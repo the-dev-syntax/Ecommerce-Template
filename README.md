@@ -34,3 +34,26 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## My notes
+
+changes happened to setting json of vscode
+
+[alt+z] to wrap code lines
+
+change slogans in lib/constants.ts and .env.local
+change category array inside search.tsx to array from database
+inside header/index.tsx ==> <Button variant='ghost' means the button bg is transparent
+made a humburger menu icon (shadcdn) inside a button .
+also showed the links in the hearder using map funtion which is a better way to do it.
+in header/index.tsx <div className='hidden md:block flex-1 max-w-xl'>
+<Search />
+
+</div>
+<Menu /> (sign in , cart)
+</div>
+<div className='md:hidden block py-2'>
+<Search />
+</div> means on small screen search will be after menu ==> on big screen search will be before menu
+code . ==> it has to have space between.
+ctrl c tto get out of the running terminal.
