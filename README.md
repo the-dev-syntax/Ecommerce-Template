@@ -35,7 +35,9 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## My notes
+## [My-notes]
+
+You can move the Primary Side Bar to the right hand side by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).
 
 changes happened to setting json of vscode
 
@@ -57,3 +59,54 @@ in header/index.tsx <div className='hidden md:block flex-1 max-w-xl'>
 </div> means on small screen search will be after menu ==> on big screen search will be before menu
 code . ==> it has to have space between.
 ctrl c tto get out of the running terminal.
+
+---
+
+only limit network access of mongodb to varcel and my laptop.
+
+---
+
+```js
+ratingDistribution: z
+  .array(
+    z.object({
+      rating: z.number(),
+      count: z.number(),
+    })
+  )
+  .max(5),
+```
+
+```js
+z.array(...):
+```
+
+This defines an array schema. It means ratingDistribution is expected to be an array.
+
+```js
+z.object({ ... }):
+```
+
+This defines the structure of each object in the array. Each object must have two properties:
+
+rating: A number.
+
+count: A number.
+
+```js
+rating: z.number():
+```
+
+The rating property must be a number.
+
+```js
+count: z.number():
+```
+
+The count property must also be a number.
+
+```js
+.max(5):
+```
+
+This adds a validation rule to the array. It ensures that the array has a maximum length of 5. If the array has more than 5 elements, validation will fail.

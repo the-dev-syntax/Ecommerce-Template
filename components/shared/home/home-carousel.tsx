@@ -23,6 +23,7 @@ export function HomeCarousel({
     buttonCaption: string
   }[]
 }) {
+  // above was the type of what was passed ,, under is the inside of the fuction *const and *return
   const plugin = React.useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })
   )
