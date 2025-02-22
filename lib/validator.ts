@@ -18,6 +18,7 @@ export const ProductInputSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   images: z.array(z.string()).min(1, 'Product must have at least one image'),
   brand: z.string().min(1, 'Brand is required'),
+  form: z.string().min(1, 'Form is required'),
   description: z.string().min(1, 'Description is required'),
   isPublished: z.boolean(),
   price: Price('Price'),
@@ -28,7 +29,8 @@ export const ProductInputSchema = z.object({
     .nonnegative('count in stock must be a non-negative number'),
   tags: z.array(z.string()).default([]),
   sizes: z.array(z.string()).default([]),
-  colors: z.array(z.string()).default([]),
+  // colors: z.array(z.string()).default([]),
+
   avgRating: z.coerce
     .number()
     .min(0, 'Average rating must be at least 0')

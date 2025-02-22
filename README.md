@@ -56,9 +56,11 @@ in header/index.tsx <div className='hidden md:block flex-1 max-w-xl'>
 </div>
 <div className='md:hidden block py-2'>
 <Search />
-</div> means on small screen search will be after menu ==> on big screen search will be before menu
-code . ==> it has to have space between.
-ctrl c tto get out of the running terminal.
+</div> means, on small screen search will be after menu ==> on big screen search will be before menu
+
+to open new tab in vscode ==> code . ==> it has to have space between.
+
+ctrl c to get out of the running terminal.
 
 ---
 
@@ -110,3 +112,21 @@ The count property must also be a number.
 ```
 
 This adds a validation rule to the array. It ensures that the array has a maximum length of 5. If the array has more than 5 elements, validation will fail.
+
+## Dealing with teh [database] [mongodb]:
+
+make a project , then make a cluster0 [free], browse collections ==> will show database with all collections under it ==> here you can create databases or the sub databases [which-called-collections].
+
+---
+
+---
+
+## --------------------- changing any keys of the input of a product --------
+
+lib\validator.ts
+lib/data.ts
+lib\db\models\product.model.ts
+
+commented colors key to the three files
+added form key to all three files
+changes the value of brands to EV in the data.ts file
