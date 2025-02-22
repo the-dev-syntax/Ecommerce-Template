@@ -7,7 +7,7 @@ const products: IProductInput[] = [
     name: 'EV Hair skin and nails with vitamins and Biotin 5000mcg',
     slug: toSlug('EV Hair skin and nails with vitamins and Biotin 5000mcg'),
     category: 'Hair Supplements',
-    images: ['/images/bioten-1.png', '/images/bioten-2.jpg'],
+    images: ['/images/bioten-1.jpg', '/images/bioten-2.jpg'],
     tags: ['new-arrival'],
     isPublished: true,
     price: 24.8,
