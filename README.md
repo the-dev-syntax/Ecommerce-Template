@@ -130,3 +130,137 @@ lib\db\models\product.model.ts
 commented colors key to the three files
 added form key to all three files
 changes the value of brands to EV in the data.ts file
+
+## --------------------- explaining product-price.tsx --------
+
+```tsx
+import { cn, formatCurrency } from '@/lib/utils' // Imports utility functions: 'cn' for conditional class names and 'formatCurrency' for formatting currency.
+
+const ProductPrice = ({
+  // Defines a React functional component named 'ProductPrice' that takes props.
+  price, // Required prop: The current price of the product (number).
+  className, // Optional prop: Custom CSS class names to apply to the price display (string).
+  listPrice = 0, // Optional prop: The original list price of the product (number, defaults to 0).
+  isDeal = false, // Optional prop:  Indicates if the product is on a special deal (boolean, defaults to false).
+  forListing = true, // Optional prop: Indicates if the component is being used in a listing context (boolean, defaults to true).
+  plain = false, // Optional prop:  If true, just display the formatted price, no extra styling (boolean, defaults to false).
+}: {
+  // Defines the type of each of the props. Typescript syntax.
+  price: number
+  isDeal?: boolean
+  listPrice?: number
+  className?: string
+  forListing?: boolean
+  plain?: boolean
+}) => {
+  const discountPercent = Math.round(100 - (price / listPrice) * 100) // Calculates the discount percentage, rounding to the nearest whole number.
+
+  const stringValue = price.toString() // Converts the price number to a string.
+  const [intValue, floatValue] = stringValue.includes('.') // Splits the price string into integer and fractional parts (if any).
+    ? stringValue.split('.') // If there's a decimal point, split the string at the decimal point.
+    : [stringValue, ''] // Otherwise, the entire string is the integer part, and the fractional part is an empty string.
+
+  return plain ? ( // If the 'plain' prop is true...
+    formatCurrency(price) // ...simply format the price as currency and return it.  No extra styling.
+  ) : listPrice == 0 ? ( // Otherwise, if the list price is 0 (meaning no discount)...
+    <div className={cn('text-3xl', className)}>
+      {' '}
+      {/*Renders the price with a large font size and any custom class names.*/}
+      <span className='text-xs align-super'>$</span>{' '}
+      {/*Renders the dollar sign as a superscript.*/}
+      {intValue} {/*Renders the integer part of the price.*/}
+      <span className='text-xs align-super'>{floatValue}</span>{' '}
+      {/*Renders the fractional part of the price as a superscript.*/}
+    </div>
+  ) : isDeal ? ( // Otherwise, if it's a deal...
+    <div className='space-y-2'>
+      {' '}
+      {/*Wraps the deal-specific content with vertical spacing.*/}
+      <div className='flex justify-center items-center gap-2'>
+        {' '}
+        {/*Renders the discount badge and "Limited time deal" text.*/}
+        <span className='bg-red-700 rounded-sm p-1 text-white text-sm font-semibold'>
+          {' '}
+          {/*Styled discount badge.*/}
+          {discountPercent}% Off{' '}
+          {/*Displays the calculated discount percentage.*/}
+        </span>
+        <span className='text-red-700 text-xs font-bold'>
+          {' '}
+          {/*"Limited time deal" text.*/}
+          Limited time deal
+        </span>
+      </div>
+      <div
+        className={`flex ${forListing && 'justify-center'} items-center gap-2`}
+      >
+        {' '}
+        {/*Renders the current price and original price.*/}
+        <div className={cn('text-3xl', className)}>
+          {' '}
+          {/*Current price with custom styling.*/}
+          <span className='text-xs align-super'>$</span>{' '}
+          {/*Dollar sign as a superscript.*/}
+          {intValue} {/*Integer part of the price.*/}
+          <span className='text-xs align-super'>{floatValue}</span>{' '}
+          {/*Fractional part as a superscript.*/}
+        </div>
+        <div className='text-muted-foreground text-xs py-2'>
+          {' '}
+          {/*Original price with a strikethrough.*/}
+          Was: <span className='line-through'>
+            {formatCurrency(listPrice)}
+          </span>{' '}
+          {/*Formatted list price with a strikethrough.*/}
+        </div>
+      </div>
+    </div>
+  ) : (
+    // Otherwise (if there's a list price and it's not a special deal)...
+    <div className=''>
+      {' '}
+      {/*Wraps the default discount display.*/}
+      <div className='flex justify-center gap-3'>
+        {' '}
+        {/*Renders the discount percentage and current price.*/}
+        <div className='text-3xl text-orange-700'>-{discountPercent}%</div>{' '}
+        {/*Discount percentage in orange.*/}
+        <div className={cn('text-3xl', className)}>
+          {' '}
+          {/*Current price with custom styling.*/}
+          <span className='text-xs align-super'>$</span>{' '}
+          {/*Dollar sign as a superscript.*/}
+          {intValue} {/*Integer part of the price.*/}
+          <span className='text-xs align-super'>{floatValue}</span>{' '}
+          {/*Fractional part as a superscript.*/}
+        </div>
+      </div>
+      <div className='text-muted-foreground text-xs py-2'>
+        {' '}
+        {/*Renders the list price with a strikethrough.*/}
+        List price:{' '}
+        <span className='line-through'>{formatCurrency(listPrice)}</span>{' '}
+        {/*Formatted list price with a strikethrough.*/}
+      </div>
+    </div>
+  )
+}
+
+export default ProductPrice // Exports the ProductPrice component for use elsewhere.
+```
+
+## --------------------- explaining [product] folder ------------------------------------------------------
+
+The `product` folder contains lower logic files
+1- product-price.tsx which diplays the price on deals or just the price and formating it using utils file.
+2- rating.tsx which floor() and ceil() the rating and the partial star, to display the rating as stars.
+3- image-hover.tsx which displays the image on hover, (usestate and timeout).
+
+then the product-card.tsx which displays the product image and details in card like display.
+
+then the product.silder.tsx which displays(maps) the product-card as a carousel.
+
+then displayed on the home page inside a card component again.(passing a filtered products array by tag "todaysdeal" specifically)
+making it a todays deal slider section.
+
+## ------------------------------------------------------------------------------------------------------------

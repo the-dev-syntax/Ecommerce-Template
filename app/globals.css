@@ -81,6 +81,10 @@ body {
   .h1-bold {
     @apply font-bold text-2xl lg:text-3xl;
   }
+
+  .h2-bold {
+    @apply font-bold text-lg lg:text-xl;
+  }
 }
 
 
@@ -89,6 +93,7 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

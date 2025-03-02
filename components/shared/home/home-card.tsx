@@ -14,9 +14,6 @@ type CardItem = {
   }[]
 }
 
-//* i think : this is a component shared can be used to show any type of card, depending on what will be passed to it, which will be whatever name, but the first key inside will be cards, which will be an array of objects with the type CardItem above.
-//?  ex. heroCard={cards[{title, link, items{},}]:CardItem[]}
-
 export function HomeCard({ cards }: { cards: CardItem[] }) {
   return (
     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:gap-4'>

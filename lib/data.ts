@@ -26,7 +26,7 @@ const products: IProductInput[] = [
     numSales: 9,
     countInStock: 11,
     description:
-      'Help to stimulate faster hair growth while combating dryness, fortifying hair follicles and enhancing elasticity. By preventing breakage this formula ensures your strands stay strong, hydrated, and resilient for healthier, long lasting growth.',
+      'Help to stimulate faster hair growth while combating dryness, enhancing elasticity and fortifying hair follicles. By preventing breakage this formula ensures your strands stay strong, hydrated, and resilient for healthier, long lasting growth.',
     sizes: ['60', '120', '360'],
     // colors: ['Green', 'Red', 'Black'],
 
