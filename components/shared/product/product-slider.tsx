@@ -20,6 +20,7 @@ export default function ProductSlider({
   products: IProduct[]
   hideDetails?: boolean
 }) {
+  //opts = options
   return (
     <div className='w-full bg-background'>
       <h2 className='h2-bold mb-5'>{title}</h2>
