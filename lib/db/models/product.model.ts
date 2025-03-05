@@ -51,7 +51,7 @@ const productSchema = new Schema<IProduct>(
       required: true,
     },
     tags: { type: [String], default: ['new arrival'] },
-    // colors: { type: [String], default: ['White', 'Red', 'Black'] },
+    colors: { type: [String], default: ['White', 'Red', 'Black'] },
     sizes: { type: [String], default: ['60'] },
     avgRating: {
       type: Number,
@@ -105,17 +105,19 @@ const Product =
 export default Product
 
 /*
-
-* Purpose: models is an object in Mongoose that acts as a cache for your defined models.
+after any change run :
+ * npm run seed
+-------------------
+ Purpose: models is an object in Mongoose that acts as a cache for your defined models.
  ? here either store inside Product the cached models.Product or store a new value by creating a new model w take two values(NewModelName, SchemaToMatchTo)
- * model() is function to create new schema
+  model() is function to create new schema
  ? Model ==> M capital is a Typescript type of the model you will create, can edit documents as a whole and edit them, can create new documents.
   Document ==> is also a Typescript type but for an actual document and can edit the specific info(objects)inside them.
- * IProductInput (and the Zod schema it's based on) is for validating and preparing data before it's sent to Mongoose.
+  IProductInput (and the Zod schema it's based on) is for validating and preparing data before it's sent to Mongoose.
  ? productSchema is for defining how Mongoose should store and manage the data in MongoDB.
- * TypeScript interfaces and Mongoose schemas serve different purposes, and Mongoose needs explicit schema definitions to properly store and manage data in MongoDB. The IProduct interface helps with type safety, but it doesn't replace the need for defining the schema itself.
+  TypeScript interfaces and Mongoose schemas serve different purposes, and Mongoose needs explicit schema definitions to properly store and manage data in MongoDB. The IProduct interface helps with type safety, but it doesn't replace the need for defining the schema itself.
  ? The IProduct interface combines the structure of input data (IProductInput) with the structure of the database document (including MongoDB-specific properties).
 
- * timestamps: true tells Mongoose to automatically manage the createdAt and updatedAt properties.
+  timestamps: true tells Mongoose to automatically manage the createdAt and updatedAt properties.
  ? Defining createdAt and updatedAt in the IProduct interface ensures that the interface is complete, provides type safety, and makes the code self-documenting. They all play different but crucial roles.
 */

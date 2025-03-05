@@ -264,3 +264,39 @@ then displayed on the home page inside a card component again.(passing a filtere
 making it a todays deal slider section.
 
 ## ------------------------------------------------------------------------------------------------------------
+
+[theme] customization
+workbench.colorCustomizations search in setting and open json file.
+added all what is inside "workbench.colorCustomizations": {..here..}
+
+```json
+"workbench.colorCustomizations": {
+
+    "[GitHub Dark High Contrast]": {
+      "editor.background": "#000000",
+      "contrastBorder": "#383838",
+      "tab.activeBorderTop": "#383838",
+      "menu.border": "#383838",
+      "sideBar.border": "#383838",
+      "tab.border": "#383838",
+      "menubar.selectionBorder": "#125f0a",
+      "menu.separatorBackground": "#383838",
+      "activityBar.border": "#383838",
+      "titleBar.border": "#383838",
+      "editorGroup.border": "#383838",
+      "editorGroupHeader.tabsBorder": "#383838",
+      "tab.activeBorder": "#383838",
+      "contrastActiveBorder": "#00000000",
+      "tab.activeBackground": "#08841f",
+      "tab.activeForeground": "#ffffff"
+    }
+  },
+
+```
+
+## --------------------------------------------------------------------------------------------------
+
+export const PAGE_SIZE = Number(process.env.PAGE_SIZE || 9)
+to show nine items per page for pagination.
+
+## --------------------------------------------------------------------------------------------------
