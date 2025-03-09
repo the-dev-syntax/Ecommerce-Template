@@ -9,6 +9,7 @@ import {
 import { HomeCard } from '@/components/shared/home/home-card'
 import ProductSlider from '@/components/shared/product/product-slider'
 import { Card, CardContent } from '@/components/ui/card'
+import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 
 export default async function Page() {
   const todaysDeals = await getProductsByTag({ tag: 'todays-deal' })
@@ -89,6 +90,9 @@ export default async function Page() {
             />
           </CardContent>
         </Card>
+      </div>
+      <div className='p-4 bg-background'>
+        <BrowsingHistoryList />
       </div>
     </>
   )

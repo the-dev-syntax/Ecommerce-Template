@@ -30,10 +30,6 @@ const productSchema = new Schema<IProduct>(
       type: String,
       required: true,
     },
-    form: {
-      type: String,
-      required: true,
-    },
     description: {
       type: String,
       trim: true,

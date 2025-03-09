@@ -2,18 +2,17 @@ import { Data, IProductInput } from '@/types'
 import { toSlug } from './utils'
 
 const products: IProductInput[] = [
-  // beauty
+  // T-Shirt
   {
-    name: 'EV Hair skin and nails with vitamins and Biotin 5000mcg',
-    slug: toSlug('EV Hair skin and nails with vitamins and Biotin 5000mcg'),
-    category: 'Hair Supplements',
-    images: ['/images/bioten-1.jpg', '/images/bioten-2.jpg'],
+    name: 'Nike Mens Slim-fit Long-Sleeve T-Shirt',
+    slug: toSlug('Nike Mens Slim-fit Long-Sleeve T-Shirt'),
+    category: 'T-Shirts',
+    images: ['/images/p11-1.jpg', '/images/p11-2.jpg'],
     tags: ['new-arrival'],
     isPublished: true,
-    price: 24.8,
+    price: 21.8,
     listPrice: 0,
-    form: 'Capsule',
-    brand: 'EV',
+    brand: 'Nike',
     avgRating: 4.71,
     numReviews: 7,
     ratingDistribution: [
@@ -26,8 +25,8 @@ const products: IProductInput[] = [
     numSales: 9,
     countInStock: 11,
     description:
-      'Help to stimulate faster hair growth while combating dryness, enhancing elasticity and fortifying hair follicles. By preventing breakage this formula ensures your strands stay strong, hydrated, and resilient for healthier, long lasting growth.',
-    sizes: ['60', '120', '360'],
+      'Made with chemicals safer for human health and the environment',
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colors: ['Green', 'Red', 'Black'],
 
     reviews: [],
@@ -46,7 +45,6 @@ const products: IProductInput[] = [
     isPublished: true,
     price: 23.78,
     listPrice: 0,
-    form: 'Capsule',
     brand: 'EV',
     avgRating: 4.2,
     numReviews: 10,
@@ -71,7 +69,6 @@ const products: IProductInput[] = [
     name: "Jerzees Men's Long-Sleeve T-Shirt",
     slug: toSlug('Jerzees Men Long-Sleeve T-Shirt'),
     category: 'T-Shirts',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p13-1.jpg', '/images/p13-2.jpg'],
     tags: ['best-seller'],
@@ -102,7 +99,6 @@ const products: IProductInput[] = [
       'Decrum Mens Plain Long Sleeve T-Shirt - Comfortable Soft Fashion V Neck Full Sleeves Jersey Shirts'
     ),
     category: 'T-Shirts',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p14-1.jpg', '/images/p14-2.jpg'],
     tags: ['todays-deal'],
@@ -133,7 +129,6 @@ const products: IProductInput[] = [
       "Muscle Cmdr Men's Slim Fit Henley Shirt Long&Short Business Sleeve Casual 3 Metal Buton Placket Casual Stylish T-Shirt"
     ),
     category: 'T-Shirts',
-    form: 'Capsule',
     brand: 'EV Cmdr',
     images: ['/images/p15-1.jpg', '/images/p15-2.jpg'],
     tags: ['new-arrival', 'featured'],
@@ -162,7 +157,6 @@ const products: IProductInput[] = [
     name: 'Hanes Mens Long Sleeve Beefy Henley Shirt',
     slug: toSlug('Hanes Mens Long Sleeve Beefy Henley Shirt'),
     category: 'T-Shirts',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p16-1.jpg', '/images/p16-2.jpg'],
     tags: ['best-seller', 'todays-deal'],
@@ -192,7 +186,6 @@ const products: IProductInput[] = [
     name: 'Silver Jeans Co. Mens Jace Slim Fit Bootcut Jeans',
     slug: toSlug('Silver Jeans Co. Mens Jace Slim Fit Bootcut Jeans'),
     category: 'Jeans',
-    form: 'Capsule',
     brand: 'EV Jeans Co',
     images: ['/images/p21-1.jpg', '/images/p21-2.jpg'],
     tags: ['new-arrival'],
@@ -223,7 +216,6 @@ const products: IProductInput[] = [
       "Levi's mens 505 Regular Fit Jeans (Also Available in Big & Tall)"
     ),
     category: 'Jeans',
-    form: 'Capsule',
     brand: "EV's",
     images: ['/images/p22-1.jpg', '/images/p22-2.jpg'],
     tags: ['featured'],
@@ -252,7 +244,6 @@ const products: IProductInput[] = [
     name: 'Essentials Mens Straight-Fit Stretch Jean',
     slug: toSlug('Essentials Mens Straight-Fit Stretch Jean'),
     category: 'Jeans',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p23-1.jpg', '/images/p23-2.jpg'],
     tags: ['best-seller'],
@@ -283,7 +274,6 @@ const products: IProductInput[] = [
       "Buffalo David Bitton Mens Men's Driven Relaxed Denim JeansJeans"
     ),
     category: 'Jeans',
-    form: 'Capsule',
     brand: 'EV David Bitton',
     images: ['/images/p24-1.jpg', '/images/p24-2.jpg'],
     tags: ['todays-deal'],
@@ -312,7 +302,6 @@ const products: IProductInput[] = [
     name: 'Dickies Mens Relaxed Fit Carpenter Jean',
     slug: toSlug('Dickies Mens Relaxed Fit Carpenter Jean'),
     category: 'Jeans',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p25-1.jpg', '/images/p25-2.jpg'],
     tags: ['new-arrival', 'featured'],
@@ -341,7 +330,6 @@ const products: IProductInput[] = [
     name: 'Wrangler mens Premium Performance Cowboy Cut Slim Fit Jean',
     slug: toSlug('Wrangler mens Premium Performance Cowboy Cut Slim Fit Jean'),
     category: 'Jeans',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p26-1.jpg', '/images/p26-2.jpg'],
     tags: ['best-seller', 'todays-deal'],
@@ -371,7 +359,6 @@ const products: IProductInput[] = [
     name: "Seiko Men's Analogue Watch with Black Dial",
     slug: toSlug("Seiko Men's Analogue Watch with Black Dial"),
     category: 'Wrist Watches',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p31-1.jpg', '/images/p31-2.jpg'],
     tags: ['new-arrival'],
@@ -402,7 +389,6 @@ const products: IProductInput[] = [
       'SEIKO 5 Sport SRPJ83 Beige Dial Nylon Automatic Watch, Beige, Automatic Watch'
     ),
     category: 'Wrist Watches',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p32-1.jpg', '/images/p32-2.jpg'],
     tags: ['featured'],
@@ -433,7 +419,6 @@ const products: IProductInput[] = [
       "Casio Men's Heavy Duty Analog Quartz Stainless Steel Strap, Silver, 42 Casual Watch"
     ),
     category: 'Wrist Watches',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p33-1.jpg', '/images/p33-2.jpg'],
     tags: ['best-seller'],
@@ -464,7 +449,6 @@ const products: IProductInput[] = [
       'Casio Classic Silver-Tone Stainless Steel Band Date Indicator Watch'
     ),
     category: 'Wrist Watches',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p34-1.jpg', '/images/p34-2.jpg'],
     tags: ['todays-deal'],
@@ -493,7 +477,6 @@ const products: IProductInput[] = [
     name: "Fossil Men's Grant Stainless Steel Quartz Chronograph Watch",
     slug: toSlug("Fossil Men's Grant Stainless Steel Quartz Chronograph Watch"),
     category: 'Wrist Watches',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p35-1.jpg', '/images/p35-2.jpg'],
     tags: ['new-arrival', 'featured'],
@@ -522,7 +505,6 @@ const products: IProductInput[] = [
     name: "Fossil Men's Machine Stainless Steel Quartz Watch",
     slug: toSlug("Fossil Men's Machine Stainless Steel Quartz Watch"),
     category: 'Wrist Watches',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p36-1.jpg', '/images/p36-2.jpg'],
     tags: ['best-seller', 'todays-deal'],
@@ -552,7 +534,6 @@ const products: IProductInput[] = [
     name: 'adidas Mens Grand Court 2.0 Training Shoes Training Shoes',
     slug: toSlug('adidas Mens Grand Court 2.0 Training Shoes Training Shoes'),
     category: 'Shoes',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p41-1.jpg', '/images/p41-2.jpg'],
     tags: ['new-arrival'],
@@ -583,7 +564,6 @@ const products: IProductInput[] = [
       "ziitop Men's Running Walking Shoes Fashion Sneakers Mesh Dress Shoes Business Oxfords Shoes Lightweight Casual Breathable Work Formal Shoes"
     ),
     category: 'Shoes',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p42-1.jpg', '/images/p42-2.jpg'],
     tags: ['featured'],
@@ -614,7 +594,6 @@ const products: IProductInput[] = [
       'Skechers mens Summits High Range Hands Free Slip-in Shoes Work shoe'
     ),
     category: 'Shoes',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p43-1.jpg', '/images/p43-2.jpg'],
     tags: ['best-seller'],
@@ -645,7 +624,6 @@ const products: IProductInput[] = [
       'DLWKIPV Mens Running Shoes Tennis Cross Training Sneakers Fashion Non Slip Outdoor Walking Jogging Shoes Mesh Light Flexible Comfortable Breathable Shoes'
     ),
     category: 'Shoes',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p44-1.jpg', '/images/p44-2.jpg'],
     tags: ['todays-deal'],
@@ -674,7 +652,6 @@ const products: IProductInput[] = [
     name: "ASICS Men's GT-2000 13 Running Shoes",
     slug: toSlug("ASICS Men's GT-2000 13 Running Shoes"),
     category: 'Shoes',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p45-1.jpg', '/images/p45-2.jpg'],
     tags: ['new-arrival', 'featured'],
@@ -705,7 +682,6 @@ const products: IProductInput[] = [
       "Mens Wearbreeze Shoes, Urban - Ultra Comfortable Shoes, Breeze Shoes for Men, Men's Mesh Dress Sneakers Business Shoes"
     ),
     category: 'Shoes',
-    form: 'Capsule',
     brand: 'EV',
     images: ['/images/p46-1.jpg', '/images/p46-2.jpg'],
     tags: ['best-seller', 'todays-deal'],
@@ -771,21 +747,21 @@ const data: Data = {
     {
       title: 'Most Popular Shoes For Sale',
       buttonCaption: 'Shop Now',
-      image: '/images/banner3.png',
+      image: '/images/banner3.jpg',
       url: '/search?category=Shoes',
       isPublished: true,
     },
     {
       title: 'Best Sellers in T-Shirts',
       buttonCaption: 'Shop Now',
-      image: '/images/banner1.png',
+      image: '/images/banner1.jpg',
       url: '/search?category=T-Shirts',
       isPublished: true,
     },
     {
       title: 'Best Deals on Wrist Watches',
       buttonCaption: 'See More',
-      image: '/images/banner2.jpeg',
+      image: '/images/banner2.jpg',
       url: '/search?category=Wrist Watches',
       isPublished: true,
     },
