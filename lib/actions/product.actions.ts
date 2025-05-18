@@ -114,7 +114,7 @@ export async function getRelatedProductsByCategory({
 
 //* getRelatedProductsByCategory
 // Connects to the database, retrieves related and published products based on category (excluding the given product),
-// sorts them by sales, paginates the results, retrieves the total count of matching products,
+// sorts them by sales -descending order, paginates the results, retrieves the total count of matching products,
 // and returns an object containing the paginated product data and the total number of pages.
 // limit is the limit of products to display in one page. limit = means page size.
 // page = means current page , are you in page 1, page 2, page 3 and so on
@@ -123,7 +123,7 @@ export async function getRelatedProductsByCategory({
     .sort({ numSales: 'desc' })
     .skip(skipAmount)
     .limit(limit)
-    find my products by category and exclude the current product, sort them by sales, skip the product displayed in previous pages (if it was the first page the skipAmount will be zero) ,limit them by the limit value per page like(9 products per page ).
+    find my products by category and exclude the current product, sort them by sales in descending order, skip the product displayed in previous pages (if it was the first page the skipAmount will be zero) ,limit them by the limit value per page like(9 products per page ).
 */
 //  const productsCount = await Product.countDocuments(conditions) ==> this is a mongodb method to count the number of documents that match the conditions.
 
@@ -159,6 +159,8 @@ $concat      ==> creates a new string by concatenating the values of two or more
 $arrayElemAt ==> returns the element at the specified index from an array field
 $ne          ==> exclude the current product
 all three are query functions inside mongodb 
+
+* //* GET PRODUCTS FOR CARD
 1-Connect to the database.
 2-Find the two newest products that have the "new-arrival" tag and are published.
 3-For each product, extract the name, create an href link using the slug, and get the first image from the images array.

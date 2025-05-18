@@ -12,8 +12,11 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json([])
   }
 
+  // convert the string of ids and categories to an array.
   const productIds = productIdsParam.split(',')
   const categories = categoriesParam.split(',')
+
+  // filter is the parameter of the find function query for the database after connecting to the db.
   const filter =
     listType === 'history'
       ? {
@@ -22,7 +25,9 @@ export const GET = async (request: NextRequest) => {
       : { category: { $in: categories }, _id: { $nin: productIds } }
 
   await connectToDatabase()
+
   const products = await Product.find(filter)
+
   if (listType === 'history')
     return NextResponse.json(
       products.sort(
@@ -34,7 +39,7 @@ export const GET = async (request: NextRequest) => {
   return NextResponse.json(products)
 }
 
-// : { category: { $in: categories }, _id: { $nin: productIds } }
+//? : { category: { $in: categories }, _id: { $nin: productIds } }
 // get categories like product categories in the req, and find in these categories products that are not products in the req.
 
 //? Sorting for History:

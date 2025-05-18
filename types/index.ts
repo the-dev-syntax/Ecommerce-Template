@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { ProductInputSchema } from '@/lib/validator'
+import {
+  CartSchema,
+  OrderItemSchema,
+  ProductInputSchema,
+} from '@/lib/validator'
+
+// either write the type directly. 
+// if there is a schema, make zod infer from it the type. 
 
 export type IProductInput = z.infer<typeof ProductInputSchema>
 
@@ -17,3 +24,6 @@ export type Data = {
     isPublished: boolean
   }[]
 }
+
+export type OrderItem = z.infer<typeof OrderItemSchema>
+export type Cart = z.infer<typeof CartSchema>

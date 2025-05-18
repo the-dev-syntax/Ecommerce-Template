@@ -6,7 +6,7 @@ const ProductPrice = ({
   className,
   listPrice = 0, // listPrice: The original price; used to show savings.
   isDeal = false,
-  forListing = true, // forListing: Tells the component where it's being used (listing or details page) to adjust its appearance accordingly.
+  forListing = true, // forListing:(stylling) Tells the component where it's being used (listing or details page) to adjust its appearance accordingly.
   plain = false,
 }: {
   price: number
