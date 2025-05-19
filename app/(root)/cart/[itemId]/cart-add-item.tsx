@@ -57,7 +57,7 @@ export default function CartAddItem({ itemId }: { itemId: string }) {
               <div className='flex justify-center items-center'>
                 {itemsPrice < FREE_SHIPPING_MIN_PRICE ? (
                   <div className='text-center '>
-                    Add
+                    Add{' '} 
                     <span className='text-green-700'>
                       <ProductPrice
                         price={FREE_SHIPPING_MIN_PRICE - itemsPrice}
