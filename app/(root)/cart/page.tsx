@@ -119,7 +119,7 @@ export default function CartPage() {
                         <p className='text-right'>
                           {item.quantity > 1 && (
                             <>
-                              {item.quantity} x
+                              {item.quantity} x{' '}
                               <ProductPrice price={item.price} plain />
                               <br />
                             </>
