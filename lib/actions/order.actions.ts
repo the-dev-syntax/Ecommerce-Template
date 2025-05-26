@@ -26,3 +26,5 @@ export const calcDeliveryDateAndPrice = async ({
     totalPrice,
   }
 }
+// no use server as all of them are utility function , used on server just cause they are computational
+// use server used for files interacting with DB or auth (secure connection is needed)
