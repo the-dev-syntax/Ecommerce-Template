@@ -8,6 +8,7 @@ import client from './lib/db/client'  // You create an *instance* of `MongoClien
 import User from './lib/db/models/user.model' // Your blueprint for what a "User" looks like in the DB
 
 import bcrypt from 'bcryptjs'
+import Google from 'next-auth/providers/google'
 
 
 
@@ -31,6 +32,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   adapter: MongoDBAdapter(client),
   providers: [
+    Google({
+      allowDangerousEmailAccountLinking: true,
+    }),
     CredentialsProvider({
       credentials: {
         email: {
