@@ -325,7 +325,7 @@ making it a todays deal slider section.
 
 
 
-## ------------------------------------------------------------------------------------------------------------
+## [theme] customization------------------------------------------------------------------------------------------------------------
 
 [theme] customization
 workbench.colorCustomizations search in setting and open json file.
@@ -415,14 +415,14 @@ Workbench: Color Customizations  lines "UI"
 Overrides colors from the currently selected color theme.
 
 
-> --------------------------------------------------------------------------------------------------
+## ---------------nine items per page for pagination.--------------------------------------------------------
 
 export const PAGE_SIZE = Number(process.env.PAGE_SIZE || 9)
 to show nine items per page for pagination.
 
-> --------------------------------------Gemini advice------------------------------------------------------------
+## ------------file browsing-history/route.ts----------Gemini advice------------------------
 
-## file browsing-history/route.ts
+
 
 Error Handling: The code lacks robust error handling. Consider adding try...catch blocks around the database connection and query to handle potential errors (e.g., database connection errors, invalid queries).
 
@@ -483,9 +483,8 @@ export const GET = async (request: NextRequest) => {
 }
 ```
 
-> ----------------------------------------------------- [another]
-
-example for handling NoSQL injection :data injection:
+## ----------------example for handling NoSQL injection :data injection:--------------- [another]
+ 
 
 ```tsx
 import { isValidObjectId } from 'mongoose' // Import to validate ObjectIds
@@ -549,9 +548,8 @@ export const GET = async (request: NextRequest) => {
 }
 ```
 
-> ---------------------------------------- [another]
-
-## recommended changes in browsing-history-list.tsx
+## -------------recommended changes in browsing-history-list.tsx---------- [another]
+ 
 
 ```tsx
 function ProductList(...) { // Same as before, but add loading state
@@ -603,9 +601,8 @@ function ProductList(...) { // Same as before, but add loading state
 }
 ```
 
-> -------------------------------------------------[another]
 
-## lib\utils\generateId.ts
+## lib\utils\generateId.ts------------------------------------[another]
 
 [not-secure]:
 
@@ -615,10 +612,9 @@ Security: The generateId function is not cryptographically secure. Don't use it 
 
 Number.EPSILON: This constant is available in modern JavaScript environments (ES6 and later). If you're supporting older browsers, you might need to provide a polyfill for Number.EPSILON.
 
-##
 
-> -------------------------------------------------[another]
-[use-cart-store]
+## -------------[use-cart-store]------------------------[another]
+
 update the name of the store to a unique name
 
 Be cautious with this operator (!). Use it only if you are absolutely certain that the value will not be null or undefined. If there's a possibility that the item is not found (e.g., due to a race condition or an error), this could cause an error. It's safer to use a conditional check or a default value instead.
@@ -628,17 +624,17 @@ better use this line:
 return foundItem ? foundItem.clientId : null // Or a default value if appropriate
 ```
 
-> -------------------------------------------------[another]
-update in [lib/actions/order.actions.ts] should be named [order.calc.ts]
+## ---------update in [lib/actions/order.actions.ts---------------[another]
+] should be named [order.calc.ts]
 make the tax value not 0.15 but a constant value in lib/constants.ts
 also make the default shipping price not 5 but a constant value in lib/constants.ts
 
 
 
--------------------------------------------------[another]
+## ---------------check if in [validator.ts]------------------[another]
 check if in [validator.ts] , should i add a non negative check on all shipping and tax price too ?????
 
-> ---------------explain-------[use-cart-store.ts]---------------------------[another]
+## ---------------explain-------[use-cart-store.ts]---------------------------[another]
 ```ts
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -766,15 +762,15 @@ if (foundItem && typeof foundItem.clientId !== 'undefined') {
 throw new Error('Client ID missing from cart item');
 ```
 
----------------changes-------[use-cart-store.ts]---------------------------[another]
+## ---------------changes-------[use-cart-store.ts]---------------------------[another]
 {
    name: 'cart-store',
 }
 change the name to something unique.
 
--------------explaining the use of [isMounted] and the [render-sequence] ------------------------------------[another]
+## -------------explaining the use of [isMounted] and the [render-sequence] -----------------[another]
 
-## Server-Side Rendering (SSR) or Static Site Generation (SSG) - Initial Page Load:
+> Server-Side Rendering (SSR) or Static Site Generation (SSG) - Initial Page Load:
 - The Next.js server (or build process for SSG) renders the CartButton component.
 - isMounted is false.
 - useCartStore() is called.
@@ -783,7 +779,7 @@ change the name to something unique.
     The server doesn't have direct access to the user's browser localStorage.
 The component renders the Link, icon, and "Cart" text. The count badge (<span>) is not rendered because isMounted is false.
 This server-rendered HTML is sent to the browser.
-## Client-Side - Hydration & Initial Client Render:
+> Client-Side - Hydration & Initial Client Render:
 - The browser receives the HTML. React starts the "hydration" process, making the static HTML interactive.
 - CartButton component code runs in the browser.
 - isMounted is still false during this very first client-side render pass.
@@ -795,62 +791,62 @@ This server-rendered HTML is sent to the browser.
     if localStorage loading hasn't completed exactly at that microsecond.
 - The count badge is still not rendered because isMounted is false. 
     This is good, as it avoids a flash of incorrect count if localStorage is still loading.
-## Client-Side - Component Mounts & useEffect in useIsMounted Runs:
+> Client-Side - Component Mounts & useEffect in useIsMounted Runs:
 - The CartButton component finishes its initial render and is mounted to the DOM.
 - The useEffect(() => { setIsMounted(true) }, []) inside useIsMounted now executes.
 - setIsMounted(true) is called.
-## Client-Side - Re-render Triggered by isMounted Update:
+> Client-Side - Re-render Triggered by isMounted Update:
 - The state change in useIsMounted (from false to true) causes the CartButton component to re-render.
 - isMounted is now true.
 - useCartStore() is called. By this time, Zustand's persist middleware has almost certainly loaded the cart state from localStorage. 
     So, items (and thus cartItemsCount) now reflects the user's actual persisted cart.
 - The count badge <span> is now rendered with the correct cartItemsCount from localStorage.
 
-## So, to [summarize] the role of isMounted here:
+> So, to [summarize] the role of isMounted here:
 - Its primary purpose is to delay the rendering of client-side-specific data (the cart count from localStorage) 
     until the component is fully mounted on the client and that data is reliably available.
 - This prevents hydration errors that occur when the server-rendered HTML (which can't see localStorage) differs from what the client 
     wants to render immediately upon hydration (before localStorage might be fully processed or if there's a flicker).
 
     
---------------fix--------[cart/page.tsx]---------------------------[another]
+## --------------fix--------[cart/page.tsx]---------------------------[another]
 
-## Potential Issues & Areas for Improvement:
+> Potential Issues & Areas for Improvement:
 Repetitive Calculations:
   Issue: items.reduce((acc, item) => acc + item.quantity, 0) is calculated twice (once for the subtotal line in the main cart, once in    the summary card). While not a major performance hit for small carts, it's redundant.
 - [Fix]: 
     Calculate it once and store it in a variable.
 --------------
-## Component Cohesion / Size (Minor):
+> Component Cohesion / Size (Minor):
   Issue: The CartPage component is doing a lot. The rendering of an individual cart item and the cart summary could be extracted into their own components.
     Benefit: Improves readability, maintainability, and reusability.
 - [Fix]: 
     Create CartItem.tsx and CartSummary.tsx (or similar).
 --------------
-## Image sizes Prop:
+> Image sizes Prop:
   Issue: sizes='20vw' for the next/image within a relative w-40 h-40 container. 20vw means 20% of the viewport width. If the container is fixed at w-40 h-40 (10rem x 10rem), 20vw might not be the most accurate sizes value, potentially leading Next.js to serve a slightly oversized or undersized image variant if you're using responsive image sources.
 - [Fix]: 
     For a fixed-size container like w-40 (160px if 1rem=16px), a more direct sizes prop would be something like sizes="(max-width: 768px) 160px, (max-width: 1200px) 160px, 160px" or simply sizes="160px" if its size doesn't change responsively beyond the container. However, since your container has w-40 h-40, 160px is a good starting point. The main goal of sizes is to help the browser pick the most appropriate image from the srcset before CSS layout is fully determined.
 --------------
-## No Loading/Disabled State for Actions:
+> No Loading/Disabled State for Actions:
   Issue: When updateItem or removeItem (which are async) are called, there's no visual feedback that an operation is in progress. The buttons remain active.
 - [Fix]:
     Add a loading state (e.g., isUpdating, isRemoving) to your component or make your store actions return a promise that resolves after the set call.
 Disable the Select and Delete button while the respective operation is in progress. You might also want to show a spinner.
 --------------
-## No User Feedback on Action Success/Failure:
+> No User Feedback on Action Success/Failure:
   Issue: If an item is removed or updated, the UI changes, but there's no explicit confirmation (like a toast notification). More importantly, if an action fails (e.g., your calcDeliveryDateAndPrice throws an error, or a hypothetical API call within the store fails), the user doesn't know.
 - [Fix]:
     Consider using a toast notification library (e.g., react-hot-toast, sonner) to show success/error messages.
     Ensure your store actions handle potential errors gracefully, perhaps by setting an error state that the UI can display.
 --------------
-## Hardcoded "Price" Header:
+> Hardcoded "Price" Header:
   Issue: The text "Price" is hardcoded. If internationalization (i18n) becomes a requirement, this would need to be managed.
 - [Fix]:
     (for i18n): Use an i18n library and pull this string from a translation file. For now, it's a minor point.
 
 --------------
-example of new code from gemini to fix the problems in  [cart/page.tsx] by creating 4 files :
+* example of new code from gemini to fix the problems in  [cart/page.tsx] by creating 4 files :
 --------------
 -
 -
@@ -1254,7 +1250,7 @@ export default function CartPage() {
   )
 }
  ```
- ## questions:
+ > questions:
 1- updateItem: storeUpdateItem,
 removeItem: storeRemoveItem,
 is this like you care renaming the method another name but it will work fine without naming it ?
@@ -1265,7 +1261,7 @@ why pass its value and if it is a boolean why not pass just one value of them  i
 4- explain the placement of this div with the text price ?
  <div className='text-sm font-medium text-muted-foreground hidden md:block'>Price</div>????
 
- ## The answer :
+> The answer :
 1- Renaming Destructured Properties:
     updateItem: storeUpdateItem,
     removeItem: storeRemoveItem,
@@ -1325,7 +1321,7 @@ why pass its value and if it is a boolean why not pass just one value of them  i
 
 ----------------------
 ----------------------
-> ----------------------[hooks/use-device-tyoe.ts]---------------------------[another]
+## ----------------------[hooks/use-device-tyoe.ts]---------------------------[another]
 ----------------------
 ----------------------
 
@@ -1449,7 +1445,7 @@ This hook provides a simple and reactive way to adapt UI based on viewport width
 */
 ------------------------------------
 --------------------------------------
-> ----------------------[hooks/use-cart-sidebar.ts]---------------------------[another]
+## ----------------------[hooks/use-cart-sidebar.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -1541,7 +1537,7 @@ This logic ensures the sidebar appears when it's most relevant (items in cart, e
 
 ------------------------------------
 --------------------------------------
-> -----------update and old explaination-----------[components/shared/header/cart-button.tsx]---------------------------[another]
+## -----------update and old explaination-----------[components/shared/header/cart-button.tsx]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -1624,7 +1620,7 @@ This pattern ensures that the part of the UI that depends on client-side state (
 
 ------------------------------------
 --------------------------------------
-> ----------------------[components/shared/client-providers.tsx]---------------------------[another]
+## ----------------------[components/shared/client-providers.tsx]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -2019,7 +2015,7 @@ These scenarios show how the `role` assigned during login (in the `authorize` fu
 
 ------------------------------------
 --------------------------------------
-> -------------explain the code inside ---------[lib/db/models/user.model.ts]---------------------------[another]
+## -------------explain the code inside ---------[lib/db/models/user.model.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 ```ts
@@ -2128,7 +2124,7 @@ Imagine you have a blueprint for a car (`userSchema`).
 
 ------------------------------------
 --------------------------------------
-> ----------------------[lib/client.ts]---------------------------[another]
+## ----------------------[lib/client.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -2260,7 +2256,7 @@ The main benefit of `NODE_ENV=development` for *this specific MongoDB client cod
 *   Setting `NODE_ENV=development` in your local environment is crucial for enabling development-specific optimizations and behaviors, like the HMR-friendly MongoDB connection caching in your code.
 ------------------------------------
 --------------------------------------
-> --------------explaination--------[auth.config.ts]---------------------------[another]
+## --------------explaination--------[auth.config.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 Okay, let's break down this `auth.config.ts` file simply and in detail.
@@ -2376,7 +2372,7 @@ This configuration is then used by your main NextAuth setup (in `auth.ts` and su
 
 ------------------------------------
 --------------------------------------
-> ----------------------[why-two-auth-files]---------------------------[another]
+## ----------------------[why-two-auth-files]---------------------------[another]
 ------------------------------------
 --------------------------------------
 why use two files for auth ==> auth.config.ts & auth.ts ??
@@ -2463,7 +2459,7 @@ The primary reason for splitting the configuration is indeed due to the **Next.j
 The split configuration in NextAuth is a clever way to ensure that the parts of your auth logic needed by the fast, restrictive Edge Middleware (`auth.config.ts`) are Edge-compatible, while the heavier lifting involving database connections and Node.js-specific crypto (`auth.ts`) can reside in the more capable Node.js runtime. This allows you to get the performance benefits of Edge Middleware for things like route protection while still using robust backend tools for authentication processing.
 ------------------------------------
 --------------------------------------
-> ----------------------[auth.ts]---------------------------[another]
+## ----------------------[auth.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 ```ts
@@ -2661,7 +2657,7 @@ In essence, this file configures NextAuth to:
 And then it exports the main functions (`auth`, `signIn`, `signOut`, `handlers`) that your application will use to interact with this authentication system.
 ------------------------------------
 --------------------------------------
-> ----------------------[why-there-is-two-ways-to-connect-to-DB]---------------------------[another]
+## ----------------------[why-there-is-two-ways-to-connect-to-DB]---------------------------[another]
 ------------------------------------
 --------------------------------------
 You've presented two different pieces of code that both deal with connecting to MongoDB, but they use different libraries and have slightly different approaches and purposes, though their ultimate goal is similar: to provide a way for your application to talk to the database.
@@ -2869,7 +2865,7 @@ You've nailed it. Route Handlers in Next.js (defined in `route.ts` or `route.js`
 *   **Data & Logic Hubs:** They are ideal for housing the backend logic, including CRUD operations on your database, interacting with external services, or performing any other server-side computation, and then returning data (often as JSON) or status codes to the client that made the request.
 ------------------------------------
 --------------------------------------
-> ----------------------[examples-of-server-actions-&-Route-Handles]---------------------------[another]
+## ----------------------[examples-of-server-actions-&-Route-Handles]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -3142,7 +3138,7 @@ Okay, let's break down each point with simpler explanations and examples.
 
 ------------------------------------
 --------------------------------------
-> ----------------------[middleware.ts]---------------------------[another]
+## ----------------------[middleware.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -3208,7 +3204,7 @@ When you have a `middleware.ts` file at the root of your `app` directory (or `sr
 **So, the "function to be run" is `middleware` (which is `NextAuth(authConfig).auth`). Next.js itself is responsible for calling this function based on the presence of the `middleware.ts` file and its `config.matcher`.** You don't explicitly call it anywhere else in your page or component code; Next.js handles its execution as part of its request lifecycle.
 ------------------------------------
 --------------------------------------
-> ----------------------[app/api/auth/[...nextauth]/route.ts]---------------------------[another]
+## ----------------------[app/api/auth/[...nextauth]/route.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -3288,7 +3284,7 @@ The `handlers` object provided by `NextAuth` encapsulates all the necessary logi
 
 ------------------------------------
 --------------------------------------
-> ----------------------[app/(auth)/sign-in/credentials-signin-form.tsx]---------------------------[another]
+## ----------------------[app/(auth)/sign-in/credentials-signin-form.tsx]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -3383,7 +3379,7 @@ const signInDefaultValues =
 
 ------------------------------------
 --------------------------------------
-> ------------replacement for ---------[user.actions.ts]---------------------------[another]
+## ------------replacement for ---------[user.actions.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 first know the difference between safeParse , parseAsync , safeParseAsync and one more
@@ -3610,7 +3606,7 @@ This approach provides a clear separation:
 
 ------------------------------------
 --------------------------------------
-> ----------------------[signin/page.tsx]---------------------------[another]
+## ----------------------[signin/page.tsx]---------------------------[another]
 > explains this-----------<Link href={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}>-------------------------
 --------------------------------------
 
@@ -3708,7 +3704,7 @@ Using `encodeURIComponent(callbackUrl)` is crucial for ensuring that the `callba
 
 ------------------------------------
 --------------------------------------
-> ------------UserSignUpSchema ----------[lib/validator.ts]---------------------------[another]
+## ------------UserSignUpSchema ----------[lib/validator.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -3739,7 +3735,7 @@ Using `encodeURIComponent(callbackUrl)` is crucial for ensuring that the `callba
 
 ------------------------------------
 --------------------------------------
-> -------------registerUser---------[user.action.ts]---------------------------[another]
+## -------------registerUser---------[user.action.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
 // CREATE
@@ -3882,14 +3878,1044 @@ Using `parseAsync` is often a safe default if you're not sure if asynchronous pa
 
 ------------------------------------
 --------------------------------------
-> ----------------------[]---------------------------[another]
+## --------getMonthName------toLocaleString--------[lib/utils.ts]---------------------------[another]
+------------------------------------
+--------------------------------------
+```ts
+export function getMonthName(yearAndMonth: string) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [year, monthNumber] = yearAndMonth.split('-')
+  const date = new Date()
+  date.setMonth(parseInt(monthNumber) - 1)
+  return new Date().getMonth() === parseInt(monthNumber) - 1
+    ? `${date.toLocaleString('default', { month: 'long' })} (ongoing)`
+    : date.toLocaleString('default', { month: 'long' })
+}
+```
+
+**2- `getMonthName()` explain this function ?**
+
+This function aims to return the full name of a month based on an input string (e.g., "2023-10") and append " (ongoing)" if that month is the current calendar month.
+
+Let's break it down line by line:
+
+```typescript
+export function getMonthName(yearAndMonth: string) {
+  // Example input: yearAndMonth = "2023-10"
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [year, monthNumber] = yearAndMonth.split('-');
+  // year = "2023", monthNumber = "10"
+  // The 'year' variable is declared but not used, hence the eslint comment.
+
+  const date = new Date();
+  // 'date' is initialized to the CURRENT date and time.
+  // e.g., if today is October 26, 2023, 'date' is "Thu Oct 26 2023 ..."
+
+  date.setMonth(parseInt(monthNumber) - 1);
+  // parseInt(monthNumber) converts "10" to the number 10.
+  // JavaScript months are 0-indexed (0 for January, 11 for December).
+  // So, 10 - 1 = 9 (which represents October).
+  // 'date.setMonth(9)' changes the month of the 'date' object to October.
+  // IMPORTANTLY: The year of 'date' remains the CURRENT YEAR.
+  // So, if today is Oct 26, 2023, and input was "2022-03" (March):
+  //   'date' would become "Mar 26 2023 ..." (March of the *current* year).
+
+  return new Date().getMonth() === parseInt(monthNumber) - 1
+    // new Date().getMonth(): Gets the 0-indexed month of the *actual current date*.
+    //   e.g., if today is Oct 26, 2023, this is 9.
+    // parseInt(monthNumber) - 1: The 0-indexed target month from input (e.g., 9 for "2023-10").
+    // This condition checks if the *input month number* matches the *current actual month number*,
+    // regardless of the year specified in the input string or the year of the 'date' object.
+
+    ? `${date.toLocaleString('default', { month: 'long' })} (ongoing)`
+    // If true (it's the current month):
+    //   date.toLocaleString('default', { month: 'long' }): Formats the 'date' object
+    //   (which has the target month and current year) to its full month name.
+    //   e.g., "October".
+    //   Then appends " (ongoing)". Result: "October (ongoing)"
+
+    : date.toLocaleString('default', { month: 'long' });
+    // If false (it's not the current month):
+    //   Returns just the full month name. e.g., "March".
+}
+```
+
+**In summary:**
+The function takes a "YYYY-MM" string, extracts the month number, and sets a `Date` object (initially the current date) to that month *within the current year*. It then returns the full name of that month. If the input month number happens to be the same as the current actual calendar month, it appends " (ongoing)".
+
+**Potential point of confusion/bug:** The `year` from the input `yearAndMonth` string is ignored when determining the month name and for the "ongoing" check. The "ongoing" status only depends on whether the *month number* matches the current month, not the year. For example, if it's currently October 2023:
+*   `getMonthName("2023-10")` returns "October (ongoing)"
+*   `getMonthName("2022-10")` also returns "October (ongoing)" (because `date` is set to Oct *2023* for formatting, and the current month is October).
+*   `getMonthName("2023-03")` returns "March"
+
+
+
+**4- what is the method `toLocaleString()` does and example of its return and what it take as argument ?**
+
+The `Date.prototype.toLocaleString()` method returns a string with a language-sensitive representation of this date.
+
+**Purpose:**
+To format a `Date` object into a human-readable string according to specific locale (language and regional) conventions and formatting options.
+
+**Arguments:**
+
+1.  `locales` (optional):
+    *   A string with a BCP 47 language tag (e.g., `"en-US"`, `"de-DE"`, `"fr-FR"`, `"ja-JP"`), or an array of such tags.
+    *   If omitted or `undefined`, the runtime's default locale is used (often the operating system's locale).
+    *   You used `"default"` in `getMonthName`, which also signifies using the runtime's default locale.
+
+2.  `options` (optional):
+    *   An object that allows you to customize the formatting of the date and time components. Some common properties include:
+        *   `dateStyle`: `"full"`, `"long"`, `"medium"`, `"short"`
+        *   `timeStyle`: `"full"`, `"long"`, `"medium"`, `"short"`
+        *   `weekday`: `"long"` (e.g., "Monday"), `"short"` (e.g., "Mon"), `"narrow"` (e.g., "M")
+        *   `year`: `"numeric"` (e.g., "2023"), `"2-digit"` (e.g., "23")
+        *   `month`: `"numeric"`, `"2-digit"`, `"long"` (e.g., "October"), `"short"` (e.g., "Oct"), `"narrow"` (e.g., "O")
+        *   `day`: `"numeric"`, `"2-digit"`
+        *   `hour`: `"numeric"`, `"2-digit"`
+        *   `minute`: `"numeric"`, `"2-digit"`
+        *   `second`: `"numeric"`, `"2-digit"`
+        *   `timeZone`: e.g., `"UTC"`, `"America/New_York"`
+        *   `hour12`: `true` (for 12-hour clock with AM/PM) or `false` (for 24-hour clock).
+        *   And many more for controlling specific parts of the date/time string.
+
+**Examples of its return:**
+
+Let's assume `const myDate = new Date(2023, 9, 26, 14, 30, 15);` (Note: month 9 is October).
+
+1.  **Default (locale-dependent):**
+    ```javascript
+    console.log(myDate.toLocaleString());
+    // Possible output (en-US): "10/26/2023, 2:30:15 PM"
+    // Possible output (en-GB): "26/10/2023, 14:30:15"
+    ```
+
+2.  **Specific locale and options (as in your `formatDateTime`):**
+    ```javascript
+    const dateTimeOptions = {
+      month: 'short',
+      year: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    };
+    console.log(myDate.toLocaleString('en-US', dateTimeOptions));
+    // Output: "Oct 26, 2023, 2:30 PM"
+
+    const dateOptions = {
+      month: 'short',
+      year: 'numeric',
+      day: 'numeric',
+    };
+    console.log(myDate.toLocaleString('en-US', dateOptions));
+    // Output: "Oct 26, 2023"
+
+    const timeOptions = {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    };
+    console.log(myDate.toLocaleString('en-US', timeOptions));
+    // Output: "2:30 PM"
+    ```
+
+3.  **Only month name (as in your `getMonthName`):**
+    ```javascript
+    console.log(myDate.toLocaleString('default', { month: 'long' }));
+    // Possible output (if default locale is English-based): "October"
+    console.log(myDate.toLocaleString('es-ES', { month: 'long' }));
+    // Output: "octubre"
+    ```
+
+`toLocaleString()` is very powerful for internationalization (i18n) as it handles many complex formatting rules specific to different languages and regions.
+
+------------------------------------
+--------------------------------------
+# ----------------------[checkout-form.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+```tsx
+'use client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  calculateFutureDate,
+  formatDateTime,
+  timeUntilMidnight,
+} from '@/lib/utils'
+import { ShippingAddressSchema } from '@/lib/validator'
+import { zodResolver } from '@hookform/resolvers/zod'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { SubmitHandler, useForm } from 'react-hook-form'
+import CheckoutFooter from './checkout-footer'
+import { ShippingAddress } from '@/types'
+import useIsMounted from '@/hooks/use-is-mounted'
+import Link from 'next/link'
+import useCartStore from '@/hooks/use-cart-store'
+import ProductPrice from '@/components/shared/product/product-price'
+import {
+  APP_NAME,
+  AVAILABLE_DELIVERY_DATES,
+  AVAILABLE_PAYMENT_METHODS,
+  DEFAULT_PAYMENT_METHOD,
+} from '@/lib/constants'
+
+const shippingAddressDefaultValues =
+  process.env.NODE_ENV === 'development'
+    ? {
+        fullName: 'Basir',
+        street: '1911, 65 Sherbrooke Est',
+        city: 'Montreal',
+        province: 'Quebec',
+        phone: '4181234567',
+        postalCode: 'H2X 1C4',
+        country: 'Canada',
+      }
+    : {
+        fullName: '',
+        street: '',
+        city: '',
+        province: '',
+        phone: '',
+        postalCode: '',
+        country: '',
+      }
+
+const CheckoutForm = () => {
+  const router = useRouter()
+
+  const {
+    cart: {
+      items,
+      itemsPrice,
+      shippingPrice,
+      taxPrice,
+      totalPrice,
+      shippingAddress,
+      deliveryDateIndex,
+      paymentMethod = DEFAULT_PAYMENT_METHOD,
+    },
+    updateItem,
+    removeItem,
+    setShippingAddress,
+    setPaymentMethod,
+    setDeliveryDateIndex,
+  } = useCartStore()
+
+  const isMounted = useIsMounted()
+
+  const shippingAddressForm = useForm<ShippingAddress>({
+    resolver: zodResolver(ShippingAddressSchema),
+    defaultValues: shippingAddress || shippingAddressDefaultValues,
+  })
+// when you submit Shipping Address
+  const onSubmitShippingAddress: SubmitHandler<ShippingAddress> = (values) => {
+    setShippingAddress(values) // update cart state
+    setIsAddressSelected(true) // update UI
+  }
+
+/*
+useEffect ==> explanation after , Guard condition; only runs if mounted and shippingAddress exists.
+*/
+  useEffect(() => {
+    if (!isMounted || !shippingAddress) return
+    shippingAddressForm.setValue('fullName', shippingAddress.fullName)
+    shippingAddressForm.setValue('street', shippingAddress.street)
+    shippingAddressForm.setValue('city', shippingAddress.city)
+    shippingAddressForm.setValue('country', shippingAddress.country)
+    shippingAddressForm.setValue('postalCode', shippingAddress.postalCode)
+    shippingAddressForm.setValue('province', shippingAddress.province)
+    shippingAddressForm.setValue('phone', shippingAddress.phone)
+  }, [items, isMounted, router, shippingAddress, shippingAddressForm])
+
+
+// Local UI State Management (useState):
+  const [isAddressSelected, setIsAddressSelected] = useState<boolean>(false)
+
+  const [isPaymentMethodSelected, setIsPaymentMethodSelected] = useState<boolean>(false)
+
+  const [isDeliveryDateSelected, setIsDeliveryDateSelected] = useState<boolean>(false)
+
+  const handlePlaceOrder = async () => {
+    // TODO: place order
+  }
+
+  // Called when the user clicks the "Use this payment method" button after selecting a payment option.
+  const handleSelectPaymentMethod = () => {
+    setIsAddressSelected(true)
+    setIsPaymentMethodSelected(true)
+  }
+
+  // when selecting a shipping address
+  const handleSelectShippingAddress = () => {
+    shippingAddressForm.handleSubmit(onSubmitShippingAddress)()
+  }
+
+  // 
+  const CheckoutSummary = () => (
+    <Card>
+      <CardContent className='p-4'>
+        {!isAddressSelected && (
+          <div className='border-b mb-4'>
+            <Button
+              className='rounded-full w-full'
+              onClick={handleSelectShippingAddress}
+            >
+              Ship to this address
+            </Button>
+            <p className='text-xs text-center py-2'>
+              Choose a shipping address and payment method in order to calculate
+              shipping, handling, and tax.
+            </p>
+          </div>
+        )}
+        {isAddressSelected && !isPaymentMethodSelected && (
+          <div className=' mb-4'>
+            <Button
+              className='rounded-full w-full'
+              onClick={handleSelectPaymentMethod}
+            >
+              Use this payment method
+            </Button>
+
+            <p className='text-xs text-center py-2'>
+              Choose a payment method to continue checking out. You&apos;ll
+              still have a chance to review and edit your order before it&apos;s
+              final.
+            </p>
+          </div>
+        )}
+        {isPaymentMethodSelected && isAddressSelected && (
+          <div>
+            <Button onClick={handlePlaceOrder} className='rounded-full w-full'>
+              Place Your Order
+            </Button>
+            <p className='text-xs text-center py-2'>
+              By placing your order, you agree to {APP_NAME}&apos;s{' '}
+              <Link href='/page/privacy-policy'>privacy notice</Link> and
+              <Link href='/page/conditions-of-use'> conditions of use</Link>.
+            </p>
+          </div>
+        )}
+
+        <div>
+          <div className='text-lg font-bold'>Order Summary</div>
+          <div className='space-y-2'>
+            <div className='flex justify-between'>
+              <span>Items:</span>
+              <span>
+                <ProductPrice price={itemsPrice} plain />
+              </span>
+            </div>
+            <div className='flex justify-between'>
+              <span>Shipping & Handling:</span>
+              <span>
+                {shippingPrice === undefined ? (
+                  '--'
+                ) : shippingPrice === 0 ? (
+                  'FREE'
+                ) : (
+                  <ProductPrice price={shippingPrice} plain />
+                )}
+              </span>
+            </div>
+            <div className='flex justify-between'>
+              <span> Tax:</span>
+              <span>
+                {taxPrice === undefined ? (
+                  '--'
+                ) : (
+                  <ProductPrice price={taxPrice} plain />
+                )}
+              </span>
+            </div>
+            <div className='flex justify-between  pt-4 font-bold text-lg'>
+              <span> Order Total:</span>
+              <span>
+                <ProductPrice price={totalPrice} plain />
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  return (
+    <main className='max-w-6xl mx-auto highlight-link'>
+      <div className='grid md:grid-cols-4 gap-6'>
+        <div className='md:col-span-3'>
+          {/* shipping address */}
+          <div>
+            {isAddressSelected && shippingAddress ? (
+              <div className='grid grid-cols-1 md:grid-cols-12    my-3  pb-3'>
+                <div className='col-span-5 flex text-lg font-bold '>
+                  <span className='w-8'>1 </span>
+                  <span>Shipping address</span>
+                </div>
+                <div className='col-span-5 '>
+                  <p>
+                    {shippingAddress.fullName} <br />
+                    {shippingAddress.street} <br />
+                    {`${shippingAddress.city}, ${shippingAddress.province}, ${shippingAddress.postalCode}, ${shippingAddress.country}`}
+                  </p>
+                </div>
+                <div className='col-span-2'>
+                  <Button
+                    variant={'outline'}
+                    onClick={() => {
+                      setIsAddressSelected(false)
+                      setIsPaymentMethodSelected(true)
+                      setIsDeliveryDateSelected(true)
+                    }}
+                  >
+                    Change
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className='flex text-primary text-lg font-bold my-2'>
+                  <span className='w-8'>1 </span>
+                  <span>Enter shipping address</span>
+                </div>
+                <Form {...shippingAddressForm}>
+                  <form
+                    method='post'
+                    onSubmit={shippingAddressForm.handleSubmit(
+                      onSubmitShippingAddress
+                    )}
+                    className='space-y-4'
+                  >
+                    <Card className='md:ml-8 my-4'>
+                      <CardContent className='p-4 space-y-2'>
+                        <div className='text-lg font-bold mb-2'>
+                          Your address
+                        </div>
+
+                        <div className='flex flex-col gap-5 md:flex-row'>
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='fullName'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='Enter full name'
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='street'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>Address</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='Enter address'
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className='flex flex-col gap-5 md:flex-row'>
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='city'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input placeholder='Enter city' {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='province'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>Province</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='Enter province'
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='country'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>Country</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='Enter country'
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className='flex flex-col gap-5 md:flex-row'>
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='postalCode'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>Postal Code</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='Enter postal code'
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='phone'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>Phone number</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='Enter phone number'
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                      <CardFooter className='  p-4'>
+                        <Button
+                          type='submit'
+                          className='rounded-full font-bold'
+                        >
+                          Ship to this address
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </form>
+                </Form>
+              </>
+            )}
+          </div>
+          {/* payment method */}
+          <div className='border-y'>
+            {isPaymentMethodSelected && paymentMethod ? (
+              <div className='grid  grid-cols-1 md:grid-cols-12  my-3 pb-3'>
+                <div className='flex text-lg font-bold  col-span-5'>
+                  <span className='w-8'>2 </span>
+                  <span>Payment Method</span>
+                </div>
+                <div className='col-span-5 '>
+                  <p>{paymentMethod}</p>
+                </div>
+                <div className='col-span-2'>
+                  <Button
+                    variant='outline'
+                    onClick={() => {
+                      setIsPaymentMethodSelected(false)
+                      if (paymentMethod) setIsDeliveryDateSelected(true)
+                    }}
+                  >
+                    Change
+                  </Button>
+                </div>
+              </div>
+            ) : isAddressSelected ? (
+              <>
+                <div className='flex text-primary text-lg font-bold my-2'>
+                  <span className='w-8'>2 </span>
+                  <span>Choose a payment method</span>
+                </div>
+                <Card className='md:ml-8 my-4'>
+                  <CardContent className='p-4'>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(value) => setPaymentMethod(value)}
+                    >
+                      {AVAILABLE_PAYMENT_METHODS.map((pm) => (
+                        <div key={pm.name} className='flex items-center py-1 '>
+                          <RadioGroupItem
+                            value={pm.name}
+                            id={`payment-${pm.name}`}
+                          />
+                          <Label
+                            className='font-bold pl-2 cursor-pointer'
+                            htmlFor={`payment-${pm.name}`}
+                          >
+                            {pm.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </CardContent>
+                  <CardFooter className='p-4'>
+                    <Button
+                      onClick={handleSelectPaymentMethod}
+                      className='rounded-full font-bold'
+                    >
+                      Use this payment method
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </>
+            ) : (
+              <div className='flex text-muted-foreground text-lg font-bold my-4 py-3'>
+                <span className='w-8'>2 </span>
+                <span>Choose a payment method</span>
+              </div>
+            )}
+          </div>
+          {/* items and delivery date */}
+          <div>
+            {isDeliveryDateSelected && deliveryDateIndex != undefined ? (
+              <div className='grid  grid-cols-1 md:grid-cols-12  my-3 pb-3'>
+                <div className='flex text-lg font-bold  col-span-5'>
+                  <span className='w-8'>3 </span>
+                  <span>Items and shipping</span>
+                </div>
+                <div className='col-span-5'>
+                  <p>
+                    Delivery date:{' '}
+                    {
+                      formatDateTime(
+                        calculateFutureDate(
+                          AVAILABLE_DELIVERY_DATES[deliveryDateIndex]
+                            .daysToDeliver
+                        )
+                      ).dateOnly
+                    }
+                  </p>
+                  <ul>
+                    {items.map((item, _index) => (
+                      <li key={_index}>
+                        {item.name} x {item.quantity} = {item.price}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className='col-span-2'>
+                  <Button
+                    variant={'outline'}
+                    onClick={() => {
+                      setIsPaymentMethodSelected(true)
+                      setIsDeliveryDateSelected(false)
+                    }}
+                  >
+                    Change
+                  </Button>
+                </div>
+              </div>
+            ) : isPaymentMethodSelected && isAddressSelected ? (
+              <>
+                <div className='flex text-primary  text-lg font-bold my-2'>
+                  <span className='w-8'>3 </span>
+                  <span>Review items and shipping</span>
+                </div>
+                <Card className='md:ml-8'>
+                  <CardContent className='p-4'>
+                    <p className='mb-2'>
+                      <span className='text-lg font-bold text-green-700'>
+                        Arriving{' '}
+                        {
+                          formatDateTime(
+                            calculateFutureDate(
+                              AVAILABLE_DELIVERY_DATES[deliveryDateIndex!]
+                                .daysToDeliver
+                            )
+                          ).dateOnly
+                        }
+                      </span>{' '}
+                      If you order in the next {timeUntilMidnight().hours} hours
+                      and {timeUntilMidnight().minutes} minutes.
+                    </p>
+                    <div className='grid md:grid-cols-2 gap-6'>
+                      <div>
+                        {items.map((item, _index) => (
+                          <div key={_index} className='flex gap-4 py-2'>
+                            <div className='relative w-16 h-16'>
+                              <Image
+                                src={item.image}
+                                alt={item.name}
+                                fill
+                                sizes='20vw'
+                                style={{
+                                  objectFit: 'contain',
+                                }}
+                              />
+                            </div>
+
+                            <div className='flex-1'>
+                              <p className='font-semibold'>
+                                {item.name}, {item.color}, {item.size}
+                              </p>
+                              <p className='font-bold'>
+                                <ProductPrice price={item.price} plain />
+                              </p>
+
+                              <Select
+                                value={item.quantity.toString()}
+                                onValueChange={(value) => {
+                                  if (value === '0') removeItem(item)
+                                  else updateItem(item, Number(value))
+                                }}
+                              >
+                                <SelectTrigger className='w-24'>
+                                  <SelectValue>
+                                    Qty: {item.quantity}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent position='popper'>
+                                  {Array.from({
+                                    length: item.countInStock,
+                                  }).map((_, i) => (
+                                    <SelectItem key={i + 1} value={`${i + 1}`}>
+                                      {i + 1}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem key='delete' value='0'>
+                                    Delete
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <div className=' font-bold'>
+                          <p className='mb-2'> Choose a shipping speed:</p>
+
+                          <ul>
+                            <RadioGroup
+                              value={
+                                AVAILABLE_DELIVERY_DATES[deliveryDateIndex!]
+                                  .name
+                              } //the value here is the name: key in the object , address here is the whole object (in constant.ts)
+                              onValueChange={(value) =>
+                                setDeliveryDateIndex(
+                                  AVAILABLE_DELIVERY_DATES.findIndex(
+                                    (address) => address.name === value
+                                  )!
+                                )
+                              }
+                            >
+                              {AVAILABLE_DELIVERY_DATES.map((dd) => (
+                                <div key={dd.name} className='flex'>
+                                  <RadioGroupItem
+                                    value={dd.name}
+                                    id={`address-${dd.name}`}
+                                  />
+                                  <Label
+                                    className='pl-2 space-y-2 cursor-pointer'
+                                    htmlFor={`address-${dd.name}`}
+                                  >
+                                    <div className='text-green-700 font-semibold'>
+                                      {
+                                        formatDateTime(
+                                          calculateFutureDate(dd.daysToDeliver)
+                                        ).dateOnly
+                                      }
+                                    </div>
+                                    <div>
+                                      {(dd.freeShippingMinPrice > 0 &&
+                                      itemsPrice >= dd.freeShippingMinPrice
+                                        ? 0
+                                        : dd.shippingPrice) === 0 ? (
+                                        'FREE Shipping'
+                                      ) : (
+                                        <ProductPrice
+                                          price={dd.shippingPrice}
+                                          plain
+                                        />
+                                      )}
+                                    </div>
+                                  </Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className='flex text-muted-foreground text-lg font-bold my-4 py-3'>
+                <span className='w-8'>3 </span>
+                <span>Items and shipping</span>
+              </div>
+            )}
+          </div>
+          {isPaymentMethodSelected && isAddressSelected && (
+            <div className='mt-6'>
+              <div className='block md:hidden'>
+                <CheckoutSummary />
+              </div>
+
+              <Card className='hidden md:block '>
+                <CardContent className='p-4 flex flex-col md:flex-row justify-between items-center gap-3'>
+                  <Button onClick={handlePlaceOrder} className='rounded-full'>
+                    Place Your Order
+                  </Button>
+                  <div className='flex-1'>
+                    <p className='font-bold text-lg'>
+                      Order Total: <ProductPrice price={totalPrice} plain />
+                    </p>
+                    <p className='text-xs'>
+                      {' '}
+                      By placing your order, you agree to {APP_NAME}&apos;s <Link href='/page/privacy-policy'>
+                        privacy notice
+                      </Link> and
+                      <Link href='/page/conditions-of-use'>
+                        {' '}
+                        conditions of use
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          <CheckoutFooter />
+        </div>
+        <div className='hidden md:block'>
+          <CheckoutSummary />
+        </div>
+      </div>
+    </main>
+  )
+}
+export default CheckoutForm
+```
+> useEffect :
+  Use: Populates the shippingAddressForm fields with data from the shippingAddress (from Zustand store) when the component mounts or when shippingAddress changes.
+  when used : if (!isMounted || !shippingAddress) return: Guard condition; only runs if mounted and shippingAddress exists.
+
+In summary for your useEffect:
+  1- isMounted: Correct and necessary.
+  2- shippingAddress: Correct and necessary.
+  3- shippingAddressForm (or shippingAddressForm.setValue): Correct and necessary because you're calling its method.
+  4-items: Likely unnecessary for this effect's specific job. It will cause the effect to run more often than needed, performing redundant setValue calls with the same data.
+  5- router: Likely unnecessary for this effect's specific job.
+Removing items and router from the dependency array of this particular useEffect would make it more targeted and prevent it from re-running when those unrelated pieces of state change. Always test thoroughly after changing dependencies to ensure no unintended consequences arise from a misunderstanding of more complex interactions.
+
+> Local UI State Management (useState):
+* [Use]: These manage the visibility and state of different sections of the checkout process (shipping address form/summary, payment method selection, items/delivery review).
+* [Specifically]: They control conditional rendering. For example, if isAddressSelected is false, the shipping address form is shown; if true, the shipping address summary is shown.
+
+> const handleSelectShippingAddress = () => { shippingAddressForm.handleSubmit(onSubmitShippingAddress)() }   standard way!!
+* Use: Called when the user clicks the "Ship to this address" button, within the shipping address form or "confirm address" button.
+* shippingAddressForm.handleSubmit(): This is a function provided by react-hook-form. 
+* (): Calling the result of handleSubmit(...) immediately executes the submission process.
+* If the form data passes validation (defined by ShippingAddressSchema), the onSubmitShippingAddress function will be called with the valid form values.
+
+### Arranging the page code starting from return:
+
+- **Card 1 - Shipping Address** :
+* 1- `if there is a Cached address and it is selected` :
+  - display address info, 
+  - Change Button ==> onClick={() => {
+                      setIsAddressSelected(false)
+                      setIsPaymentMethodSelected(true)
+                      setIsDeliveryDateSelected(true)
+                      
+* 2- `if anyone missing or both` ==> show a form. 
+    onSubmit={shippingAddressForm.handleSubmit( onSubmitShippingAddress )}
+
+----------
+
+-**Card 2 - payment method**:
+* 1. `if there are a payment method cached and a payment method selected`:
+    - diplay it , 
+    - Change Button ==> onClick={() => {
+                      setIsPaymentMethodSelected(false)
+                      if (paymentMethod) setIsDeliveryDateSelected(true)}}
+* 2. `else if anyone missing or both but there is an address selected` :
+   - <span>Choose a payment method</span>.
+   - use <RadioGroup> , map AVAILABLE_PAYMENT_METHODS object to select payment method.
+   - Use this payment method Button ==> onClick={handleSelectPaymentMethod}
+* 3. `else non of the above is there ==> <p> Choose a payment method`:
+   - ?????   
+-----------
+- **Card 3 - items and delivery date**
+* 1. `if there is deliveryDateIndex Cached and delivary date selected` ==>
+  -calculate Delivery date by: formatDateTime(calculateFutureDate(AVAILABLE_DELIVERY_DATES[deliveryDateIndex].daysToDeliver)).dateOnly ==> "formatDateTime().dateOnly"
+  - Change Button ==> onClick={() => {
+                      setIsPaymentMethodSelected(true)
+                      setIsDeliveryDateSelected(false) }}
+* 2. `else if payment method selected and Address selected` ==>
+   - <span>Review items and shipping</span>
+   - calculate Delivery date: AVAILABLE_DELIVERY_DATES[deliveryDateIndex!], why `!` ?
+   - <p> if you order in the next {timeUntilMidnight().hours} hours and minutes.
+   - Map all items, RadioGroup all delivery date names: name: 'Tomorrow', 'Next 3 Days', 'Next 5 Days'.
+* 3. `else` <span> Items and shipping
+-----------
+* **at the end**
+1. `if payment method selected and Address selected` ==> <checkoutSummary> then place order. 
+2. `hidden class` <checkoutSummary> at the end anyway.
+
+* <checkoutSummary> :
+1. `if No address is selected`: Ship to this address Button, onClick={handleSelectShippingAddress}
+2. `if address is selected and No payment method selected`:  Use this payment method Button, onClick={handleSelectPaymentMethod}
+3. `if both selected`:  Place Your Order Button, onClick={handlePlaceOrder}
+4. `Display`: items, shipping cost, Taxes, prices, total price
+
+__________________________________________________________________________________
+### GEMINI Explains:
+
+2.  **Main JSX Structure (`return <main>...</main>`)**:
+    *   **Layout:** Uses a CSS Grid for layout (`grid md:grid-cols-4`).
+    *   **Conditional Rendering for Checkout Steps:** The core logic of the form is to display different sections based on the `isAddressSelected`, `isPaymentMethodSelected`, and `isDeliveryDateSelected` state variables.
+
+    *   **Section 1: Shipping Address (`isAddressSelected` determines view)**
+        *   **If `isAddressSelected` is `true` AND `shippingAddress` exists:**
+            *   Displays a summary of the selected shipping address.
+            *   Provides a "Change" button that sets `setIsAddressSelected(false)` (to show the form again) and also sets `isPaymentMethodSelected` and `isDeliveryDateSelected` to `true` (this logic seems a bit unusual for a simple "change address" and might be specific to a desired flow where changing address re-confirms subsequent steps).
+        *   **If `isAddressSelected` is `false` (or no `shippingAddress`):**
+            *   Displays the title "1 Enter shipping address".
+            *   Renders the `react-hook-form` (`<Form {...shippingAddressForm}>`) for entering shipping details.
+            *   Each input field is wrapped in `FormField` from `shadcn/ui` for integration with `react-hook-form` and styling.
+            *   A "Ship to this address" button inside the form triggers `onSubmitShippingAddress` via the form's `onSubmit`.
+
+    *   **Section 2: Payment Method (`isPaymentMethodSelected` and `isAddressSelected` determine view)**
+        *   **If `isPaymentMethodSelected` is `true` AND `paymentMethod` exists:**
+            *   Displays the selected payment method.
+            *   Provides a "Change" button that sets `setIsPaymentMethodSelected(false)` (to show selection options again) and potentially influences `isDeliveryDateSelected`.
+        *   **If `isAddressSelected` is `true` BUT `isPaymentMethodSelected` is `false`:**
+            *   Displays the title "2 Choose a payment method".
+            *   Renders a `RadioGroup` for selecting a payment method from `AVAILABLE_PAYMENT_METHODS`.
+            *   The `onValueChange` of the `RadioGroup` calls `setPaymentMethod` (from Zustand) to update the global state.
+            *   A "Use this payment method" button calls `handleSelectPaymentMethod`.
+        *   **If `isAddressSelected` is `false`:**
+            *   Shows a muted title "2 Choose a payment method", indicating this step is not yet active.
+
+    *   **Section 3: Items and Delivery Date (`isDeliveryDateSelected`, `isPaymentMethodSelected`, `isAddressSelected` determine view)**
+        *   **If `isDeliveryDateSelected` is `true` AND `deliveryDateIndex` is defined:**
+            *   Displays a summary of the chosen delivery date and lists the cart items.
+            *   Provides a "Change" button.
+        *   **If `isPaymentMethodSelected` and `isAddressSelected` are `true` BUT `isDeliveryDateSelected` is `false`:**
+            *   Displays the title "3 Review items and shipping".
+            *   Shows the estimated arrival date and time until midnight for ordering.
+            *   Lists each item in the cart with:
+                *   Image, name, color, size, price.
+                *   A `Select` component to change the quantity (`updateItem`) or delete the item (`removeItem`).
+            *   Provides a `RadioGroup` to select a shipping speed/delivery date from `AVAILABLE_DELIVERY_DATES`.
+                *   `onValueChange` calls `setDeliveryDateIndex` (from Zustand).
+                *   Dynamically calculates and displays the shipping cost for each option.
+        *   **If preceding steps are not complete:**
+            *   Shows a muted title "3 Items and shipping".
+
+    *   **Final "Place Order" Section & Checkout Summary:**
+        *   If all steps (`isPaymentMethodSelected` and `isAddressSelected`) are complete, a "Place Your Order" button and summary are shown, 
+              potentially duplicated for different screen sizes (one inline, one in the sidebar).
+        *   The `CheckoutSummary` component is rendered in the right column on medium screens and above (`hidden md:block`).
+
+3.  **`CheckoutFooter`**: A separate component, likely containing links or information at the bottom of the checkout page.
+
+**Overall Flow:**
+
+The component guides the user through a multi-step checkout:
+1.  Enter/Confirm Shipping Address.
+2.  Choose Payment Method.
+3.  Review Items and select Shipping/Delivery Speed.
+4.  Place Order.
+
+Each step's completion (tracked by `isAddressSelected`, `isPaymentMethodSelected`, `isDeliveryDateSelected`) unlocks the next section of the UI.
+Data is primarily managed by the `useCartStore` (Zustand), and `react-hook-form` handles the shipping address form.
+
+------------------------------------
+--------------------------------------
+## ----------------------[making google Api key]-------------------[another]
+------------------------------------
+--------------------------------------
+https://console.cloud.google.com/auth/clients?authuser=5&inv=1&invt=AbyhSw&project=ev-template-101&supportedpurview=project
+the dev syntax
+EV template 101 ==> EV template Test
+
+
+------------------------------------
+--------------------------------------
+## ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
 
 ------------------------------------
 --------------------------------------
-> ----------------------[]---------------------------[another]
+## ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+------------------------------------
+--------------------------------------
+## ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+------------------------------------
+--------------------------------------
+## ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+------------------------------------
+--------------------------------------
+## ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
