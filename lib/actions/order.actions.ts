@@ -1,5 +1,11 @@
-import { OrderItem, ShippingAddress } from '@/types'
-import { round2 } from '../utils'
+'use server'
+
+import { Cart, OrderItem, ShippingAddress } from '@/types'
+import { formatError, round2 } from '../utils'
+import { connectToDatabase } from '../db'
+import { auth } from '@/auth'
+import { OrderInputSchema } from '../validator'
+import Order from '../db/models/order.model'
 import { AVAILABLE_DELIVERY_DATES } from '../constants'
 
 export const calcDeliveryDateAndPrice = async ({
@@ -14,16 +20,14 @@ export const calcDeliveryDateAndPrice = async ({
     const itemsPrice = round2(
       items.reduce((acc, item) => acc + item.price * item.quantity, 0)
     )
-    // get index of the AVAILABLE_DELIVERY_DATES to return object of that choice from constant.
+   
     const deliveryDate =
     AVAILABLE_DELIVERY_DATES[
       deliveryDateIndex === undefined
         ? AVAILABLE_DELIVERY_DATES.length - 1
         : deliveryDateIndex
     ]
-    //if shippingAddress=false ==> !shippingAddress=ture, || won't work, immediately all the condition line = true(undefined).
-    //so if you have value for shippingAdress ==> !shippingAddress=false , || will check the other side, !deliveryDate.
-    // shippingAddress and deliveryDate has to be true so the result won't be undefined.
+ 
   const shippingPrice =
     !shippingAddress || !deliveryDate
       ? undefined
@@ -52,20 +56,56 @@ export const calcDeliveryDateAndPrice = async ({
   }
 }
 
-// no use server as all of them are utility function , used on server just cause they are computational
-// use server used for files interacting with DB or auth (secure connection is needed)
-/*
-const shippingPrice = itemsPrice > FREE_SHIPPING_MIN_PRICE ? 0 : 5
-  const taxPrice = round2(itemsPrice * 0.15)
-  
-  const totalPrice = round2(
-    itemsPrice +
-      (shippingPrice ? round2(shippingPrice) : 0) +
-      (taxPrice ? round2(taxPrice) : 0)
-  )
-  return {
-    itemsPrice,
-    shippingPrice,
-    taxPrice,
-    totalPrice
-*/
+// create order
+export const createOrder = async (clientSideCart: Cart) => {
+  try {
+    await connectToDatabase()
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
+    // recalculate price and delivery date on the server
+    const createdOrder = await createOrderFromCart(
+      clientSideCart,
+      session.user.id!
+    )
+    return {
+      success: true,
+      message: 'Order placed successfully',
+      data: { orderId: createdOrder._id.toString() },
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// recalculate price and delivery date on the server
+//? compare ...calcDeliveryDateAndPrice from server and calcDeliveryDateAndPrice from client first. ==> NO NEED, this is enough.
+export const createOrderFromCart = async (
+  clientSideCart: Cart,
+  userId: string
+) => {
+    const cart = {
+      ...clientSideCart,
+      ...calcDeliveryDateAndPrice({
+        items: clientSideCart.items,
+        shippingAddress: clientSideCart.shippingAddress,
+        deliveryDateIndex: clientSideCart.deliveryDateIndex,
+      }),
+    }
+    // parse do validate, conform to a type and  error handling.
+    // here validate with zod then Order.create(order) create a new instant of order model in DB with this data. 
+    const order = OrderInputSchema.parse({
+      user: userId,
+      items: cart.items,
+      shippingAddress: cart.shippingAddress,
+      paymentMethod: cart.paymentMethod,
+      itemsPrice: cart.itemsPrice,
+      shippingPrice: cart.shippingPrice,
+      taxPrice: cart.taxPrice,
+      totalPrice: cart.totalPrice,
+      expectedDeliveryDate: cart.expectedDeliveryDate,
+    })
+
+  return await Order.create(order)
+}
+
+

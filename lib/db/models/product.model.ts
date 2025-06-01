@@ -1,7 +1,7 @@
 import { Document, Model, model, models, Schema } from 'mongoose'
 import { IProductInput } from '@/types'
 
-// To Make the Interface Complete: It ensures that the IProduct interface accurately represents the structure of a product document as it will exist in the database after Mongoose has added its properties. If you didn't define createdAt and updatedAt in the interface, TypeScript would complain if you tried to access those properties on a product document.
+// createdAt: Date and updatedAt: Date, will be added by Mongoose anyway, but defining it here so  TypeScript would complain if you tried to access those properties on a product document.
 export interface IProduct extends Document, IProductInput {
   _id: string
   createdAt: Date
