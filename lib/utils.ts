@@ -136,3 +136,7 @@ export const formatDateTime = (dateString: Date) => {
     timeOnly: formattedTime,
   }
 }
+// return the last 6 digits of the id and add .. before it = ..45sd5s
+export function formatId(id: string) {
+  return `..${id.substring(id.length - 6)}`
+}

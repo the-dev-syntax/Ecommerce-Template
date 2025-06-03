@@ -4961,21 +4961,56 @@ export const createOrderFromCart = async (
 ## ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
+https://developer.paypal.com/dashboard/applications/sandbox
+API Credentials
+change the URL in env.local to the real website URL
+
+npm i resend @react-email/components @paypal/react-paypal-js --legacy-peer-deps npm i -D react-email --legacy-peer-deps npx shadcn@latest add badge table
+
+* this command ==> broke my app
+1. removed all uncommited changes from source control ==> hover over (changes) ==> the choose discard all changes
+2. rm package-lock.json  ==> to start fresh
+3. rm -rf node_modules  ==> to remove all the installed packages 
+4. npm install ==> to reinstall node_modules and package-lock.json
 
 
+npm install resend   done
+npm install @react-email/components -E   done
+npm install -D react-email   last one done
+npm install @paypal/react-paypal-js    done
+npx shadcn@latest add badge      cause react 19 ==> legacy peers chosen
+npx shadcn@latest add table       done as is latest
+
+
+// place holder for image and others ==> check website.
+https://placehold.co/
 ------------------------------------
 --------------------------------------
-## ----------------------[]---------------------------[another]
+## ----------------------[order.action.ts]---------------------------[another]
 ------------------------------------
 --------------------------------------
+```ts
+const order = await Order.findById(orderId).populate('user', 'email')
 
-
+```
+> .populate() does:
+1. 'user': This is the first argument and specifies the path (field name) in the Order document that you want to populate. In this case, it's the user field.
+2. Mongoose looks at the user field in the retrieved order document. It sees that this field contains an ObjectId and that its ref option points to the 'User' model.
+3. It then takes that ObjectId and performs another query on the "users" collection to find the user document with that specific _id.
+4. 'email': This is the second (optional) argument to populate(). It's a space-separated string of field names that you want to select from the populated User document.
+  - Instead of fetching the entire user document (which might contain many fields like password hashes, addresses, etc.), you're telling Mongoose, "When you fetch the user, I only want their email field (and by default, _id is always included unless explicitly excluded)."
+5. Once the user document (or just its selected fields) is fetched, Mongoose replaces the ObjectId in the order.user field with the actual user document (or the partial user document containing only the selected fields).
 ------------------------------------
 --------------------------------------
-## ----------------------[]---------------------------[another]
+## ----------------------[app/checkout/[id]/payment-form.tsx]---------------------------[another]
 ------------------------------------
 --------------------------------------
+> const handleCreatePayPalOrder = async () => { const res = await createPayPalOrder(order._id) ...
+> const handleApprovePayPalOrder = async (data: { orderID: string }) => { const res = await approvePayPalOrder(order._id, data)
 
+Both when clicking <PayPalButtons> activated 
+1. it calls [createPayPalOrder(order._id)] and [approvePayPalOrder(order._id,data)] from order.action.ts (DB connect)
+2. which calls [paypal.createOrder(order.totalPrice)] and [paypal.capturePayment(data.orderID)] from lib/paypal.ts
 
 ------------------------------------
 --------------------------------------
