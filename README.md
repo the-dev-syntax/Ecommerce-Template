@@ -5012,6 +5012,11 @@ Both when clicking <PayPalButtons> activated
 1. it calls [createPayPalOrder(order._id)] and [approvePayPalOrder(order._id,data)] from order.action.ts (DB connect)
 2. which calls [paypal.createOrder(order.totalPrice)] and [paypal.capturePayment(data.orderID)] from lib/paypal.ts
 
+
+testing paypal is hard: test in other browsers for clean cookies and no cookies 
+you have to make two accounts one for the seller(business) and one for the buyer(personal) 
+use the buyer to log in the account and password at the time of the buying from the app
+while seller account client ID and APP secret to be at env.local 
 ------------------------------------
 --------------------------------------
 ## ----------------------[]---------------------------[another]
