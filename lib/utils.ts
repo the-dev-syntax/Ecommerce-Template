@@ -79,7 +79,7 @@ export function calculateFutureDate(days: number) {
   return currentDate
 }
 export function getMonthName(yearAndMonth: string) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  
   const [year, monthNumber] = yearAndMonth.split('-')
   const date = new Date()
   console.log(year)
