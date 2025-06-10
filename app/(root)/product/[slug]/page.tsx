@@ -8,10 +8,15 @@ import SelectVariant from '@/components/shared/product/select-variant'
 import ProductPrice from '@/components/shared/product/product-price'
 import ProductGallery from '@/components/shared/product/product-gallery'
 import ProductSlider from '@/components/shared/product/product-slider'
-import Rating from '@/components/shared/product/rating'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import AddToBrowsingHistory from '@/components/shared/product/add-to-browsing-history'
 import AddToCart from '@/components/shared/product/add-to-cart'
+// import Rating from '@/components/shared/product/rating'
+
+import ReviewList from './review-list'
+import { auth } from '@/auth'
+import RatingSummary from '@/components/shared/product/rating-summary'
+
 
 
 export async function generateMetadata(props: {
@@ -32,6 +37,9 @@ export default async function ProductDetails(props: {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ page: string; color: string; size: string }>
 }) {
+
+
+  
   const searchParams = await props.searchParams
 
   const { page, color, size } = searchParams
@@ -47,6 +55,9 @@ export default async function ProductDetails(props: {
     productId: product._id,
     page: Number(page || '1'),
   })
+
+  const session = await auth()
+  
   //used in order: AddToBrowsingHistory, ProductGallery, Rating, Separator, ProductPrice, SelectVariant, Separator, Card, addToCart
   return (
     <div>
@@ -64,9 +75,12 @@ export default async function ProductDetails(props: {
               </p>
               <h1 className='font-bold text-lg lg:text-xl'>{product.name}</h1>
               <div className='flex items-center gap-2'>
-                <span>{product.avgRating.toFixed(1)}</span>
-                <Rating rating={product.avgRating} />
-                <span>{product.numReviews} ratings</span>
+                <RatingSummary
+                  avgRating={product.avgRating}
+                  numReviews={product.numReviews}
+                  asPopover
+                  ratingDistribution={product.ratingDistribution}
+                />
               </div>
               <Separator />
               <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
@@ -138,6 +152,13 @@ export default async function ProductDetails(props: {
       </section>
 
       <section className='mt-10'>
+        <h2 className='h2-bold mb-2' id='reviews'>
+          Customer Reviews
+        </h2>
+        <ReviewList product={product} userId={session?.user.id} />
+      </section>
+
+      <section className='mt-10'>
         <ProductSlider
           products={relatedProducts.data}
           title={`Best Sellers in ${product.category}`}
@@ -155,4 +176,13 @@ export default async function ProductDetails(props: {
  and searchParams: which is an object which have page, color and size inside it.
 * example:
  props = {slug: 'product-slug', searchParams: {page: '1', color: 'red', size: 'M'}} and all inside props are promises.
+
+
+ <h1 className='font-bold text-lg lg:text-xl'>{product.name}</h1>
+              <div className='flex items-center gap-2'>
+                <span>{product.avgRating.toFixed(1)}</span>
+                <Rating rating={product.avgRating} />
+                <span>{product.numReviews} ratings</span>
+              </div>
+              <Separator />
 */
