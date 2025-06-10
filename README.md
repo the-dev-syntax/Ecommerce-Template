@@ -5617,6 +5617,76 @@ The `x` variable is a **counter that is local to each product**.
     2.  As it generates reviews for Product A, `x++` increments the counter for every single review created (`1`, `2`, `3`...). This counter drives the cycling logic for picking review text and users.
     3.  When the script finishes with Product A and moves to the next product ("Product B"), the loop repeats, and `let x = 0` is executed again. The counter is reset.
     4.  This ensures that the user and review text assignment for Product B also starts from the beginning (user 1, first template), making the data seeding process predictable and consistent across all products.
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[22-create-order-history-page]---------------------------[another]
+------------------------------------
+--------------------------------------
+npm i query-string  without --legacy-peer--
+
+```ts
+import qs from 'query-string' // stand for queryString
+
+export function formUrlQuery({
+  params,
+  key,
+  value,
+}: {
+  params: string   // category=laptops
+  key: string      // key: "sort"
+  value: string | null   // value: "price-desc"
+}) {
+  const currentUrl = qs.parse(params) // currentUrl= {category: laptops}
+
+  currentUrl[key] = value   
+  // give key inside {} a new value,(if key doesn't exist , added it) , currentUrl= { category: 'laptops',  sort: 'price-desc' }
+
+  return qs.stringifyUrl(
+    {
+      url: window.location.pathname, //    /products or /search
+      query: currentUrl,
+    },
+    { skipNull: true }   // This is a crucial option. If any value in the currentUrl object is null, this option tells the function to completely remove that key-value pair from the final URL string.
+  )
+}
+// return will be "/products?category=laptops&sort=price-desc"
+```
+
+### Full Example Walkthrough
+
+Let's see two common use cases. Assume `window.location.pathname` is `"/search"`.
+
+#### Scenario 1: Adding a new filter
+
+```javascript
+formUrlQuery({
+  params: 'category=electronics', // current query string
+  key: 'brand',                   // new key to add
+  value: 'samsung'                // new value
+})
+```
+1.  **`qs.parse`**: `params` becomes `{ category: 'electronics' }`.
+2.  **`currentUrl[key] = value`**: The object becomes `{ category: 'electronics', brand: 'samsung' }`.
+3.  **`qs.stringifyUrl`**: Combines `/search` with the object.
+4.  **Return Value:** `"/search?category=electronics&brand=samsung"`
+
+#### Scenario 2: Removing a filter
+
+```javascript
+formUrlQuery({
+  params: 'category=electronics&brand=samsung', // current query string
+  key: 'brand',                               // key to remove
+  value: null                                 // value is null
+})
+```
+1.  **`qs.parse`**: `params` becomes `{ category: 'electronics', brand: 'samsung' }`.
+2.  **`currentUrl[key] = value`**: The object becomes `{ category: 'electronics', brand: null }`.
+3.  **`qs.stringifyUrl`**: Combines `/search` with the object. The `{ skipNull: true }` option sees `brand: null` and **discards it**.
+4.  **Return Value:** `"/search?category=electronics"`
+
 ------------------------------------
 --------------------------------------
 # ----------------------[]---------------------------[another]
@@ -5631,6 +5701,85 @@ The `x` variable is a **counter that is local to each product**.
 # ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
 
 
 

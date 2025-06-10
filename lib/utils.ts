@@ -3,6 +3,7 @@ import { clsx, type ClassValue } from 'clsx'
 // import { collectMeta } from 'next/dist/build/utils'
 // import { cloneElement } from 'react'
 import { twMerge } from 'tailwind-merge'
+import qs from 'query-string'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -139,4 +140,27 @@ export const formatDateTime = (dateString: Date) => {
 // return the last 6 digits of the id and add .. before it = ..45sd5s
 export function formatId(id: string) {
   return `..${id.substring(id.length - 6)}`
+}
+
+
+export function formUrlQuery({
+  params,
+  key,
+  value,
+}: {
+  params: string
+  key: string
+  value: string | null
+}) {
+  const currentUrl = qs.parse(params)
+
+  currentUrl[key] = value
+
+  return qs.stringifyUrl(
+    {
+      url: window.location.pathname,
+      query: currentUrl,
+    },
+    { skipNull: true }
+  )
 }
