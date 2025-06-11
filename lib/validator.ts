@@ -191,4 +191,6 @@ export const UserSignUpSchema = UserSignInSchema.extend({
   path: ['confirmPassword'],
 })
 
-
+export const UserNameSchema = z.object({
+  name: UserName,
+})

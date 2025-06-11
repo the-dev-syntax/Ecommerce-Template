@@ -1,7 +1,7 @@
 'use server'
 import bcrypt from 'bcryptjs'
-import { signIn, signOut } from '@/auth'
-import { IUserSignIn, IUserSignUp } from '@/types'
+import { auth, signIn, signOut } from '@/auth'
+import { IUserName, IUserSignIn, IUserSignUp } from '@/types'
 import { UserSignUpSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User from '../db/models/user.model'
@@ -44,6 +44,29 @@ export async function registerUser(userSignUp: IUserSignUp) {
     return { success: false, error: formatError(error) }
   }
 }
+
+// UPDATE
+export async function updateUserName(user: IUserName) {
+  try {
+    await connectToDatabase()
+    const session = await auth()
+
+    const currentUser = await User.findById(session?.user?.id)
+    if (!currentUser) throw new Error('User not found')
+
+    currentUser.name = user.name
+    const updatedUser = await currentUser.save()
+
+    return {
+      success: true,
+      message: 'User updated successfully',
+      data: JSON.parse(JSON.stringify(updatedUser)), // return updated user to the frontend
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
 /*
 ? zod validated the data client side , now validated again with zod server side
 ?  before sending it to be authenticated by DB

@@ -44,9 +44,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         await connectToDatabase()
+        console.log('from auth', credentials)
         if (credentials == null) return null
 
         const user = await User.findOne({ email: credentials.email })
+
+        console.log('USER FOUND:', user)
 
         if (user && user.password) {
           const isMatch = await bcrypt.compare(
