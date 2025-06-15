@@ -14,6 +14,7 @@ export const formatNumberWithDecimal = (num: number): string => {
   const [int, decimal] = num.toString().split('.')
   return decimal ? `${int}.${decimal.padEnd(2, '0')}` : int
 }
+
 // PROMPT: [ChatGTP] create toSlug ts arrow function that convert text to lowercase, remove non-word, non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens
 // PROMPT: [ChatGTP] last line only :non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens  - non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens.- Also replace repeated hyphens in middle with single hyphen
 export const toSlug = (text: string): string =>
@@ -31,11 +32,13 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
   style: 'currency',
   minimumFractionDigits: 2,
 })
+
 export function formatCurrency(amount: number) {
   return CURRENCY_FORMATTER.format(amount)
 }
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US')
+
 export function formatNumber(number: number) {
   return NUMBER_FORMATTER.format(number)
 }
@@ -79,6 +82,7 @@ export function calculateFutureDate(days: number) {
   currentDate.setDate(currentDate.getDate() + days)
   return currentDate
 }
+
 export function getMonthName(yearAndMonth: string) {
   
   const [year, monthNumber] = yearAndMonth.split('-')
@@ -95,6 +99,7 @@ export function calculatePastDate(days: number) {
   currentDate.setDate(currentDate.getDate() - days)
   return currentDate
 }
+
 export function timeUntilMidnight(): { hours: number; minutes: number } {
   const now = new Date()
   const midnight = new Date()
@@ -163,4 +168,39 @@ export function formUrlQuery({
     },
     { skipNull: true }
   )
+}
+
+export const getFilterUrl = ({
+  params,
+  category,
+  tag,
+  sort,
+  price,
+  rating,
+  page,
+}: {
+  params: {
+    q?: string  // query:term typed into a search bar.
+    category?: string
+    tag?: string
+    sort?: string
+    price?: string
+    rating?: string
+    page?: string
+  }
+  category?: string
+  tag?: string
+  sort?: string
+  price?: string
+  rating?: string
+  page?: string
+}) => {
+  const newParams = { ...params }
+  if (category) newParams.category = category
+  if (tag) newParams.tag = toSlug(tag)
+  if (sort) newParams.sort = sort
+  if (price) newParams.price = price
+  if (rating) newParams.rating = rating
+  if (page) newParams.page = page
+  return `/search?${new URLSearchParams(newParams).toString()}`
 }

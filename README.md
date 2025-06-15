@@ -75,7 +75,16 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 16. add editing Password ,Email and adresses implemented in account page manager. ???
 
-17. 
+17. after adding item to cart remove redirect to checkout page.
+
+18. components/shared/collapsible-on-mobile.tsx ==>only mobile and desktop used (there is others check!!!) (new page code available).
+
+19. possible bug here in product.actions.ts > getAllProducts( > const products = await Product.find({ have isPublished:true
+    but const countProducts = await Product.countDocuments({   does not have isPublished at all.
+
+20. sortOrder array in search/page.tsx need to be in constant.ts ??!! MAYBE.
+
+
 
 ---------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------ in header/index.tsx --------------------------------------------------------
@@ -4878,6 +4887,91 @@ The component guides the user through a multi-step checkout:
 Each step's completion (tracked by `isAddressSelected`, `isPaymentMethodSelected`, `isDeliveryDateSelected`) unlocks the next section of the UI.
 Data is primarily managed by the `useCartStore` (Zustand), and `react-hook-form` handles the shipping address form.
 
+
+> Explaining .map((_, i) => ...)-------------------------------------------
+
+
+Of course! Let's break down this piece of code. This is a very common and elegant pattern in modern JavaScript and React.
+
+### Overall Purpose
+
+This code dynamically generates the options for a dropdown menu (`<SelectContent>`), which is likely used as a **quantity selector** in a shopping cart or on a product page.
+
+It creates a list of selectable numbers from **1** up to the number of items available in stock (`item.countInStock`). It also adds a special "Delete" option at the end.
+
+If `item.countInStock` is `5`, the dropdown will look like this:
+
+*   1
+*   2
+*   3
+*   4
+*   5
+*   Delete
+
+---
+
+### Code Breakdown
+
+Let's go through it piece by piece.
+
+#### 1. `<SelectContent position='popper'>`
+This is the container for all the dropdown options. It's likely a component from a UI library like **Shadcn/UI** or **Radix UI**. The `position='popper'` prop tells the library how to position the dropdown relative to the trigger button (e.g., make it "pop out" and handle screen edges gracefully).
+
+#### 2. `Array.from({ length: item.countInStock })`
+This is the clever part for creating the list of numbers.
+*   `{ length: item.countInStock }` is an "array-like" object. It's an object that has a `length` property, which is all `Array.from` needs to work.
+*   `Array.from(...)` creates a new, real JavaScript array from an array-like object.
+*   If `item.countInStock` is `3`, this line creates an array of 3 empty slots: `[undefined, undefined, undefined]`. We don't care about the *values* in the array yet, only its *length*.
+
+#### 3. `.map((_, i) => ...)`
+This is where we transform our empty array into a list of React components.
+*   The `.map()` method is a standard JavaScript array function. It executes a callback function for every element in the array and builds a new array from the results.
+*   The callback function for `.map()` receives two main arguments:
+    1.  The **element** itself (the value at the current position).
+    2.  The **index** of that element (its position, starting from 0).
+*   In our case, the **element** is `undefined` (from `Array.from`), so we don't need it. The **index** (`i`) is what we care about, as it will be `0`, `1`, `2`, etc.
+
+#### 4. `<SelectItem key={i + 1} value={`${i + 1}`}> {i + 1} </SelectItem>`
+This is the JSX that is returned for each item in the array. For each iteration of the map, it creates one dropdown option.
+*   `key={i + 1}`: This is a **crucial** prop for React. When rendering a list of items, React needs a unique and stable `key` for each item to efficiently update the UI. Since our index `i` is unique (`0, 1, 2...`), `i + 1` (`1, 2, 3...`) is a perfect key.
+*   `value={`${i + 1}``: This is the actual value that will be submitted or used by the parent component when this option is selected. We use `i + 1` to show quantities `1, 2, 3` instead of `0, 1, 2`. The `` `${...}` `` ensures the value is a string, which is common for form inputs.
+*   `{i + 1}`: This is the content that the user actually sees inside the dropdown menu (the visible text).
+
+#### 5. The "Delete" Option
+```jsx
+<SelectItem key='delete' value='0'>
+  Delete
+</SelectItem>
+```
+This is a static option added after the dynamic list of numbers.
+*   `key='delete'` provides a unique key for this special item.
+*   `value='0'` is a conventional choice. When the user selects "Delete", the value of the selector will become "0", which the application logic can then interpret as a command to remove the item from the cart.
+
+---
+
+### The Benefit of the Underscore `_`
+
+This directly answers your specific question.
+
+In JavaScript, when a function provides arguments that you don't need to use, it is a widely adopted **convention** to name that argument with an underscore (`_`).
+
+**The `.map()` callback signature is `(element, index) => { ... }`.**
+
+1.  **It Signals Intent:** Using `_` immediately tells anyone reading the code (including your future self): "I acknowledge that this argument exists, but I am intentionally not using it in my function."
+
+2.  **It Improves Readability:** If you wrote `(value, i) => ...` but never used `value`, it might look like a mistake or an unfinished thought. Using `_` makes it clear that ignoring the first argument is deliberate.
+
+3.  **It Satisfies Linters:** Many code quality tools (like ESLint) are configured to warn you about "unused variables." This helps catch bugs where you meant to use a variable but forgot. By naming the unused variable `_`, you are often telling the linter, "This is not a mistake, please don't flag it." This keeps your code free of unnecessary warnings.
+
+In this specific code:
+```javascript
+.map((_, i) => ... )
+```
+*   `_` is a placeholder for the `element` argument (which is `undefined` and useless to us).
+*   `i` is the variable name for the `index` argument, which we absolutely need to generate our numbers (`i + 1`).
+
+You could have written `(element, i) => ...`, but using `_` is cleaner and more conventional.
+
 ------------------------------------
 --------------------------------------
 # ----------------------[making google Api key]-------------------[another]
@@ -5321,8 +5415,6 @@ After the pipeline finishes, the `result` variable will be an array that looks s
 
 This tells you that the product has 120 five-star reviews, 85 four-star reviews, and so on.
 
-
-
 ------------------------------------
 --------------------------------------
 # ----------------------[review.action.ts]---------------------------[another]
@@ -5625,8 +5717,8 @@ The `x` variable is a **counter that is local to each product**.
 
 ------------------------------------
 --------------------------------------
-# ----------------------[22-create-order-history-page]---------------------------[another]
-------------------------------------
+# ----------------------[22-create-order-history-page]-----[utils.ts]----------------------[another]
+-----------------------------------
 --------------------------------------
 npm i query-string  without --legacy-peer--
 
@@ -5808,6 +5900,1313 @@ Once the server has sent its response back to the browser, it forgets everything
 
 ------------------------------------
 --------------------------------------
+# -------------toSlug---------[lib/utils.ts]---------------------------[another]
+------------------------------------
+--------------------------------------
+```ts
+export const toSlug = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^\w\s-]+/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-')
+```
+
+> This function converts a string into a URL-friendly "slug". Here are three examples:
+
+1.  **Handles basic capitalization and spaces.**
+    *   **Input:** `"Hello World"`
+    *   **Returns:** `"hello-world"`
+
+2.  **Removes special characters and trims excess spaces/hyphens from the ends.**
+    *   **Input:** `"  My Awesome Post!! (2023)  "`
+    *   **Returns:** `"my-awesome-post-2023"`
+
+3.  **Collapses multiple consecutive hyphens or spaces into a single hyphen.**
+    *   **Input:** `"Another   Post---With---Extra-Separators"`
+    *   **Returns:** `"another-post-with-extra-separators"`
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ------------getFilterUrl----------[lib/utils.ts]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+```ts
+export const getFilterUrl = ({
+  params,
+  category,
+  tag,
+  sort,
+  price,
+  rating,
+  page,
+}: {
+  params: {
+    q?: string  // query:term typed into a search bar.
+    category?: string
+    tag?: string
+    sort?: string
+    price?: string
+    rating?: string
+    page?: string
+  }
+  category?: string
+  tag?: string
+  sort?: string
+  price?: string
+  rating?: string
+  page?: string
+}) => {
+  const newParams = { ...params }
+  if (category) newParams.category = category
+  if (tag) newParams.tag = toSlug(tag)
+  if (sort) newParams.sort = sort
+  if (price) newParams.price = price
+  if (rating) newParams.rating = rating
+  if (page) newParams.page = page
+  return `/search?${new URLSearchParams(newParams).toString()}`
+}
+
+```
+
+
+Excellent questions! This function is a classic example of a URL-building utility in a web application. Let's break it down.
+
+---
+
+> 1. What is `q`?
+
+In web development, `q` is a widely used convention that stands for **"query"**.
+
+It represents the main search term that a user would type into a search bar. For example, if you go to Google and search for "laptops", the URL will contain `q=laptops`. This function preserves the `q` parameter from the existing `params` but doesn't have a way to set it directly.
+
+---
+
+> 2. Does `getFilterUrl()` expect an object even if its an empty object?
+
+**Yes, it absolutely expects an object.** The function signature `({ params, ... })` uses object destructuring.
+
+*   **Calling with an empty object `getFilterUrl({})` works.**
+    *   `params` will be `undefined`.
+    *   `const newParams = { ...params }` will become `const newParams = {}`.
+    *   All the `if` conditions will be false.
+    *   The function will return `"/search?"`.
+
+*   **However, if you call it with nothing `getFilterUrl()`...**
+    *   You are trying to destructure `undefined`, which will cause a crash.
+    *   The error would be: `TypeError: Cannot destructure property 'params' of 'undefined' as it is undefined.`
+
+---
+
+> 3. How does `new URLSearchParams()` work?
+
+`URLSearchParams` is a built-in browser API that makes it easy to work with the query string part of a URL (i.e., everything after the `?`). When you pass an object to its constructor, it converts that object into a URL-encoded query string.
+
+Here are 3 examples:
+
+1.  **Basic Object:** It converts key-value pairs into `key=value` format, joined by `&`. It also correctly encodes spaces.
+    *   **Input:** `new URLSearchParams({ sort: 'price-asc', q: 'blue shoes' })`
+    *   **Returns (from `.toString()`):** `"sort=price-asc&q=blue+shoes"`
+
+2.  **Handles Special Characters:** It automatically encodes special characters to be URL-safe.
+    *   **Input:** `new URLSearchParams({ category: 'books&media', tag: 'sci-fi/fantasy' })`
+    *   **Returns (from `.toString()`):** `"category=books%26media&tag=sci-fi%2Ffantasy"`
+
+3.  **Ignores `undefined` values:** This is very useful. If a key's value is `undefined`, the key-value pair is completely omitted from the final string.
+    *   **Input:** `new URLSearchParams({ page: '2', category: undefined, sort: 'name' })`
+    *   **Returns (from `.toString()`):** `"page=2&sort=name"` (the `category` key is gone)
+
+---
+
+> 4. What is this function used for and how is it used?
+
+This is a summary of its purpose, input, and output.
+
+*   **What it's used for:**
+    The `getFilterUrl` function is a **URL builder for a search or product listing page**. Its purpose is to generate the correct URL when a user clicks on a new filter (like a category, tag, or sort option) while preserving all the other active filters.
+
+*   **Where it should be called from:**
+    It should be called from front-end components (e.g., in React, Vue, or vanilla JS) in response to user actions. For example:
+    *   Inside the `onClick` handler of a category link.
+    *   Inside the `onChange` handler for a "Sort by" dropdown menu.
+    *   Inside the `onClick` handler for a pagination button ("Next Page").
+
+*   **What it expects to be passed (Input):**
+    It expects a single object with two main parts:
+    1.  `params`: An object representing the **current active filters**, usually derived from the current page's URL.
+    2.  A new filter to apply: A new value for `category`, `tag`, `sort`, `price`, `rating`, or `page`.
+
+*   **What it returns (Output):**
+    It returns a **URL string** that can be used in an `<a>` tag's `href` attribute or with a routing library to navigate the user to the updated search results page.
+
+**Example Scenario:**
+
+Imagine you are on the URL `/search?q=phone&sort=rating`.
+Your current `params` object is `{ q: 'phone', sort: 'rating' }`.
+
+Now, you click on a button to change the sort order to "price". You would call the function like this:
+
+```javascript
+// currentParams are the filters from the current URL
+const currentParams = { q: 'phone', sort: 'rating' };
+
+// Call the function to get the URL for the "sort by price" link
+const newUrl = getFilterUrl({
+  params: currentParams, // Preserve existing filters
+  sort: 'price-asc'      // Apply the new filter
+});
+
+// The function returns: "/search?q=phone&sort=price-asc"
+console.log(newUrl);
+```
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------refactoring the code------------[collapsible-on-mobile.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+Excellent component! It's a very common and useful pattern for responsive design. Let's analyze your questions.
+
+### 1. Is limiting to only `mobile` and `desktop` enough?
+
+It's a common approach, but it has a significant gap: **tablets**.
+
+How a tablet should behave is a design decision.
+*   Should it act like a desktop (filters always visible)?
+*   Or should it act like a mobile device (filters are collapsible)?
+
+Right now, if your `useDeviceType` hook returned `'tablet'`, your `useEffect` would do nothing, and the `open` state would remain at its initial `false` value. This is likely not the desired behavior.
+
+**Recommendation:** Explicitly handle tablets. Usually, tablets have enough screen space to be treated like desktops.
+
+```javascript
+// In the useEffect
+if (deviceType === 'mobile') {
+  setOpen(false);
+} else if (deviceType === 'desktop' || deviceType === 'tablet') { // Handle tablet
+  setOpen(true);
+}
+```
+
+### 2. What is the benefit of adding `searchParams` as a dependency in `useEffect`?
+
+This is a subtle but very important feature for **improving the user experience on mobile**.
+
+Here’s the flow:
+1.  A user is on a mobile device. The collapsible filter section is open (`open` is `true`).
+2.  The user clicks a filter (e.g., a category or a price range) inside the `children`.
+3.  This click navigates to a new URL, which causes the `searchParams` object to change.
+4.  Because `searchParams` is a dependency, the `useEffect` hook re-runs.
+5.  Inside the hook, the condition `if (deviceType === 'mobile')` is met, and `setOpen(false)` is called.
+
+**The benefit:** The component **automatically closes the filter menu** after the user makes a selection. This immediately reveals the updated search results behind the menu without requiring the user to manually close it first. It's a small detail that makes the interface feel much smoother.
+
+### 3. Is this code efficient enough or should it be modified?
+
+The code is very efficient in terms of performance—there are no heavy computations. However, it can be made more robust, readable, and maintainable.
+
+Here are a few suggested modifications:
+
+**A. Simplify the `useEffect` logic:** The logic can be made more declarative. Instead of setting state inside `if/else`, determine the desired state first.
+
+**B. Add a non-collapsible title for desktop:** On desktop, the component is always open, but the `title` is never shown because the `<Button>` trigger is not rendered. It would be better to display the title as a simple heading.
+
+**C. Combine improvements:** Let's apply the suggestions from all points.
+
+---
+
+### Refactored Code Example
+
+This version handles tablets, simplifies the `useEffect`, and displays the title on desktop for better UI consistency.
+
+```jsx
+// Give a clear name for the props
+interface CollapsibleOnMobileProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+export default function CollapsibleOnMobile({
+  title,
+  children,
+}: CollapsibleOnMobileProps) {
+  const searchParams = useSearchParams();
+  const deviceType = useDeviceType();
+  const [open, setOpen] = useState(false);
+
+  // Modification B: Determine if the device is mobile.
+  // This makes the render logic cleaner.
+  const isMobile = deviceType === 'mobile';
+
+  useEffect(() => {
+    // Modification A: More declarative logic.
+    // The section should be open if the device is NOT mobile.
+    const shouldBeOpen = deviceType === 'desktop' || deviceType === 'tablet';
+    setOpen(shouldBeOpen);
+  }, [deviceType, searchParams]); // searchParams is kept for the UX benefit
+
+  if (deviceType === 'unknown') {
+    return null; // Good practice: avoid flicker on initial render , also on the server deviceType always is 'unknown'
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      {/* Modification C: Show a button on mobile, but a simple title on desktop/tablet */}
+      {isMobile ? (
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full">
+            {title}
+          </Button>
+        </CollapsibleTrigger>
+      ) : (
+        <h3 className="text-lg font-semibold">{title}</h3>
+      )}
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+```
+
+This refactored version is more robust and provides a better, more consistent user experience across all device types.
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[components/shared/product/product-sort-selector.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+```ts
+type ====> sortOrders: { value: string; name: string }[] 
+// value*: is keyID    also      value={s.value*}     and      s.value* === sort.
+//  name for display. 
+return (
+    <Select
+      onValueChange={(v) => {
+        router.push(getFilterUrl({ params, sort: v })) // params could be {empty}, sort= passed as props
+      }}
+      value={sort}
+    >
+      <SelectTrigger>
+        <SelectValue>
+          Sort By: {sortOrders.find((s) => s.value === sort)!.name}  
+          // find in sortOrders: { value: string; name: string }[] an obj with its value=sort, then get me its name.         
+        </SelectValue>
+      </SelectTrigger>
+
+      <SelectContent>
+        {sortOrders.map((s) => (
+          <SelectItem key={s.value} value={s.value}>
+            {s.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
+```
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[product.actions.ts]---------------------------[another]
+------------------------------------
+--------------------------------------
+```ts
+'use server'
+
+import { connectToDatabase } from '@/lib/db'
+import Product, { IProduct } from '@/lib/db/models/product.model'
+import { PAGE_SIZE } from '../constants'
+
+//* GET ALL CATEGORIES
+export async function getAllCategories() {
+  await connectToDatabase()
+  const categories = await Product.find({ isPublished: true }).distinct(
+    'category'
+  )
+  return categories
+}
+
+//* GET PRODUCTS FOR CARD
+export async function getProductsForCard({
+  tag,
+  limit = 4,
+}: {
+  tag: string
+  limit?: number
+}) {
+  await connectToDatabase()
+  const products = await Product.find(
+    { tags: { $in: [tag] }, isPublished: true },
+    {
+      name: 1,
+      href: { $concat: ['/product/', '$slug'] },
+      image: { $arrayElemAt: ['$images', 0] },
+    }
+  )
+    .sort({ createdAt: 'desc' })
+    .limit(limit)
+  return JSON.parse(JSON.stringify(products)) as {
+    name: string
+    href: string
+    image: string
+  }[]
+}
+
+//* GET PRODUCTS BY TAG
+export async function getProductsByTag({
+  tag,
+  limit = 10,
+}: {
+  tag: string
+  limit?: number
+}) {
+  await connectToDatabase()
+  const products = await Product.find({
+    tags: { $in: [tag] },
+    isPublished: true,
+  })
+    .sort({ createdAt: 'desc' })
+    .limit(limit)
+  return JSON.parse(JSON.stringify(products)) as IProduct[]
+}
+
+// GET ONE PRODUCT BY SLUG
+export async function getProductBySlug(slug: string) {
+  await connectToDatabase()
+  const product = await Product.findOne({ slug, isPublished: true })
+  if (!product) throw new Error('Product not found')
+  return JSON.parse(JSON.stringify(product)) as IProduct
+}
+
+//* GET RELATED PRODUCTS: PRODUCTS WITH SAME CATEGORY
+export async function getRelatedProductsByCategory({
+  category,
+  productId,
+  limit = PAGE_SIZE, //how many products per page
+  page = 1, //current page number
+}: {
+  category: string
+  productId: string
+  limit?: number
+  page: number
+}) {
+  await connectToDatabase()
+  const skipAmount = (Number(page) - 1) * limit // explaination down
+  const conditions = {
+    isPublished: true,
+    category,
+    _id: { $ne: productId }, //exclude the current product
+  }
+  const products = await Product.find(conditions)
+    .sort({ numSales: 'desc' })
+    .skip(skipAmount)
+    .limit(limit)
+  const productsCount = await Product.countDocuments(conditions)
+  return {
+    data: JSON.parse(JSON.stringify(products)) as IProduct[],
+    totalPages: Math.ceil(productsCount / limit),
+  }
+}
+
+// GET ALL PRODUCTS
+export async function getAllProducts({
+  query,
+  limit,
+  page,
+  category,
+  tag,
+  price,
+  rating,
+  sort,
+}: {
+  query: string
+  category: string
+  tag: string
+  limit?: number
+  page: number
+  price?: string
+  rating?: string
+  sort?: string
+}) {
+  limit = limit || PAGE_SIZE
+  await connectToDatabase()
+
+  const queryFilter =
+    query && query !== 'all'
+      ? {
+          name: {
+            $regex: query,
+            $options: 'i',
+          },
+        }
+      : {}
+  const categoryFilter = category && category !== 'all' ? { category } : {}
+  const tagFilter = tag && tag !== 'all' ? { tags: tag } : {}
+  // when rating filter selected ex(4) = filter more than or equal to 4 rating products
+  const ratingFilter =
+    rating && rating !== 'all'
+      ? {
+          avgRating: {
+            $gte: Number(rating),
+          },
+        }
+      : {}
+ // 10-50 = more than or equal to index0 , less than or equal to index1
+  const priceFilter =
+    price && price !== 'all'
+      ? {
+          price: {
+            $gte: Number(price.split('-')[0]),
+            $lte: Number(price.split('-')[1]),
+          },
+        }
+      : {}
+
+  // if best-selling was chosen ==> then order numSales from big to small(-1)(desending)
+  const order: Record<string, 1 | -1> =
+    sort === 'best-selling'
+      ? { numSales: -1 }
+      : sort === 'price-low-to-high'
+        ? { price: 1 }
+        : sort === 'price-high-to-low'
+          ? { price: -1 }
+          : sort === 'avg-customer-review'
+            ? { avgRating: -1 }
+            : { _id: -1 }
+
+  const isPublished = { isPublished: true }
+
+  const products = await Product.find({
+    ...queryFilter,
+    ...tagFilter,   
+    ...categoryFilter,   // category
+    ...priceFilter,
+    ...ratingFilter, // avgRating: { $gte: Number(rating),
+     ...isPublished, // isPublished: true
+  })
+    .sort(order)
+    .skip(limit * (Number(page) - 1))
+    .limit(limit)
+    .lean()
+
+  const countProducts = await Product.countDocuments({
+    ...queryFilter,
+    ...tagFilter,
+    ...categoryFilter,
+    ...priceFilter,
+    ...ratingFilter,   // missing isPublished ==> bug here
+  })
+
+  return {
+    products: JSON.parse(JSON.stringify(products)) as IProduct[],
+    totalPages: Math.ceil(countProducts / limit),
+    totalProducts: countProducts,
+    from: limit * (Number(page) - 1) + 1,
+    to: limit * (Number(page) - 1) + products.length,
+  }
+}
+
+export async function getAllTags() {
+  const tags = await Product.aggregate([
+    { $unwind: '$tags' },
+    { $group: { _id: null, uniqueTags: { $addToSet: '$tags' } } },
+    { $project: { _id: 0, uniqueTags: 1 } },
+  ])
+  // tags = [{uniqueTags:[..,..,..,...]}]
+  return (
+    (tags[0]?.uniqueTags
+      .sort((a: string, b: string) => a.localeCompare(b))
+      .map((x: string) =>
+        x
+          .split('-')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+      ) as string[]) || []
+  )
+}
+```
+
+> GET ALL CATEGORIES
+ Finds all published products in the Product collection.
+ Extracts the value of the category field from each of those products.
+ Returns an array containing only the unique category values. Duplicate category values are removed.
+
+--------------------
+> getProductsForCard
+ find takes two arguments , first what to find and second what to return.
+ here find  { tags: { $in: [tag] }, isPublished: true },
+ return name, href, image
+ A value of 1 indicates that you want to include this field in the results. You're explicitly saying you want the name of the product.
+ '$slug': The '$' prefix indicates that slug refers to the value of the slug field in the Product document. It dynamically inserts the product's slug into the URL. This is a common pattern for creating product-specific URLs (e.g., /product/my-cool-product).
+ .sort({ createdAt: 'desc' }) descending order
+
+--------------------
+> getProductBySlug
+ Connects to the database, retrieves a published product by slug, throws an error if not found,
+ and returns a plain JavaScript object representing the product, typed as IProduct.
+
+--------------------
+
+> getRelatedProductsByCategory
+ Connects to the database, retrieves related and published products based on category (excluding the given product),
+ sorts them by sales -descending order, paginates the results, retrieves the total count of matching products,
+ and returns an object containing the paginated product data and the total number of pages.
+ limit is the limit of products to display in one page. limit = means page size.
+ page = means current page , are you in page 1, page 2, page 3 and so on
+ const skipAmount = (Number(page) - 1) * limit  
+ how many products to skip to get to the current page (skip 9 from page 1 and 9 from page 2 and display from 19 to 28)
+
+ ```ts
+ const products = await Product.find(conditions)
+    .sort({ numSales: 'desc' })
+    .skip(skipAmount)
+    .limit(limit)
+    find my products by category and exclude the current product, sort them by sales in descending order, skip the product displayed in previous pages (if it was the first page the skipAmount will be zero) ,limit them by the limit value per page like(9 products per page ).
+
+```
+ const productsCount = await Product.countDocuments(conditions) ==> this is a mongodb method to count the number of documents that match the conditions.
+
+// expected return of the function is an object like that:
+```ts
+{
+  "data": [
+    {
+      "_id": "64f...",
+      "name": "Related Product 1",
+      "category": "Electronics",
+      "price": 99.99,
+      "isPublished": true,
+      ? ... other product properties
+    },
+    {
+      "_id": "650...",
+      "name": "Related Product 2",
+      "category": "Electronics",
+      "price": 149.99,
+      "isPublished": true,
+      ? ... other product properties
+    }
+  ],
+  "totalPages": 5
+}
+```
+//---------------------------------notes---------------------------------
+
+they are called Operators
+
+> $in          ==> finds all documents where the value of a field is one of the specified values.
+> $concat      ==> creates a new string by concatenating the values of two or more fields.
+> $arrayElemAt ==> returns the element at the specified index from an array field.
+> $ne          ==> exclude the current product.
+> $regex       ==> allows you to find documents where a string field matches a pattern, not just an exact value. 
+> $options     ==> i = insensetive to small or capital letters.
+> $gte         ==> (Greater Than or Equal To).  only inside aggregate() method
+> $lte         ==> (Less Than or Equal To).
+> $unwind      ==> convert the big object model to several objects by only dividing the $unwind:$thisValue[] , only inside aggregate() method.
+* accumulator: means what is the action"$sum,push,addToSet,avg,min, first", 
+* expression: on what (key name): $salary,name,totalProducts, ...
+* _id:$key(category) = group these by this $keyValue(mobile),
+* _id:null = group everything no higher filter,
+* _id:{ $substrCP: ["$name", 0, 1] }
+> $group       ==> reduce multi-objects to one, _id: <to group by>,   <field1>: { <accumulator1>: <expression1"$salary,$name"> }.
+> $addToSet    ==> used as an accumulator1 inside $group to add a unique value to new {}  and  In updates, it modifies arrays.  
+> $project     ==> it reshape the final output, remove or rename keys, if key=0 remove it, key=1 keep it.
+
+#### **`$regex` (Regular Expression)**
+
+*   **Function:** `$regex` allows you to find documents where a string field matches a **pattern**, not just an exact value. It’s the key to implementing a search bar. Instead of looking for a product with the *exact* name `"laptop"`, you can look for any product where `"laptop"` *appears anywhere* in the name.
+
+*   **What it does:** It takes a string pattern and searches for it within the specified field (`name` in this case).
+
+*   **Example:** If a user searches and `query` is `"pro"`.
+    *   **It will match:** "Macbook **Pro**", "**Pro**fessional Camera", "Gaming Headset v2 **pro**".
+    *   **It will NOT match:** "Macbook Air", "Standard Camera".
+
+#### **`$options: 'i'` (Case-Insensitive)**
+
+*   **Function:** `$options` provides flags to modify the behavior of the `$regex` search. The `'i'` flag specifically stands for **"case-insensitive"**.
+
+*   **What it does:** It tells the `$regex` search to ignore whether the letters are uppercase or lowercase when looking for a match. This is crucial for a user-friendly search experience.
+
+*   **Example:** If a user searches and `query` is `"book"`.
+    *   Without `$options: 'i'`, it would only match "notebook" or "bookworm". It would **miss** "**B**ook of Tales" or "Text**B**ook".
+    *   With `$options: 'i'`, it matches all of them: "note**book**", "**B**ook of Tales", "Text**B**ook", etc.
+
+By combining them, `{ $regex: query, $options: 'i' }` creates a powerful, user-friendly search filter: **"find any product where the name contains the search `query`, ignoring capitalization."**
+
+Of course. These functions use powerful operators from the MongoDB query language. The `$` prefix indicates that it's a special operator, not a literal value.
+
+Let's break them down by the function they appear in.
+
+------------------------------------------------------
+------------------------------------------------------
+
+### In `getAllProducts` (Used in `Product.find` and `Product.countDocuments`)
+
+These operators are used to build a filter object to find specific documents.
+
+> 1. `$regex` (and `$options`)
+
+This pair is used inside the `queryFilter`.
+
+*   **Function:** To perform a "regular expression" search. This allows for flexible pattern matching instead of just finding exact text. It's the foundation of any search bar functionality.
+*   **What it Does:** `$regex` tells MongoDB to find documents where the `name` field contains the text from the `query` variable. The `$options: 'i'` is a flag that makes the search **case-insensitive**.
+*   **Example:**
+    *   Assume your database has products named: "iPhone **Pro**", "Go**Pro** Camera", and "Macbook Air".
+    *   If a user's search `query` is `"pro"`, the filter becomes `{ name: { $regex: 'pro', $options: 'i' } }`.
+    *   **It will match:** "iPhone **Pro**" and "Go**Pro** Camera" because "pro" is present in their names. It also works if the user typed "Pro" or "PRO".
+    *   **It will NOT match:** "Macbook Air".
+
+> 2. `$gte` (Greater Than or Equal To)
+
+This is used in the `ratingFilter` and `priceFilter`.
+
+*   **Function:** To find documents where a numeric field's value is **greater than or equal to** a specified value.
+*   **What it Does:** It filters for numbers that meet a minimum threshold.
+*   **Example (for Rating):**
+    *   Assume a user selects a `rating` filter of `"4"`.
+    *   The `ratingFilter` becomes `{ avgRating: { $gte: 4 } }`.
+    *   **It will match:** Products with an `avgRating` of `4.0`, `4.5`, or `5.0`.
+    *   **It will NOT match:** A product with an `avgRating` of `3.9`.
+
+> 3. `$lte` (Less Than or Equal To)
+
+This is used in the `priceFilter`.
+
+*   **Function:** To find documents where a numeric field's value is **less than or equal to** a specified value.
+*   **What it Does:** It filters for numbers that are below a maximum threshold. It's often used with `$gte` to create a range.
+*   **Example (for Price Range):**
+    *   Assume a user selects a `price` filter of `"10-50"`.
+    *   The `priceFilter` becomes `{ price: { $gte: 10, $lte: 50 } }`.
+    *   **It will match:** A product with a `price` of `10`, `25.99`, or `50`.
+    *   **It will NOT match:** A product with a `price` of `9.99` or `50.01`.
+
+---
+
+### In `getAllTags` (Used in `Product.aggregate`)
+
+This function uses an "aggregation pipeline", which is a multi-stage process for transforming data. Data flows through each stage in order.
+
+> 1. `$unwind` -----------------
+
+This is the first stage of the aggregation.
+
+*   **Function:** To deconstruct an array field. It creates a new, separate document for each element in the array.
+*   **What it Does:** Imagine you have one product document with an array of three tags. `$unwind` will turn that single document into three documents in the pipeline's memory, where each one contains one of the tags.
+*   **Example:**
+    *   **Input Document:** `{ name: 'Smartwatch', tags: ['electronics', 'wearable', 'new-arrival'] }`
+    *   **Output of `$unwind: '$tags'` (3 documents):**
+        1.  `{ name: 'Smartwatch', tags: 'electronics' }`
+        2.  `{ name: 'Smartwatch', tags: 'wearable' }`
+        3.  `{ name: 'Smartwatch', tags: 'new-arrival' }`
+
+>  2. `$group` ----------
+
+This is the second stage. It takes the output from `$unwind`.
+
+*   **Function:** To group multiple documents into a single document. You can perform calculations on the grouped data.
+*   **What it Does:** Here, `{ _id: null, ... }` means "group **all** documents flowing into this stage into a **single group**". While grouping, it performs an action defined by the accumulator operator (`$addToSet`).
+*   **Example:** All the deconstructed documents from the `$unwind` stage are fed into this single group.
+
+**************************************** 
+>  USE OF $group :
+ Example Collection: employees
+```js
+
+{
+  _id: 1,
+  department: "Sales",
+  name: "Alice",
+  age: 30,
+  salary: 50000,
+  joinDate: ISODate("2020-01-15"),
+  role: "Manager"
+},
+{
+  _id: 2,
+  department: "Sales",
+  name: "Bob",
+  age: 25,
+  salary: 40000,
+  joinDate: ISODate("2021-02-01"),
+  role: "Executive"
+},
+{
+  _id: 3,
+  department: "Engineering",
+  name: "Carol",
+  age: 28,
+  salary: 70000,
+  joinDate: ISODate("2019-03-10"),
+  role: "Engineer"
+},
+{
+  _id: 4,
+  department: "Engineering",
+  name: "David",
+  age: 35,
+  salary: 80000,
+  joinDate: ISODate("2018-04-20"),
+  role: "Manager"
+}
+```
+📊 Aggregation Pipeline with $group Accumulators
+```js
+db.employees.aggregate([
+  {
+    $group: {
+      _id: "$department",  // Grouping by department
+
+      totalEmployees: { $sum: 1 },                // Count of employees
+      totalSalary: { $sum: "$salary" },           // Total salary
+      avgAge: { $avg: "$age" },                   // Average age
+      minSalary: { $min: "$salary" },             // Minimum salary
+      maxSalary: { $max: "$salary" },             // Maximum salary
+
+      allNames: { $push: "$name" },               // Array of all names (duplicates allowed)
+      uniqueRoles: { $addToSet: "$role" },        // Unique roles per department
+
+      firstJoinDate: { $first: "$joinDate" },     // First join date in group
+      lastJoinDate: { $last: "$joinDate" }        // Last join date in group
+    }
+  }
+])
+```
+✅ What You Get (Sample Output)
+```js
+{
+  _id: "Sales",
+  totalEmployees: 2,
+  totalSalary: 90000,
+  avgAge: 27.5,
+  minSalary: 40000,
+  maxSalary: 50000,
+  allNames: ["Alice", "Bob"],
+  uniqueRoles: ["Manager", "Executive"],
+  firstJoinDate: ISODate("2020-01-15"),
+  lastJoinDate: ISODate("2021-02-01")
+},
+{
+  _id: "Engineering",
+  totalEmployees: 2,
+  totalSalary: 150000,
+  avgAge: 31.5,
+  minSalary: 70000,
+  maxSalary: 80000,
+  allNames: ["Carol", "David"],
+  uniqueRoles: ["Engineer", "Manager"],
+  firstJoinDate: ISODate("2019-03-10"),
+  lastJoinDate: ISODate("2018-04-20")
+}
+```
+Note: The result of $first and $last depends on the document order before grouping, so use $sort before $group if ordering is important.
+
+*****************************************
+
+>  3. `$addToSet` -------------
+
+This is an "accumulator" operator used inside `$group`.
+
+*   **Function:** To collect unique values from a field across all documents in the group and add them to a set (an array with no duplicates).
+*   **What it Does:** For every document coming from the `$unwind` stage, it looks at the `tags` field and adds its value to a new array called `uniqueTags`, but only if that value isn't already in the array.
+*   **Example:**
+    *   **Input stream of tags:** `'electronics'`, `'wearable'`, `'new-arrival'`, `'electronics'` (from another product).
+    *   **Output field `uniqueTags`:** `['electronics', 'wearable', 'new-arrival']`. The second `'electronics'` is ignored because it's already in the set.
+
+> 4. `$project` ------------
+
+This is the final stage of the pipeline.
+
+*   **Function:** To reshape the output document. You can choose which fields to include, exclude, or rename.
+*   **What it Does:** `{ _id: 0, uniqueTags: 1 }` tells MongoDB: "In the final output, get rid of the `_id` field (0 means exclude) and only keep the `uniqueTags` field (1 means include)."
+*   **Example:**
+    *   **Input from `$group`:** `{ _id: null, uniqueTags: ['electronics', 'wearable', 'new-arrival'] }`
+    *   **Final Output of the pipeline:** `{ uniqueTags: ['electronics', 'wearable', 'new-arrival'] }`
+
+* only with _id can be excluded with :0 and include others in the same object like { _id: 0, uniqueTags: 1 }
+* but can't mix include and exclude by :0 , :1 in the same object for other than _id, like:
+* { $project: { name: 1, email: 0 } }         // Error: can't mix inclusion & exclusion.
+
+----------------------
+* localeCompare():
+
+* A string method that compares strings according to the current locale (language-specific rules).
+* Handles special characters (e.g., accents, diacritics), case sensitivity, and language-specific sorting rules (e.g., ä sorting near a in German).
+
+```ts
+const words = ["ä", "a", "z", "â"];
+words.sort((a, b) => a.localeCompare(b)); 
+
+// Result (in German locale): ["a", "ä", "â", "z"]
+// Result in Swedish: ["a", "z", "ä", "â"] (different rules!)
+// with localeCompare() change the sort behaviour from UTC-16 to the local environment.
+// custamizable: 
+ a.localeCompare( b, 
+ 'de-DE', // Locale (e.g., German) 
+ { sensitivity: 'base', // Ignore case/accents 
+   numeric: true  // Handle numbers inside strings (e.g., "file2" vs "file10")
+ }
+)
+```
+1. 'accent'	Ignores case, distinguishes accents: "e" ≠ "é"
+2. 'case'	Ignores accents, distinguishes case: "e" ≠ "E"
+3. 'variant'	Distinguishes both (default)
+4. 'base' ignores both
+--------------------
+
+> GET PRODUCTS FOR CARD
+1-Connect to the database.
+2-Find the two newest products that have the "new-arrival" tag and are published.
+3-For each product, extract the name, create an href link using the slug, and get the first image from the images array.
+4-Return an array of objects, each containing the name, href, and image for the products found.
+
+
+
+```ts
+// example of the expected return values
+[
+  {
+    "name": "Product Name",
+    "href": "/product/product-slug",
+    "image": "url_to_first_image.jpg"
+  },
+  {
+    "name": "Another Product",
+    "href": "/product/another-product-slug",
+    "image": "url_to_another_image.jpg"
+  },
+  * ... and so on, up to the limit
+]
+```
+
+
+> another way to do it , maybe a better way :
+-------------------------------------------------
+```ts
+export async function getProductsForCard({
+  tag,
+  limit = 4,
+}: {
+  tag: string
+  limit?: number
+}) {
+  await connectToDatabase() // Ensure DB connection
+  const products = await Product.find(
+    { tags: { $in: [tag] }, isPublished: true },
+    {
+      name: 1,
+      href: { $concat: ['/product/', '$slug'] },
+      image: { $arrayElemAt: ['$images', 0] },
+    }
+  )
+    .lean() // Add .lean() to get plain JavaScript objects
+    .sort({ createdAt: 'desc' })
+    .limit(limit);
+
+  return products as {  // No JSON.parse needed now!
+    name: string;
+    href: string;
+    image: string;
+  }[];
+}
+*/
+```
+
+------------------------------- 
+
+
+> 1. `getAllProducts`: Purpose, Inputs, Outputs, and Usage
+
+#### **What is its purpose?**
+
+The primary purpose of `getAllProducts` is to fetch a list of products from the database. More importantly, it's designed to handle all the complex logic for a typical e-commerce search and filter page:
+*   **Searching:** By a text query (e.g., "laptop").
+*   **Filtering:** By category, tag, price range, and minimum rating.
+*   **Sorting:** By criteria like price, best-selling, or rating.
+*   **Pagination:** Returning only a specific "page" of results (e.g., items 11-20).
+
+#### **What does it expect (Inputs)?**
+
+It expects a single object with several optional properties that correspond to the user's selected filters.
+*   `query`: A search string from a search bar.
+*   `category`: The slug of a specific category.
+*   `tag`: The slug of a specific tag.
+*   `price`: A string representing a range, like `"10-50"`.
+*   `rating`: A number string, like `"4"`, for a minimum rating.
+*   `sort`: A string defining the sort order, like `"price-low-to-high"`.
+*   `page` / `limit`: Numbers for controlling pagination.
+
+#### **What does it return (Outputs)?**
+
+It returns an object containing not just the product data, but also metadata needed to build the UI for the search results page:
+*   `products`: An array of the product objects that matched the filters.
+*   `totalPages`: The total number of pages available for the given query, used to build pagination controls (e.g., `<< 1 2 3 >>`).
+*   `totalProducts`: The total count of products that matched the filters.
+*   `from` / `to`: Numbers to display messages like "Showing results **11** to **20**".
+
+#### **Where is it called from?**
+
+This is an `async` server-side function. In a Next.js application, it would be called from a place that runs on the server:
+*   A **Server Component** (the modern approach in the App Router).
+*   A **Route Handler** (i.e., an API endpoint at `/api/products`).
+*   `getServerSideProps` (in the older Pages Router).
+
+---
+
+>  2. Explanation of the Database Query (`$regex` and `$options: 'i'`)
+
+This part of the code dynamically builds a filter object for a MongoDB query. The most interesting part is the `queryFilter`.
+
+```javascript
+const queryFilter =
+  query && query !== 'all'
+    ? {
+        name: {
+          $regex: query,  // <-- The pattern to match
+          $options: 'i',  // <-- The option for the pattern match
+        },
+      }
+    : {}
+```
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[search/page.tsx]------------[another]
+------------------------------------
+--------------------------------------
+
+```tsx
+import Link from 'next/link'
+
+import Pagination from '@/components/shared/pagination'
+import ProductCard from '@/components/shared/product/product-card'
+import { Button } from '@/components/ui/button'
+import {
+  getAllCategories,
+  getAllProducts,
+  getAllTags,
+} from '@/lib/actions/product.actions'
+import { IProduct } from '@/lib/db/models/product.model'
+import ProductSortSelector from '@/components/shared/product/product-sort-selector'
+import { getFilterUrl, toSlug } from '@/lib/utils'
+import Rating from '@/components/shared/product/rating'
+
+import CollapsibleOnMobile from '@/components/shared/collapsible-on-mobile'
+
+
+
+// i think this sould be in constant ??!!
+const sortOrders = [
+  { value: 'price-low-to-high', name: 'Price: Low to high' },
+  { value: 'price-high-to-low', name: 'Price: High to low' },
+  { value: 'newest-arrivals', name: 'Newest arrivals' },
+  { value: 'avg-customer-review', name: 'Avg. customer review' },
+  { value: 'best-selling', name: 'Best selling' },
+]
+
+const prices = [
+  {
+    name: '$1 to $20',
+    value: '1-20',
+  },
+  {
+    name: '$21 to $50',
+    value: '21-50',
+  },
+  {
+    name: '$51 to $1000',
+    value: '51-1000',
+  },
+]
+
+// create a metadata for google search to find my products search page
+export async function generateMetadata(props: {
+  searchParams: Promise<{
+    q: string
+    category: string
+    tag: string
+    price: string
+    rating: string
+    sort: string
+    page: string
+  }>
+}) {
+  const searchParams = await props.searchParams
+  const {
+    q = 'all',
+    category = 'all',
+    tag = 'all',
+    price = 'all',
+    rating = 'all',
+  } = searchParams
+
+  if ( // if any param has a value other than the default all or something got chosen to be searched for(checked or typed). 
+    (q !== 'all' && q !== '') ||
+    category !== 'all' ||
+    tag !== 'all' ||
+    rating !== 'all' ||
+    price !== 'all'
+  ) {
+    return {  // all = ''
+      title: `Search ${q !== 'all' ? q : ''} 
+          ${category !== 'all' ? ` : Category ${category}` : ''}
+          ${tag !== 'all' ? ` : Tag ${tag}` : ''}
+          ${price !== 'all' ? ` : Price ${price}` : ''}
+          ${rating !== 'all' ? ` : Rating ${rating}` : ''}`,
+    }
+  } else {
+    return {
+      title: 'Search Products',
+    }
+  }
+}
+
+
+
+
+export default async function SearchPage(props: {
+  searchParams: Promise<{
+    q: string
+    category: string
+    tag: string
+    price: string
+    rating: string
+    sort: string
+    page: string
+  }>
+}) {
+  const searchParams = await props.searchParams
+
+  const {
+    q = 'all',
+    category = 'all',
+    tag = 'all',
+    price = 'all',
+    rating = 'all',
+    sort = 'best-selling',
+    page = '1',
+  } = searchParams
+
+  const params = { q, category, tag, price, rating, sort, page }
+
+  const categories = await getAllCategories()
+
+  const tags = await getAllTags()
+
+  const data = await getAllProducts({ //it has to be query by name.also page has to be a number.
+    query: q,
+    category,
+    tag,
+    price,
+    rating,
+    sort,
+    page: Number(page),
+  })
+
+  return (
+    <div>
+      <div className='mb-2 py-2 md:border-b flex-between flex-col md:flex-row '>
+        <div className='flex items-center'>
+        {// no results or 0-200 of 200 (or more if isPublished-false added) results for q cat:best-seller pr:$10-$20
+        }
+          {data.totalProducts === 0  
+            ? 'No'
+            : `${data.from}-${data.to} of ${data.totalProducts}`}{' '}
+          results
+          {(q !== 'all' && q !== '') ||
+          (category !== 'all' && category !== '') ||
+          (tag !== 'all' && tag !== '') ||
+          rating !== 'all' ||
+          price !== 'all'
+            ? ` for `
+            : null}
+          {q !== 'all' && q !== '' && '"' + q + '"'}
+          {category !== 'all' && category !== '' && `  Category: ` + category}
+          {tag !== 'all' && tag !== '' && `   Tag: ` + tag}
+          {price !== 'all' && `    Price: ` + price}
+          {rating !== 'all' && `   Rating: ` + rating + ` & up`}
+          &nbsp;
+          {(q !== 'all' && q !== '') ||
+          (category !== 'all' && category !== '') ||
+          (tag !== 'all' && tag !== '') ||
+          rating !== 'all' ||
+          price !== 'all' ? (
+            <Button variant={'link'} asChild>
+              <Link href='/search'>Clear</Link>
+            </Button>
+          ) : null}
+        </div>
+        <div>
+          <ProductSortSelector
+            sortOrders={sortOrders}
+            sort={sort}
+            params={params}
+          />
+        </div>
+      </div>
+      <div className='bg-card grid md:grid-cols-5 md:gap-4'>
+        <CollapsibleOnMobile title='Filters'>  
+        {// what is that and why title matter?
+        }
+          <div className='space-y-4'>
+            <div>
+              <div className='font-bold'>Department</div>
+              <ul>
+                <li>
+                  {// styling for the the word ALL and construct a link for ALL .
+                  }
+                  <Link 
+                    className={`${
+                      ('all' === category || '' === category) && 'text-primary'
+                    }`}
+                    href={getFilterUrl({ category: 'all', params })}
+                  >
+                    All
+                  </Link>
+                  // stylize each category name and construct its individual URL.
+                </li>
+                {categories.map((c: string) => (
+                  <li key={c}>
+                    <Link
+                      className={`${c === category && 'text-primary'}`}
+                      href={getFilterUrl({ category: c, params })}
+                    >
+                      {c}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <div className='font-bold'>Price</div>
+              <ul>
+                <li>
+                  <Link
+                    className={`${'all' === price && 'text-primary'}`}
+                    href={getFilterUrl({ price: 'all', params })}
+                  >
+                    All
+                  </Link>
+                {// stylize each price-range name and construct its individual URL.
+                }
+                </li>
+                {prices.map((p) => (
+                  <li key={p.value}>
+                    <Link
+                      href={getFilterUrl({ price: p.value, params })}
+                      className={`${p.value === price && 'text-primary'}`}
+                    >
+                      {p.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <div className='font-bold'>Customer Review</div>
+              <ul>
+                <li>
+                  <Link
+                    href={getFilterUrl({ rating: 'all', params })}
+                    className={`${'all' === rating && 'text-primary'}`}
+                  >
+                    All
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href={getFilterUrl({ rating: '4', params })}
+                    className={`${'4' === rating && 'text-primary'}`}
+                  >
+                    <div className='flex'>
+                      <Rating size={4} rating={4} /> & Up
+                    </div>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <div className='font-bold'>Tag</div>
+              <ul>
+                <li>
+                  <Link
+                    className={`${
+                      ('all' === tag || '' === tag) && 'text-primary'
+                    }`}
+                    href={getFilterUrl({ tag: 'all', params })}
+                  >
+                    All
+                  </Link>
+                </li>
+                {tags.map((t: string) => (
+                  <li key={t}>
+                    <Link
+                      className={`${toSlug(t) === tag && 'text-primary'}`}
+                      href={getFilterUrl({ tag: t, params })}
+                    >
+                      {t}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </CollapsibleOnMobile>
+
+        <div className='md:col-span-4 space-y-4'>
+          <div>
+            <div className='font-bold text-xl'>Results</div>
+            <div>Check each product page for other buying options</div>
+          </div>
+
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2  lg:grid-cols-3  '>
+            {data.products.length === 0 && <div>No product found</div>}
+            {data.products.map((product: IProduct) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </div>
+          {data!.totalPages! > 1 && (
+            <Pagination page={page} totalPages={data!.totalPages} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+> explaining  className={`${toSlug(t) === tag && 'text-primary'}`}
+
+1. toSlug() convert what passes inside from string to URL string (t) ex. "New Arrivals" into "New-Arrivals".
+2. compare the new return "New-Arrivals" with the tag passed to the component which is the same one in the search param.
+3. if true apply the text-primary style 
+4. functionality of it: if this one is selected as a search link , it will be highlighted when the page reload with taht search result.
+5. className=String so here it should be like that {`${working function}`}
+
+
+
+
+
+------------------------------------
+--------------------------------------
 # ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
@@ -5888,5 +7287,17 @@ Once the server has sent its response back to the browser, it forgets everything
 # ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
 
 

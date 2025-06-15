@@ -11,13 +11,14 @@ export default function Rating({
   rating: number
   size?: number
 }) {
+
   const fullStars = Math.floor(rating)
   const partialStar = rating % 1
   const emptyStars = 5 - Math.ceil(rating)
 
   // if 3.4 starts floor will make 3 ,
   //  partial will be 0.4 and
-  //  empty will 5- ( ceil(3.4) is 4))= 1
+  //  empty will 5-(ceil(3.4) is 4))= 1
 
   return (
     <div
