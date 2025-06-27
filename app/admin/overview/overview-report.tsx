@@ -38,8 +38,8 @@ export default function OverviewReport() {
   })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<{ [key: string]: any }>()
-  //  eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_isPending, startTransition] = useTransition()
+ 
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (date) {
@@ -49,7 +49,7 @@ export default function OverviewReport() {
     }
   }, [date])
 
-  if (!data)
+  if (!data || isPending )
     return (
       <div className='space-y-4'>
         <div>
