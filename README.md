@@ -80,11 +80,24 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 18. components/shared/collapsible-on-mobile.tsx ==>only mobile and desktop used (there is others check!!!) (new page code available).
 
 19. possible bug here in product.actions.ts > getAllProducts( > const products = await Product.find({ have isPublished:true
-    but const countProducts = await Product.countDocuments({   does not have isPublished at all.
+    but const countProducts = await Product.countDocuments({...}   does not have isPublished at all.
 
 20. sortOrder array in search/page.tsx need to be in constant.ts ??!! MAYBE.
 
 21. in menu.tsx ==>  {forAdmin ? null : <CartButton />} in the repo but in tut <CartButton /> ? check.
+
+22. fix the bug in product-card.tsx ==> when clicking on the image it does not redirect to the product page. "from co-pilot"
+--- suggestion: by co-pilot:
+23. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add isDeal={product.isDeal} to it.
+24. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add forListing={true} to it.
+25. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add plain={false} to it.
+26. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add className='text-orange-700' to it.
+-- end
+27. in order.actions.ts fix getTopSalesProducts { $sort: { _id: 1 } }, to { $sort: { value: -1 } },
+
+28. fix paypal and stripe env.local keys.
+
+29. sales-category-pie-chart.tsx ==> fix entry to _entry
 
 
 
@@ -7784,6 +7797,683 @@ You need both because they solve two different problems. This is a design princi
 *   Without `ColorProvider`, you could change the theme (e.g., adding `class="dark"` to `<html>`), but your custom CSS variables would never get updated. Your colors would be stuck.
 
 The combined `ThemeProvider` simply makes this powerful two-part system clean and easy to use by ensuring you never forget to include one or the other. You get one component to handle everything.
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[27-create-admin-dashboard]---------------------------[another]
+------------------------------------
+--------------------------------------
+npx shadcn@latest add skeleton calendar
+npm i recharts
+
+------------------------------------
+--------------------------------------
+# ----------------------[order.actions.ts]---------------------------[another]
+------------------------------------
+--------------------------------------
+```ts
+// GET ORDERS BY USER - for ADMIN
+export async function getOrderSummary(date: DateRange) {
+  await connectToDatabase()
+  // get number of orders, products, users, total sales, monthly sales, top sales categories, top sales products, and latest orders
+  // get number of orders in the date-range.
+  const ordersCount = await Order.countDocuments({
+    createdAt: {
+      $gte: date.from,
+      $lte: date.to,
+    },
+  })
+  // get number of products created in the date-range.
+  const productsCount = await Product.countDocuments({
+    createdAt: {
+      $gte: date.from,
+      $lte: date.to,
+    },
+  })
+  // get number of new users in the date-range.
+  const usersCount = await User.countDocuments({
+    createdAt: {
+      $gte: date.from,
+      $lte: date.to,
+    },
+  })
+  // get number of total sales in the date-range.
+  const totalSalesResult = await Order.aggregate([
+    { // get all order documents created in the date range
+      $match: {
+        createdAt: {
+          $gte: date.from,
+          $lte: date.to,
+        },
+      },// return example:[{_id, user, totalPrice, etc.)},{},{},...] with all {} contents.
+    },
+    {
+      $group: {  // group them all in one document(_id: null), sales:sum of($sum): all $totalPrice values
+        _id: null,
+        sales: { $sum: '$totalPrice' }, // return example: [{_id: null, sales: 1000}] only the specified fields.
+      },
+    }, // show the resulted object previously ==>
+      // but make it {totalSales(instead od sales): its value of the previous step(but if null make it 0) }
+    { $project: { totalSales: { $ifNull: ['$sales', 0] } } },
+  ]) // return example: [{totalSales: 1000}]
+
+  // get totlaSales number from previous step
+  const totalSales = totalSalesResult[0] ? totalSalesResult[0].totalSales : 0
+  
+  const today = new Date()
+// new Date(year, month, day) month is 0-indexed, so -5 means 5 months ago not including the current month or 6 months ago
+  const sixMonthEarlierDate = new Date(
+    today.getFullYear(),
+    today.getMonth() - 5,
+    1
+  )
+// get orders in last 6months, group them by month, and sum the totalPrice for each month
+  // this will return a decending sorted array of objects with label (Y-M) and value (total sales
+  const monthlySales = await Order.aggregate([
+    {
+      $match: {
+        createdAt: {
+          $gte: sixMonthEarlierDate,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+        totalSales: { $sum: '$totalPrice' },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        label: '$_id',
+        value: '$totalSales',
+      },
+    },
+
+    { $sort: { label: -1 } },
+  ])
+
+  const topSalesCategories = await getTopSalesCategories(date)
+
+  const topSalesProducts = await getTopSalesProducts(date)
+  // get all orders, populate user by only name
+  const latestOrders = await Order.find()
+    .populate('user', 'name')
+    .sort({ createdAt: 'desc' })
+    .limit(PAGE_SIZE)
+
+  return {
+    ordersCount,
+    productsCount,
+    usersCount,
+    totalSales,
+    monthlySales: JSON.parse(JSON.stringify(monthlySales)),
+    salesChartData: JSON.parse(JSON.stringify(await getSalesChartData(date))),
+    topSalesCategories: JSON.parse(JSON.stringify(topSalesCategories)),
+    topSalesProducts: JSON.parse(JSON.stringify(topSalesProducts)),
+    latestOrders: JSON.parse(JSON.stringify(latestOrders)) as IOrderList[],
+  }
+}
+
+async function getSalesChartData(date: DateRange) {
+  const result = await Order.aggregate([
+    {
+      $match: {
+        createdAt: {
+          $gte: date.from,
+          $lte: date.to,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          day: { $dayOfMonth: '$createdAt' },
+        },
+        totalSales: { $sum: '$totalPrice' },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: {
+          $concat: [
+            { $toString: '$_id.year' },
+            '/',
+            { $toString: '$_id.month' },
+            '/',
+            { $toString: '$_id.day' },
+          ],
+        },
+        totalSales: 1,
+      },
+    },
+    { $sort: { date: 1 } },
+  ])
+
+  return result
+}
+
+async function getTopSalesProducts(date: DateRange) {
+  const result = await Order.aggregate([
+    {
+      $match: {
+        createdAt: {
+          $gte: date.from,
+          $lte: date.to,
+        },
+      },
+    },
+    // Step 1: Unwind orderItems array
+    { $unwind: '$items' },
+    // Step 2: Group by productId to calculate total sales per product
+    // group the unwind objects where items.name, items.image, items.product are identical.
+    {
+      $group: {
+        _id: {
+          name: '$items.name',
+          image: '$items.image',
+          _id: '$items.product',
+        },
+        totalSales: {
+          $sum: { $multiply: ['$items.quantity', '$items.price'] },
+        }, // Assume quantity field in orderItems represents units sold
+      },
+    },
+    {
+      $sort: {
+        totalSales: -1,
+      },
+    },
+    { $limit: 6 },
+
+    // Step 3: Replace productInfo array with product name and format the output
+    {
+      $project: {
+        _id: 0,
+        id: '$_id._id',
+        label: '$_id.name',
+        image: '$_id.image',
+        value: '$totalSales',
+      },
+    },
+    // Step 4: Sort by totalSales in descending order  { $sort: { value: -1 } },
+    // Step 4: Sort by totalSales in descending order
+    { $sort: { _id: 1 } },
+  ])
+
+  return result
+}
+
+async function getTopSalesCategories(date: DateRange, limit = 5) {
+  const result = await Order.aggregate([
+    {
+      $match: {
+        createdAt: {
+          $gte: date.from,
+          $lte: date.to,
+        },
+      },
+    },
+    // Step 1: Unwind orderItems array
+    { $unwind: '$items' },
+    // Step 2: Group by productId to calculate total sales per product
+    {
+      $group: {
+        _id: '$items.category',
+        totalSales: { $sum: '$items.quantity' }, // Assume quantity field in orderItems represents units sold
+      },
+    },
+    // Step 3: Sort by totalSales in descending order
+    { $sort: { totalSales: -1 } },
+    // Step 4: Limit to top N products
+    { $limit: limit },
+  ])
+
+  return result
+}
+```
+
+
+### How the Database Query (Aggregation Pipeline) Works
+
+Here is a step-by-step breakdown, confirming and adding detail to your points:
+
+#### Stage 1: `$match`
+*   **What it does:** This is a filtering stage. It's like the `WHERE` clause in SQL.
+*   **Your interpretation:** "get all order documents that was created in the last 6 months" - **Correct.**
+*   **In detail:** It looks at every document in the `Order` collection and only allows documents to pass to the next stage if their `createdAt` field is **G**reater **T**han or **E**qual to (`$gte`) the `sixMonthEarlierDate` you calculated.
+
+---
+
+#### Stage 2: `$group`
+*   **What it does:** This stage groups documents together based on a specified identifier (`_id`) and performs calculations on each group.
+*   **Your interpretation:** "group them by the date they where created in and write the date as year and month. in each group totalSales : sum of all totalPrice of all documents inside." - **Perfectly Correct.**
+*   **In detail:**
+    *   `_id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }`: This is the key to grouping. For each document, it converts the `createdAt` date into a string like `"2023-10"`. All documents that result in the same string are put into the same group.
+    *   `totalSales: { $sum: '$totalPrice' }`: For each group created above, this defines a new field called `totalSales`. It calculates its value by summing up (`$sum`) the `totalPrice` from every document within that group.
+
+*Example Output After This Stage:*
+```json
+[
+  { "_id": "2023-10", "totalSales": 15000 },
+  { "_id": "2023-09", "totalSales": 12500 },
+  { "_id": "2023-08", "totalSales": 18000 }
+  // ... and so on for 6 months
+]
+```
+
+---
+
+#### Stage 3: `$project`
+*   **What it does:** This stage reshapes the output documents. You can rename fields, add new ones, or remove existing ones.
+*   **Your interpretation:** "show them as label: year and month , value: the sum of each month (all totalPrice of all orders in that month)." - **Correct.**
+*   **In detail:**
+    *   `_id: 0`: This explicitly removes the default `_id` field from the output.
+    *   `label: '$_id'`: This creates a new field named `label` and sets its value to the value from the `_id` field of the previous stage (e.g., `"2023-10"`).
+    *   `value: '$totalSales'`: This creates a new field named `value` and sets its value to the `totalSales` we calculated in the `$group` stage. This is often done to format data nicely for charts or front-end components.
+
+*Example Output After This Stage:*
+```json
+[
+  { "label": "2023-10", "value": 15000 },
+  { "label": "2023-09", "value": 12500 },
+  { "label": "2023-08", "value": 18000 }
+]
+```
+
+---
+
+#### Stage 4: `$sort`
+*   **What it does:** This stage orders the final documents.
+*   **Your interpretation:** "sort them from current month to previous months so the last shown is 6 months ago." - **Correct.**
+*   **In detail:**
+    *   `{ label: -1 }`: It sorts the documents based on the `label` field. Since the label is a string like `"2023-10"`, sorting it in descending order (`-1`) puts the most recent months first.
+
+*Final Output:*
+```json
+[
+  { "label": "2023-10", "value": 15000 }, // Most recent
+  { "label": "2023-09", "value": 12500 },
+  { "label": "2023-08", "value": 18000 },
+  { "label": "2023-07", "value": 11000 },
+  { "label": "2023-06", "value": 13200 },
+  { "label": "2023-05", "value": 9800 }   // 6 months ago
+]
+```
+
+------------
+------------
+------------
+------------
+> >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>[getTopSalesProducts] ==>
+#### $unwind:
+
+```json
+// From Order 1
+{ "_id": "order123", "items": { "product": "prod_A", "name": "Laptop", "image": "laptop.jpg", "quantity": 1, "price": 1200 } }
+{ "_id": "order123", "items": { "product": "prod_B", "name": "Mouse", "image": "mouse.jpg", "quantity": 2, "price": 25 } }
+// From Order 2
+{ "_id": "order456", "items": { "product": "prod_A", "name": "Laptop", "image": "laptop.jpg", "quantity": 2, "price": 1200 } }
+{ "_id": "order456", "items": { "product": "prod_C", "name": "Keyboard", "image": "keyboard.jpg", "quantity": 1, "price": 75 } }
+```
+
+#### $group:
+```json 
+{
+  "_id": { "name": "Laptop", "image": "laptop.jpg", "_id": "prod_A" },
+  "totalSales": 3600
+}
+{
+  "_id": { "name": "Mouse", "image": "mouse.jpg", "_id": "prod_B" },
+  "totalSales": 50
+}
+{
+  "_id": { "name": "Keyboard", "image": "keyboard.jpg", "_id": "prod_C" },
+  "totalSales": 75
+}
+```
+
+#### $project:
+```json
+{
+  "_id": { "name": "Laptop", "image": "laptop.jpg", "_id": "prod_A" },
+  "totalSales": 3600
+}
+{
+  "_id": { "name": "Mouse", "image": "mouse.jpg", "_id": "prod_B" },
+  "totalSales": 50
+}
+{
+  "_id": { "name": "Keyboard", "image": "keyboard.jpg", "_id": "prod_C" },
+  "totalSales": 75
+}
+```
+####  $sort: { totalSales: -1 }
+```json
+{ "_id": { "name": "Laptop", ... }, "totalSales": 3600 }   // First
+{ "_id": { "name": "Keyboard", ... }, "totalSales": 75 } // Second
+{ "_id": { "name": "Mouse", ... }, "totalSales": 50 }    // Third
+```
+#### $limit: 6
+```json
+{ "_id": { "name": "Laptop", ... }, "totalSales": 3600 }   // First
+{ "_id": { "name": "Keyboard", ... }, "totalSales": 75 } // Second
+{ "_id": { "name": "Mouse", ... }, "totalSales": 50 }    // Third
+```
+
+#### $project:
+```json
+{ "id": "prod_A", "label": "Laptop", "image": "laptop.jpg", "value": 3600 }
+{ "id": "prod_C", "label": "Keyboard", "image": "keyboard.jpg", "value": 75 }
+{ "id": "prod_B", "label": "Mouse", "image": "mouse.jpg", "value": 50 }
+```
+
+#### $sort: { _id:1 } is wrong here, it should be { value: -1 } to sort by total sales.
+```json
+{ "id": "prod_A", "label": "Laptop", "image": "laptop.jpg", "value": 3600 }   // First
+{ "id": "prod_C", "label": "Keyboard", "image": "keyboard.jpg", "value": 75 } // Second
+{ "id": "prod_B", "label": "Mouse", "image": "mouse.jpg", "value": 50 }       // Third
+```
+------------------------------------
+--------------------------------------
+# ----------------------[typeScript type of array]---------admin/overview/table-chart.tsx------------------[another]
+------------------------------------
+--------------------------------------
+
+```tsx
+//"The data prop must be an array. If that array has any items in it, every single one of them must match the specified object shape."
+type TableChartProps = {
+  labelType: 'month' | 'product'
+  data: {
+    label: string
+    image?: string
+    value: number
+    id?: string
+  }[]
+}
+
+export default function TableChart({
+  labelType = 'month',
+  data = [],
+}: TableChartProps) {
+```
+> An empty array [] perfectly satisfies this condition because it has zero items that violate the shape.
+
+------------------------------------
+--------------------------------------
+# ----------------------[admin/overview/sales-area-chart.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+```tsx
+'use client'
+
+import ProductPrice from '@/components/shared/product/product-price'
+import { Card, CardContent } from '@/components/ui/card'
+import useColorStore from '@/hooks/use-color-store'
+import { formatDateTime } from '@/lib/utils'
+import { useTheme } from 'next-themes'
+import React from 'react'
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  TooltipProps,
+  XAxis,
+  YAxis,
+} from 'recharts'
+
+interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean
+  payload?: { value: number }[]
+  label?: string
+}
+// when a user hovers over a data point on the chart
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (active && payload && payload.length) {
+    return (
+      <Card>
+        <CardContent className='p-2'>
+          <p>{label && formatDateTime(new Date(label)).dateOnly}</p>
+          <p className='text-primary text-xl'>
+            <ProductPrice price={payload[0].value} plain />
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+  return null
+}
+
+//  returns an SVG <text>
+//  raw date "2023-10-26T00:00:00.000Z", from payload.value, converts it to a Date object, and formatDateTime() to "Oct 26, 2023"..
+const CustomXAxisTick: React.FC<any> = ({ x, y, payload }) => {
+  return (
+    <text x={x} y={y + 10} textAnchor='left' fill='#666' className='text-xs'>
+      {formatDateTime(new Date(payload.value)).dateOnly}
+      {/* {`${payload.value.split('/')[1]}/${payload.value.split('/')[2]}`} */}
+    </text>
+  )
+}
+
+// STROKE_COLORS['Green']['dark'] would return the string '#06dc06'. come from useColorStore(theme) and color.name
+const STROKE_COLORS: { [key: string]: { [key: string]: string } } = {
+  Red: { light: '#980404', dark: '#ff3333' },
+  Green: { light: '#015001', dark: '#06dc06' },
+  Gold: { light: '#ac9103', dark: '#f1d541' },
+}
+
+// date should be like { date: '...', totalSales: 1500 }[].
+export default function SalesAreaChart({ data }: { data: any[] }) {
+  const { theme } = useTheme()
+  const { cssColors, color } = useColorStore(theme)
+
+  return (
+    <ResponsiveContainer width='100%' height={400}>
+      <AreaChart data={data}>
+        <CartesianGrid horizontal={true} vertical={false} stroke='' />
+        <XAxis dataKey='date' tick={<CustomXAxisTick />} interval={3} />
+        <YAxis fontSize={12} tickFormatter={(value: number) => `$${value}`} />
+        <Tooltip content={<CustomTooltip />} />
+        <Area
+          type='monotone'
+          dataKey='totalSales'
+          stroke={STROKE_COLORS[color.name][theme || 'light']}
+          strokeWidth={2}
+          fill={`hsl(${cssColors['--primary']})`}
+          fillOpacity={0.8}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+
+```
+
+### 4. `SalesAreaChart` (The Main Component)
+
+This is the component that assembles everything to render the final chart.
+
+*   **Props:** It receives one prop, `data`, which is the array of data to be plotted. Each object in the array should look something like `{ date: '...', totalSales: 1500 }`.
+*   **Hooks:**
+    *   `useTheme()`: From the `next-themes` library, this hook gets the current active theme, which will be either `'light'` or `'dark'`.
+    *   `useColorStore()`: This is a custom hook (likely using Zustand or a similar state manager). It provides the currently selected application color theme (`color.name`, e.g., 'Red', 'Green') and the corresponding CSS variables for that theme (`cssColors`).
+
+*   **Component Breakdown:**
+    1.  **`<ResponsiveContainer>`**: A wrapper from Recharts that makes the chart automatically resize to fit its parent container's dimensions.
+    2.  **`<AreaChart>`**: The main chart component. It takes the `data` and makes it available to all its children elements (`XAxis`, `Area`, etc.).
+    3.  **`<CartesianGrid>`**: Draws the background grid lines. Here, it's configured to only have horizontal lines (`horizontal={true}`), but the `stroke=''` makes them invisible. This is likely done to disable the grid lines.
+    4.  **`<XAxis>`**: Defines the horizontal axis.
+        *   `dataKey='date'`: Tells the axis to use the `date` property from each object in the `data` array as its value.
+        *   `tick={<CustomXAxisTick />}`: **This is crucial.** It tells Recharts to use our custom component for rendering each tick label instead of the default text.
+        *   `interval={3}`: Prevents the axis from becoming too cluttered by only showing every 3rd label from the data.
+    5.  **`<YAxis>`**: Defines the vertical axis.
+        *   `tickFormatter`: A function that takes the numeric value of a tick (e.g., `5000`) and returns a formatted string (e.g., `'$5000'`).
+    6.  **`<Tooltip>`**:
+        *   `content={<CustomTooltip />}`: Tells Recharts to use our `CustomTooltip` component for the hover pop-up.
+    7.  **`<Area>`**: This is the element that actually draws the chart.
+        *   `type='monotone'`: Makes the line smooth and curvy.
+        *   `dataKey='totalSales'`: Tells the chart to use the `totalSales` property from the `data` array for the Y-value (the height).
+        *   `stroke`: Defines the color of the line itself. It dynamically picks the right color from `STROKE_COLORS` based on the `color.name` from the store and the `theme` from `next-themes`.
+        *   `fill`: Defines the color of the area under the line. It's dynamically set using a CSS variable (`--primary`) that is also managed by the `useColorStore` hook. This ensures the chart's fill color always matches the app's primary theme color.
+        *   `fillOpacity={0.8}`: Makes the fill color slightly transparent.
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[admin/overview/sales-category-pie-chart.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+```tsx
+'use client'
+
+import useColorStore from '@/hooks/use-color-store'
+import { useTheme } from 'next-themes'
+import React from 'react'
+import { PieChart, Pie, ResponsiveContainer, Cell } from 'recharts'
+
+
+export default function SalesCategoryPieChart({ data }: { data: any[] }) {
+  const { theme } = useTheme()
+  const { cssColors } = useColorStore(theme)
+
+  //This is a constant to convert the midAngle from degrees to radians, because JavaScript's Math.cos() and Math.sin() functions work with radians.
+  const RADIAN = Math.PI / 180
+  
+  // (Since this is a pie chart and not a donut chart, innerRadius is 0).
+  const renderCustomizedLabel = ({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    index,
+  }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+    return (
+      <>
+        <text
+          x={x}
+          y={y}
+          textAnchor={x > cx ? 'start' : 'end'}
+          dominantBaseline='central'
+          className='text-xs'
+        >
+          {`${data[index]._id} ${data[index].totalSales} sales`}
+        </text>
+      </>
+    )
+  }
+
+  return (
+    <ResponsiveContainer width='100%' height={400}>
+      <PieChart width={400} height={400}>
+        <Pie
+          data={data}
+          dataKey='totalSales'
+          cx='50%'
+          cy='50%'
+          labelLine={false}
+          label={renderCustomizedLabel}
+        >
+          {data.map((_entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={`hsl(${cssColors['--primary']})`}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </ResponsiveContainer>
+  )
+}
+```
+Of course. Let's break down the `SalesCategoryPieChart` component.
+
+This component is designed to render a responsive, theme-aware pie chart where each slice represents a category's total sales. Its main features are custom labels placed directly inside the slices and a single, theme-based color for all slices.
+
+Here is a step-by-step explanation of its parts:
+
+### 1. The Main Component `SalesCategoryPieChart`
+
+*   **Props:** It accepts a `data` prop, which is an array of objects. Based on the code, each object is expected to have an `_id` (the category name) and a `totalSales` (the numerical value).
+*   **Hooks:**
+    *   `useTheme()`: Gets the current theme (`'light'` or `'dark'`) from `next-themes`.
+    *   `useColorStore()`: A custom hook that provides CSS color variables (`cssColors`) based on the current theme. This allows the chart's color to automatically match the application's overall look.
+
+### 2. The `renderCustomizedLabel` Function
+
+This is the most complex part of the component. Its entire job is to calculate the position for and render a custom text label *inside* each slice of the pie chart. Recharts calls this function for every slice, passing it all the information it needs.
+
+*   **Purpose:** To create better-looking labels than the Recharts default.
+*   **Parameters from Recharts:**
+    *   `cx`, `cy`: The x and y coordinates of the center of the pie chart.
+    *   `midAngle`: The angle (in degrees) pointing to the middle of the current pie slice.
+    *   `innerRadius`, `outerRadius`: The distance from the center to the inner and outer edge of the slice. (Since this is a pie chart and not a donut chart, `innerRadius` is 0).
+    *   `index`: The index of the current slice in the original `data` array. This is how we get the category name (`_id`) and sales value.
+*   **The Math (Trigonometry):**
+    1.  `const RADIAN = Math.PI / 180;`: This is a constant to convert the `midAngle` from degrees to radians, because JavaScript's `Math.cos()` and `Math.sin()` functions work with radians.
+    2.  `const radius = ... * 0.5;`: This calculates a point that is halfway from the center to the outer edge of the slice. This is where the label will be placed.
+    3.  `const x = ...` and `const y = ...`: This is standard trigonometry. It uses the radius (distance) and the angle to calculate the exact `(x, y)` coordinate on the screen for the label.
+*   **The Returned JSX (`<text>`):**
+    *   It returns an SVG `<text>` element, which is how you draw text inside an SVG-based chart.
+    *   `x={x}` and `y={y}`: Places the label at the calculated coordinates.
+    *   `textAnchor`: A clever trick for alignment. If the label is on the right side of the chart (`x > cx`), it aligns the text to the start (left-aligned). If it's on the left side, it aligns it to the end (right-aligned). This keeps labels from running outside the pie slice.
+    *   The content of the label is constructed using the original data: `` `${data[index]._id} ${data[index].totalSales} sales` ``.
+
+### 3. The JSX Return (The Chart Structure)
+
+This is what actually renders the chart to the screen.
+
+1.  **`<ResponsiveContainer>`**: Makes the pie chart automatically fill the width and height of its parent container.
+
+2.  **`<PieChart>`**: The main wrapper for the pie.
+
+3.  **`<Pie>`**: This is the core component that draws the pie slices.
+    *   `data={data}`: Provides the data array to be visualized.
+    *   `dataKey='totalSales'`: Tells the pie that the `totalSales` property of each data object should determine the size (angle) of the slice.
+    *   `cx='50%'`, `cy='50%'`: Centers the pie chart within the `<PieChart>` container.
+    *   `labelLine={false}`: Hides the default lines that usually point from a slice to its label. This is necessary because we are placing our labels directly inside the slices.
+    *   `label={renderCustomizedLabel}`: **This is the key connection.** It tells Recharts to ignore its default labeling logic and use our custom function instead.
+
+4.  **The `<Cell>` Loop:**
+    *   Inside the `<Pie>` component, we map over the `data` array. For each item, we render a `<Cell>` component.
+    *   **Purpose:** In Recharts, this is the standard way to set the color for each individual slice of a pie chart.
+    *   `fill={'hsl(${cssColors['--primary']})'}`: This sets the color of each slice. It dynamically gets the `--primary` color from our `useColorStore` hook and uses it for every slice. This results in a **monochromatic** pie chart where all slices have the same color, matching the app's primary theme color.
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[how to pass SetState from Component to Component]---------------------------[another]
+------------------------------------
+--------------------------------------
+1. date, setDate in overview-report.tsx ==>
+2. setDate is passed down to date-range-picker.tsx as a prop. 
+3. date-range-picker.tsx calls setDate when the user selects a new date range and click Apply.
+4. onclick={() => setDate( calenderDate)}  then calenderDate update ==> setDate useState in overview-report.tsx
+```tsx
+const [date, setDate] = useState<DateRange | undefined>({
+    from: calculatePastDate(30),
+    to: new Date(),
+  }) 
+  ```
+
 
 
 
