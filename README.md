@@ -8584,12 +8584,17 @@ error: failed to push some refs to 'https://github.com/user-name/repo-name.git'
 ------------------------------------
 --------------------------------------
 1.  save unsaved files then commit them the changes first then you can switch branches.
-> 
+>  git status
+> git add .
+> git commit -m "your commit message"
+
 > git switch my-feature-branch ==> go to branch
 > git switch main   ==> go to main
 
+#### The -b flag both creates the branch AND switches to it in one step.
+git checkout -b update-user-profile
 
-
+git tag -a v1.0 -m "End video, before fixes and edits"
 
 ------------------------------------
 --------------------------------------
