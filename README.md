@@ -52,15 +52,21 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 1. You can move the Primary Side Bar to the right hand side by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).
 
 2. changes happened to setting json of vscode
+
 3. [alt+z] to wrap code lines
 
 4. in lib utils.ts ==> change generate id to something secure like uuid or nanoid
+
 5. change slogans in lib/constants.ts and .env.local
+
 6. change category array inside search.tsx to array from database
 
 7. made a humburger menu icon (shadcdn) inside a button .
+
 8. also showed the links in the hearder using map funtion which is a better way to do it.
+
 9. to open new tab in vscode ==> code . ==> it has to have space between.
+
 10. ctrl c to get out of the running terminal.
 
 11. only limit network access of mongodb to varcel and my laptop.
@@ -87,17 +93,24 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 21. in menu.tsx ==>  {forAdmin ? null : <CartButton />} in the repo but in tut <CartButton /> ? check.
 
 22. fix the bug in product-card.tsx ==> when clicking on the image it does not redirect to the product page. "from co-pilot"
+
 --- suggestion: by co-pilot:
 23. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add isDeal={product.isDeal} to it.
 24. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add forListing={true} to it.
 25. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add plain={false} to it.
 26. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add className='text-orange-700' to it.
 -- end
+
 27. in order.actions.ts fix getTopSalesProducts { $sort: { _id: 1 } }, to { $sort: { value: -1 } },
 
 28. fix paypal and stripe env.local keys.
 
 29. sales-category-pie-chart.tsx ==> fix entry to _entry
+
+30. there is no standard to verify email written at signUp page and Strong passwaord , and email verification after signUp.
+
+
+
 
 
 
@@ -8479,10 +8492,13 @@ const [date, setDate] = useState<DateRange | undefined>({
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[?? operator]---------------------------[another]
 ------------------------------------
 --------------------------------------
-
+* ?? ==>  is called the nullish coalescing operator.
+let result = value ?? fallback;
+If value is not null or undefined, result will be value.
+If value is null or undefined, result will be fallback.
 
 
 
