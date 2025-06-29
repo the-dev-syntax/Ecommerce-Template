@@ -8506,10 +8506,21 @@ If value is null or undefined, result will be fallback.
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[to make a new branch]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
+1. Click on the branch name at the bottom-left of the VS Code window (main).
+
+2. Select "Create new branch from..."
+
+3. Choose main as the base.
+
+4. Enter the new branch name: v1.0.2.
+
+5. go to source control tab, up up beside the branch name, click on the "Publish Branch" button to Github repo.
+
+
 
 
 
@@ -8517,12 +8528,53 @@ If value is null or undefined, result will be fallback.
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[get a new cloned repo and push it to a new owned repo]---------------------------[another]
 ------------------------------------
 --------------------------------------
+1. clone tut repo make a folder locally, open it by Vscode, open cli ==> git clone https://github.com/other-user/their-repo.git
+2. make a repo on GitHub.
+3. in vscode on the main branch, add the new remote repo URL.
+4. first make for this cloned code a new origin ==>  git remote set-url origin https://github.com/your-username/your-new-repo.git
+5. then push the code to the new repo on GitHub ==> git push -u origin main
+6. this error could happened:
 
+> error : when tried to push the tut repo to GitHub new github repo:
 
-
+git push -u origin main
+Enumerating objects: 983, done.
+Counting objects: 100% (983/983), done.
+Delta compression using up to 12 threads
+Compressing objects: 100% (368/368), done.
+Writing objects: 100% (983/983), 4.68 MiB | 2.59 MiB/s, done.
+Total 983 (delta 560), reused 978 (delta 558), pack-reused 0
+remote: Resolving deltas: 100% (560/560), done.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote:
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote:
+remote:     - Push cannot contain secrets
+remote:
+remote:
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:
+remote:
+remote:       —— Stripe Test API Secret Key ————————————————————————
+remote:        locations:
+remote:          - commit: 2c6407adc3768401d7c75fc3a6
+remote:            path: lessons/20-pay-order-by-stripe.md:12
+> solution : follow this URL to allow the secret:
+remote:
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/user-name/repo-name/security/secret-scanning/unblock-secret/2zC7cQ4Kvh9HmcwJP
+remote:
+remote:
+remote:
+To https://github.com/user-name/repo-name.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/user-name/repo-name.git'
 
 
 
