@@ -8583,7 +8583,8 @@ error: failed to push some refs to 'https://github.com/user-name/repo-name.git'
 # ----------------------[from main to branch and vice versa]---------------------------[another]
 ------------------------------------
 --------------------------------------
-
+1.  save unsaved files then commit them the changes first then you can switch branches.
+> 
 > git switch my-feature-branch ==> go to branch
 > git switch main   ==> go to main
 
