@@ -4,6 +4,9 @@ import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
 import { PAGE_SIZE } from '../constants'
 
+import { revalidatePath } from 'next/cache'
+import { formatError } from '../utils'
+
 //* GET ALL CATEGORIES
 export async function getAllCategories() {
   await connectToDatabase()
@@ -218,3 +221,75 @@ export async function getAllTags() {
   )
 }
 
+
+// DELETE
+export async function deleteProduct(id: string) {
+  try {
+    await connectToDatabase()
+    const res = await Product.findByIdAndDelete(id)
+    if (!res) throw new Error('Product not found')
+      //success ==> refresh the page
+    revalidatePath('/admin/products')
+    return {
+      success: true,
+      message: 'Product deleted successfully',
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// GET ALL PRODUCTS FOR ADMIN
+export async function getAllProductsForAdmin({
+  query,
+  page = 1,
+  sort = 'latest',
+  limit,
+}: {
+  query: string
+  page?: number
+  sort?: string
+  limit?: number
+}) {
+  await connectToDatabase()
+
+  const pageSize = limit || PAGE_SIZE
+  const queryFilter =
+    query && query !== 'all'
+      ? {
+          name: {
+            $regex: query,
+            $options: 'i',
+          },
+        }
+      : {}
+
+  const order: Record<string, 1 | -1> =
+    sort === 'best-selling'
+      ? { numSales: -1 }
+      : sort === 'price-low-to-high'
+        ? { price: 1 }
+        : sort === 'price-high-to-low'
+          ? { price: -1 }
+          : sort === 'avg-customer-review'
+            ? { avgRating: -1 }
+            : { _id: -1 }
+  const products = await Product.find({
+    ...queryFilter,
+  })
+    .sort(order)
+    .skip(pageSize * (Number(page) - 1))
+    .limit(pageSize)
+    .lean()
+
+  const countProducts = await Product.countDocuments({
+    ...queryFilter,
+  })
+  return {
+    products: JSON.parse(JSON.stringify(products)) as IProduct[],
+    totalPages: Math.ceil(countProducts / pageSize),
+    totalProducts: countProducts,
+    from: pageSize * (Number(page) - 1) + 1,
+    to: pageSize * (Number(page) - 1) + products.length,
+  }
+}
