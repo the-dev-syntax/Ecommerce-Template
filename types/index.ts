@@ -10,6 +10,9 @@ import {
   UserSignUpSchema,
   ReviewInputSchema,
   UserNameSchema,
+  ProductUpdateSchema,
+  ProductInputFormSchema,
+  ProductUpdateFormSchema,
 } from '@/lib/validator'
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
@@ -22,6 +25,10 @@ export type IReviewDetails = IReviewInput & {
 }
 
 export type IProductInput = z.infer<typeof ProductInputSchema>
+export type IProductUpdate = z.infer<typeof ProductUpdateSchema>
+export type IProductInputForm = z.infer<typeof ProductInputFormSchema>
+export type IProductFormUpdate = z.infer<typeof ProductUpdateFormSchema>
+
 
 export type Data = {
   users: IUserInput[]
