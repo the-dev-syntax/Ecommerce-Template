@@ -119,7 +119,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 ---------------------------------------------------------------------------------------------------------------------------
        --> v1-dont-change 
 main --|
-       --> v1.0.2-after-V-end
+       --> admin-orders
 
 ---------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------ in header/index.tsx --------------------------------------------------------
@@ -8531,6 +8531,25 @@ If value is null or undefined, result will be fallback.
 6. git checkout feature/login        # switch to the branch you want to branch from
 7. git checkout -b feature/login-ui  # create and switch to the new branch
 
+> 8. Switch to the main branch
+git checkout main
+
+> 9. Update it with latest remote changes (optional but recommended)
+git pull origin main
+
+> 10. Merge your feature branch into main
+git merge your-branch-name
+
+> 11. Push the updated main branch to remote
+git push origin main
+
+> 12. delete the branch locally after merging 
+ git branch -d your-branch-name
+
+> 13. delete the branch remotely 
+ git push origin --delete your-branch-name
+
+> 14. 
 
 
 
