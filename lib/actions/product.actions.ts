@@ -12,6 +12,7 @@ import { IProductInput } from '@/types'
 import { z } from 'zod'
 
 
+
 //* GET ALL CATEGORIES
 export async function getAllCategories() {
   await connectToDatabase()
@@ -338,3 +339,4 @@ export async function getProductById(productId: string) {
   const product = await Product.findById(productId)
   return JSON.parse(JSON.stringify(product)) as IProduct
 }
+

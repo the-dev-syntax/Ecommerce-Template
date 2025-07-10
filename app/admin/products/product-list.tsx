@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { formatDateTime, formatId } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
+
 type ProductListDataProps = {
   products: IProduct[]
   totalPages: number
@@ -115,7 +116,7 @@ const ProductList = () => {
               <TableRow>
                 <TableHead>Id</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead className='text-right'>Price</TableHead>
+                <TableHead className='text-left'>Price</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Rating</TableHead>
@@ -133,7 +134,7 @@ const ProductList = () => {
                       {product.name}
                     </Link>
                   </TableCell>
-                  <TableCell className='text-right'>${product.price}</TableCell>
+                  <TableCell className='text-left'>${product.price}</TableCell>
                   <TableCell>{product.category}</TableCell>
                   <TableCell>{product.countInStock}</TableCell>
                   <TableCell>{product.avgRating}</TableCell>
@@ -168,7 +169,7 @@ const ProductList = () => {
             </TableBody>
           </Table>
           {(data?.totalPages ?? 0) > 1 && (
-            <div className='flex items-center gap-2'>
+            <div className='flex justify-center items-center gap-2 md:gap-8'>
               <Button
                 variant='outline'
                 onClick={() => handlePageChange('prev')}

@@ -9262,12 +9262,28 @@ images: {
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[stylize the image uploadthing drop area
 ------------------------------------
 --------------------------------------
-
-
-
+```tsx
+<UploadDropzone
+  endpoint='imageUploader'
+  className=" flex flex-col items-center justify-center // Centers content horizontally and vertically [5]
+  min-h-[200px] w-full max-w-md // Example dimensions for the dropzone
+  border-2 border-dashed border-gray-400 rounded-lg p-4 // Visual styling for the drop area
+  text-center // Centers text within the dropzone "
+  onClientUploadComplete={(res: { ufsUrl: string }[]) => {
+    const newImageUrls = res.map((file) => file.ufsUrl);
+    form.setValue('images', [...images, ...newImageUrls]);
+  }}
+  onUploadError={(error: Error) => {
+    toast({
+      variant: 'destructive',
+      description: `ERROR! ${error.message}`,
+    })
+  }}
+/>
+```
 
 
 

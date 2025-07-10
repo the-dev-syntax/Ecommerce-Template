@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
-import { UploadButton } from '@/lib/uploadthing'
+import { UploadDropzone } from '@/lib/uploadthing'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toSlug } from '@/lib/utils'
 import { IProductInputForm } from '@/types'
@@ -190,9 +190,32 @@ interface ProductFormUIProps {
                           height={100}
                         />
                       ))}
-                      <FormControl>                    
-                        <UploadButton
+                      <FormControl className="flex-grow flex items-center justify-center">                    
+                        <UploadDropzone
                           endpoint='imageUploader'
+                          className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg p-4 text-center"
+                          content={{
+                              label: ({ ready }) => {  
+                              if (ready) {
+                                return (
+                                  <div>
+                                     Drag and Drop
+                                  </div>
+                                );
+                              }
+                              return "Uploading..."; 
+                            },                            
+                            allowedContent: ({ ready }) => {  
+                              if (ready) {
+                                return (
+                                  <div>
+                                    Only images are allowed, 10 max.
+                                  </div>
+                                );
+                              }
+                              return "checking permissions..."; 
+                            },
+                          }}
                           onClientUploadComplete={(res: { ufsUrl: string }[]) => {
                             const newImageUrls = res.map((file) => file.ufsUrl);
                             form.setValue('images', [...images, ...newImageUrls]);
