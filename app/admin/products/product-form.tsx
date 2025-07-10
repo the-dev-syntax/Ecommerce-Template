@@ -194,7 +194,8 @@ interface ProductFormUIProps {
                         <UploadButton
                           endpoint='imageUploader'
                           onClientUploadComplete={(res: { ufsUrl: string }[]) => {
-                            form.setValue('images', [...images, res[0].ufsUrl])
+                            const newImageUrls = res.map((file) => file.ufsUrl);
+                            form.setValue('images', [...images, ...newImageUrls]);
                           }}
                           onUploadError={(error: Error) => {
                             toast({

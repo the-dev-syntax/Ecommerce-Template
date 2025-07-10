@@ -9218,13 +9218,27 @@ from gemini:
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[error with UploadThing]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
+when attempting to add an image in the image field , error appear:
+[{"slug":"imageUploader","config":{"image":{"maxFileSize":"4MB","maxFileCount":1,"minFileCount":1,"contentDisposition":"inline"}}}]
+Error! invalid token. a token is a base64 encoded JSON object matching {apiKey: string, appId:string, regions:string[]} what is the problem , i am using /api/uploadthing
 
-
-
+the problem was i have to add in next.config.js the following code:
+```js
+images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'uel9brzirf.ufs.sh',
+        port: '',
+        pathname: '/**', // This allows any path under the hostname
+      },
+    ],
+  },
+  ```
 
 
 ------------------------------------
