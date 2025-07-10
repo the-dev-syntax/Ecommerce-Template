@@ -109,17 +109,20 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 30. there is no standard to verify email written at signUp page and Strong passwaord , and email verification after signUp.
 
+31. 
+
+32. 
 
 
 ---------------------------------------------------------------------------------------------------------------------------
------------------------------------------- Branches --------------------------------------------------------
+#-------------------------git & github----------------- Branches --------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------
        --> v1-dont-change 
 main --|
        --> v1.0.2-after-V-end
 
 ---------------------------------------------------------------------------------------------------------------------------
------------------------------------------- in header/index.tsx --------------------------------------------------------
+# ------------------------------------------ in header/index.tsx --------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------
 1-
 inside header/index.tsx ==> <Button variant='ghost' means the button bg is transparent
@@ -8510,7 +8513,7 @@ If value is null or undefined, result will be fallback.
 
 ------------------------------------
 --------------------------------------
-# ----------------------[to make a new branch]---------------------------[another]
+# --------------git & github--------[to make a new branch]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -8524,7 +8527,9 @@ If value is null or undefined, result will be fallback.
 
 5. go to source control tab, up up beside the branch name, click on the "Publish Branch" button to Github repo.
 
-
+> to branch from another branch:
+6. git checkout feature/login        # switch to the branch you want to branch from
+7. git checkout -b feature/login-ui  # create and switch to the new branch
 
 
 
@@ -8532,7 +8537,7 @@ If value is null or undefined, result will be fallback.
 
 ------------------------------------
 --------------------------------------
-# ----------------------[get a new cloned repo and push it to a new owned repo]---------------------------[another]
+# ------------git & github----------[get a new cloned repo and push it to a new owned repo]---------------------------[another]
 ------------------------------------
 --------------------------------------
 1. clone tut repo make a folder locally, open it by Vscode, open cli ==> git clone https://github.com/other-user/their-repo.git
@@ -8584,7 +8589,7 @@ error: failed to push some refs to 'https://github.com/user-name/repo-name.git'
 
 ------------------------------------
 --------------------------------------
-# ----------------------[from main to branch and vice versa]---------------------------[another]
+# ---------git & github-------------[from main to branch and vice versa]---------------------------[another]
 ------------------------------------
 --------------------------------------
 1.  save unsaved files then commit them the changes first then you can switch branches.
@@ -8780,36 +8785,460 @@ The `handleInputChange` function does exactly this for API requests, ensuring a 
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[alternative implementation of admin/product/form-list.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+admin/product/form-list.tsx
+```tsx
+'use client'
+
+
+import Image from 'next/image'
+
+import { UseFormReturn } from 'react-hook-form'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/hooks/use-toast'
+import { UploadButton } from '@/lib/uploadthing'
+import { Checkbox } from '@/components/ui/checkbox'
+import { toSlug } from '@/lib/utils'
+import { IProductInput } from '@/types'
+
+
+
+interface ProductFormUIProps {
+    form: UseFormReturn<IProductInput>;
+    onSubmit: (values: IProductInput) => void;
+    isSubmitting: boolean;
+    type: 'Create' | 'Update';
+}
+
+
+ const ProductFormUI = ({ form, onSubmit, isSubmitting, type }: ProductFormUIProps) => {
+
+  const { toast } = useToast()
+ 
+  const images = form.watch('images')
+
+  console.log(form.formState.errors)
+  return (
+    <Form {...form}>
+      <form
+        method='post'
+        onSubmit={form.handleSubmit(onSubmit)}
+        className='space-y-8'
+      >
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
+            name='name'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder='Enter product name' {...field} />
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='slug'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Slug</FormLabel>
+
+                <FormControl>
+                  <div className='relative'>
+                    <Input
+                      placeholder='Enter product slug'
+                      className='pl-8'
+                      {...field}
+                    />
+                    <button
+                      type='button'
+                      onClick={() => {
+                        form.setValue('slug', toSlug(form.getValues('name')))
+                      }}
+                      className='absolute right-2 top-2.5'
+                    >
+                      Generate
+                    </button>
+                  </div>
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
+            name='category'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Category</FormLabel>
+                <FormControl>
+                  <Input placeholder='Enter category' {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='brand'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Brand</FormLabel>
+                <FormControl>
+                  <Input placeholder='Enter product brand' {...field} />
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
+            name='listPrice'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>List Price</FormLabel>
+                <FormControl>
+                  <Input placeholder='Enter product list price' {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='price'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Net Price</FormLabel>
+                <FormControl>
+                  <Input placeholder='Enter product price' {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='countInStock'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Count In Stock</FormLabel>
+                <FormControl>
+                  <Input
+                    type='number'
+                    placeholder='Enter product count in stock'
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
+            name='images'
+            render={() => (
+              <FormItem className='w-full'>
+                <FormLabel>Images</FormLabel>
+                <Card>
+                  <CardContent className='space-y-2 mt-2 min-h-48'>
+                    <div className='flex justify-start items-center space-x-2'>
+                      {images.map((image: string) => (
+                        <Image
+                          key={image}
+                          src={image}
+                          alt='product image'
+                          className='w-20 h-20 object-cover object-center rounded-sm'
+                          width={100}
+                          height={100}
+                        />
+                      ))}
+                      <FormControl>
+                        <UploadButton
+                          endpoint='imageUploader'
+                          onClientUploadComplete={(res: { url: string }[]) => {
+                            form.setValue('images', [...images, res[0].url])
+                          }}
+                          onUploadError={(error: Error) => {
+                            toast({
+                              variant: 'destructive',
+                              description: `ERROR! ${error.message}`,
+                            })
+                          }}
+                        />
+                      </FormControl>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div>
+          <FormField
+            control={form.control}
+            name='description'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder='Tell us a little bit about yourself'
+                    className='resize-none'
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  You can <span>@mention</span> other users and organizations to
+                  link to them.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div>
+          <FormField
+            control={form.control}
+            name='isPublished'
+            render={({ field }) => (
+              <FormItem className='space-x-2 items-center'>
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Is Published?</FormLabel>
+              </FormItem>
+            )}
+          />
+        </div>
+        <div>
+        <Button type='submit' size='lg' disabled={isSubmitting} className='button col-span-2 w-full'>
+            {isSubmitting ? 'Submitting...' : `${type} Product `}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  )
+}
+
+export default ProductFormUI
+
+```
+---------------
+-----------------
+----------------
+
+
+'use client';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createProduct } from '@/lib/actions/product.actions';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { IProductInput } from '@/types';
+import { ProductInputSchema, ReviewInputSchema } from '@/lib/validator';
+import ProductFormUI from './product-form';
+import z from 'zod';
+import { formatNumberWithDecimal } from '@/lib/utils';
+
+
+// const defaultValues: IProductInput = { 
+//         name: '',
+//         slug: '',
+//         category: '',
+//         images: [],
+//         brand: '',
+//         description: '',
+//         price: 0,
+//         listPrice: 0,
+//         countInStock: 0,
+//         numReviews: 0,
+//         avgRating: 0,
+//         numSales: 0,
+//         isPublished: false,
+//         tags: [],
+//         sizes: [],
+//         colors: [],
+//         ratingDistribution: [],
+//         reviews: [],
+//  };
+
+ const Price = (field: string) =>
+   z.coerce
+     .number()
+     .refine(
+       (value) => /^\d+(\.\d{2})?$/.test(formatNumberWithDecimal(value)),
+       `${field} must have exactly two decimal places (e.g., 49.99)`
+     )
+ const IOrderListSchema = z.object({
+   name: z.string().min(3, 'Name must be at least 3 characters'),
+   slug: z.string().min(3, 'Slug must be at least 3 characters'),
+   category: z.string().min(1, 'Category is required'),
+   images: z.array(z.string()).min(1, 'Product must have at least one image'),
+     brand: z.string().min(1, 'Brand is required'),
+     description: z.string().min(1, 'Description is required'),
+     isPublished: z.boolean(),
+     price: Price('Price'),
+     listPrice: Price('List price'),
+     countInStock: z.coerce
+       .number()
+       .int()
+       .nonnegative('count in stock must be a non-negative number'),
+     tags: z.array(z.string()),
+     sizes: z.array(z.string()),
+     colors: z.array(z.string()),
+     avgRating: z.coerce
+        .number()
+        .min(0, 'Average rating must be at least 0')
+        .max(5, 'Average rating must be at most 5'),
+      numReviews: z.coerce
+        .number()
+        .int()
+        .nonnegative('Number of reviews must be a non-negative number'),
+      ratingDistribution: z
+        .array(z.object({ rating: z.number(), count: z.number() }))
+        .max(5),
+        numSales: z.coerce
+            .number()
+            .int()
+            .nonnegative('Number of sales must be a non-negative number'),
+            // reviews: z.array(ReviewInputSchema).default([]),
+ })
+
+type IOrderList = z.infer<typeof IOrderListSchema>
+
+ const defaultValues: IOrderList = { 
+        name: 'happy',
+        slug: '5646548',
+        category: 'fdgdf',
+        images: [],
+        brand: '',
+        description: '',
+        price: 0,
+        listPrice: 0,
+        countInStock: 0,
+        isPublished: false,
+       tags:["tag1", "tag2"],
+        sizes: [],
+        colors: [],
+        numReviews: 0,
+        avgRating: 0,
+        numSales: 0,
+        // reviews: [],
+        ratingDistribution: [],        
+
+ }
+
+export const CreateProductForm = () => {
+  const router = useRouter()
+
+  const { toast } = useToast()
+
+  const form = useForm<IOrderList >({
+    resolver: zodResolver(IOrderListSchema),
+    defaultValues,
+  })
+
+
+  const onSubmit = async (values: IProductInput) => {
+            const res = await createProduct(values)
+        if (!res.success) {
+          toast({
+            variant: 'destructive',
+            description: res.message,
+          })
+        } else {
+          toast({
+            description: res.message,
+          })
+          router.push(`/admin/products`)
+        }
+      }
+     
+  
+
+  return <ProductFormUI form={form} onSubmit={onSubmit} isSubmitting={form.formState.isSubmitting} type="Create" />;
+};
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[image upload component in product-form.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+from gemini: 
+```tsx
+    <UploadButton
+        endpoint='imageUploader'
+        onClientUploadComplete={(res: { ufsUrl: string }[]) => {
+            const newImageUrls = res.map((file) => file.ufsUrl);
+            form.setValue('images', [...images, ...newImageUrls]); // Spread the new URLs
+        }}
+    /> 
+
+```
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[error with UploadThing]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
+when attempting to add an image in the image field , error appear:
+[{"slug":"imageUploader","config":{"image":{"maxFileSize":"4MB","maxFileCount":1,"minFileCount":1,"contentDisposition":"inline"}}}]
+Error! invalid token. a token is a base64 encoded JSON object matching {apiKey: string, appId:string, regions:string[]} what is the problem , i am using /api/uploadthing
 
-
-
-
-
-------------------------------------
---------------------------------------
-# ----------------------[]---------------------------[another]
-------------------------------------
---------------------------------------
-
-
-
-
-
-
-
-------------------------------------
---------------------------------------
-# ----------------------[]---------------------------[another]
-------------------------------------
---------------------------------------
-
-
-
-
+the problem was i have to add in next.config.js the following code:
+```js
+images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'uel9brzirf.ufs.sh',
+        port: '',
+        pathname: '/**', // This allows any path under the hostname
+      },
+    ],
+  },
+  ```
 
 
 ------------------------------------
