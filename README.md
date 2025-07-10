@@ -8513,7 +8513,7 @@ If value is null or undefined, result will be fallback.
 
 ------------------------------------
 --------------------------------------
-# ----------------------[to make a new branch]---------------------------[another]
+# --------------git & github--------[to make a new branch]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
@@ -8527,7 +8527,9 @@ If value is null or undefined, result will be fallback.
 
 5. go to source control tab, up up beside the branch name, click on the "Publish Branch" button to Github repo.
 
-
+> to branch from another branch:
+6. git checkout feature/login        # switch to the branch you want to branch from
+7. git checkout -b feature/login-ui  # create and switch to the new branch
 
 
 
