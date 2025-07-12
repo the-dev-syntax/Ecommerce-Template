@@ -38,8 +38,6 @@ export default async function ProductDetails(props: {
   searchParams: Promise<{ page: string; color: string; size: string }>
 }) {
 
-
-  
   const searchParams = await props.searchParams
 
   const { page, color, size } = searchParams

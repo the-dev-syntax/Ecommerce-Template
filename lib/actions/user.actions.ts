@@ -4,13 +4,14 @@ import { auth, signIn, signOut } from '@/auth'
 import { IUserName, IUserSignIn, IUserSignUp } from '@/types'
 import { UserSignUpSchema } from '../validator'
 import { connectToDatabase } from '../db'
-import User from '../db/models/user.model'
+import User, { IUser } from '../db/models/user.model'
 import { formatError } from '../utils'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { PAGE_SIZE } from '../constants'
 
 // SIGN IN
-export async function signInWithCredentials(user: IUserSignIn) {
-    
+export async function signInWithCredentials(user: IUserSignIn) {    
   return await signIn('credentials', { ...user, redirect: false })
 }
 
@@ -20,13 +21,15 @@ export const SignOut = async () => {
   redirect(redirectTo.redirect)
 }
 
+// SIGN IN WITH GOOGLE
 export const SignInWithGoogle = async () => {
   await signIn('google')
 }
 
-// CREATE
+// CREATE USER - ADMIN
 export async function registerUser(userSignUp: IUserSignUp) {
   try {
+
     const user = await UserSignUpSchema.parseAsync({
       name: userSignUp.name,
       email: userSignUp.email,
@@ -35,6 +38,12 @@ export async function registerUser(userSignUp: IUserSignUp) {
     })
 
     await connectToDatabase()
+     const session = await auth()
+      if(session?.user.role !== "Admin")
+        throw new Error('Admin permission required')
+
+
+
     await User.create({
       ...user,
       password: await bcrypt.hash(user.password, 5),
@@ -45,11 +54,13 @@ export async function registerUser(userSignUp: IUserSignUp) {
   }
 }
 
-// UPDATE
+// UPDATE USER NAME- ADMIN
 export async function updateUserName(user: IUserName) {
   try {
     await connectToDatabase()
     const session = await auth()
+    if(session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
 
     const currentUser = await User.findById(session?.user?.id)
     if (!currentUser) throw new Error('User not found')
@@ -66,6 +77,66 @@ export async function updateUserName(user: IUserName) {
     return { success: false, message: formatError(error) }
   }
 }
+
+// DELETE USER - ADMIN
+export async function deleteUser(id:string) {
+  try {
+    await connectToDatabase()
+    const session = await auth()
+    if(session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
+
+    const res = await User.findByIdAndDelete(id)
+    if (!res) throw new Error('User not found')
+    revalidatePath('/admin/users')
+    return {
+      success: true,
+      message: 'User deleted successfully',
+    }
+  }catch (error) {
+    return {
+      success: false,
+      message: formatError(error),
+    }
+  }
+}
+
+// GET ALL USERS - ADMIN
+export async function getAllUsers({
+    page = 1,
+    limit 
+  }: {
+    page:number,
+    limit?:number
+  }) {   
+    await connectToDatabase()
+    const session = await auth()
+    if(session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
+
+    limit = limit || PAGE_SIZE
+    const skipAmount = (Number(page) -1)  * limit
+
+    const usersQuery = User.find()
+      .sort({ createdAt: 'desc' })
+      .skip(skipAmount)
+      .limit(limit)
+
+    // Execute queries in parallel for efficiency
+    const [users, totalUsers] = await Promise.all([
+        usersQuery.exec(),
+        User.countDocuments()
+    ])
+
+    const totalPages = Math.ceil(totalUsers / limit)
+
+    return {
+      data : JSON.parse(JSON.stringify(users)) as IUser[],
+      totalPages : totalPages,
+    }
+ 
+  }
+
 
 /*
 ? zod validated the data client side , now validated again with zod server side

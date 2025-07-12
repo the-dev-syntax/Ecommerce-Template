@@ -13,8 +13,8 @@ import { ReviewInputSchema } from '../validator'
 import { IReviewDetails, IReviewInput } from '@/types'
 import { PAGE_SIZE } from '../constants'
 
-// createUpdateReview , updateProductReview, getReviews, getReviewByProductId
 
+// CREATE OR UPDATE REVIEW - PRIVATE
 export async function createUpdateReview({
   data,
   path,
@@ -70,9 +70,14 @@ export async function createUpdateReview({
   }
 }
 
+// HELPER FN TO UPDATE ONE REVIEW - PRIVATE
 const updateProductReview = async (productId: string) => {
   // get all reviews to this product, then group them by the value of the rating field "one-star""two-stars", $sum is accumulator(count no.of docs in each group"120","85").
   //? ex. return  result = [  { _id: 5, count: 120 },   { _id: 4, count: 85 }, ....] , think of it _id= star.
+   const session = await auth()
+    if (!session) {
+      throw new Error('User is not authenticated')
+    }
 
   const result = await Review.aggregate([
     { $match: { product: new mongoose.Types.ObjectId(productId) } },
@@ -115,6 +120,7 @@ const updateProductReview = async (productId: string) => {
   })
 }
 
+// GET ALL REVIEWS - PUBLIC
 export async function getReviews({
   productId,
   limit,
@@ -124,6 +130,7 @@ export async function getReviews({
   limit?: number
   page: number
 }) {
+
   limit = limit || PAGE_SIZE
   await connectToDatabase()
   const skipAmount = (page - 1) * limit
@@ -142,6 +149,7 @@ export async function getReviews({
   }
 }
 
+// GET ONE REVIEW - PRIVATE
 export const getReviewByProductId = async ({
   productId,
 }: {
@@ -152,6 +160,7 @@ export const getReviewByProductId = async ({
   if (!session) {
     throw new Error('User is not authenticated')
   }
+  
   const review = await Review.findOne({
     product: productId,
     user: session?.user?.id,

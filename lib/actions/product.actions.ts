@@ -10,6 +10,7 @@ import { formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
+import { auth } from '@/auth'
 
 
 
@@ -72,7 +73,7 @@ export async function getProductBySlug(slug: string) {
   return JSON.parse(JSON.stringify(product)) as IProduct
 }
 
-//* GET RELATED PRODUCTS: PRODUCTS WITH SAME CATEGORY
+//* GET RELATED PRODUCTS WITH SAME CATEGORY
 export async function getRelatedProductsByCategory({
   category,
   productId,
@@ -207,6 +208,7 @@ export async function getAllProducts({
   }
 }
 
+// GET ALL TAGS
 export async function getAllTags() {
 
   const tags = await Product.aggregate([
@@ -228,10 +230,14 @@ export async function getAllTags() {
 }
 
 
-// DELETE
+// DELETE PRODUCT - ADMIN
 export async function deleteProduct(id: string) {
   try {
     await connectToDatabase()
+    const session = await auth()
+        if(session?.user.role !== "Admin")
+          throw new Error('Admin permission required')
+
     const res = await Product.findByIdAndDelete(id)
     if (!res) throw new Error('Product not found')
       //success ==> refresh the page
@@ -258,6 +264,9 @@ export async function getAllProductsForAdmin({
   limit?: number
 }) {
   await connectToDatabase()
+  const session = await auth()
+      if(session?.user.role !== "Admin")
+        throw new Error('Admin permission required')
 
   const pageSize = limit || PAGE_SIZE
   const queryFilter =
@@ -302,11 +311,15 @@ export async function getAllProductsForAdmin({
 
 
 // ADMIN ACTIONS FOR PRODUCTS:
-// CREATE
+// CREATE PRODUCT - ADMIN
 export async function createProduct(data: IProductInput) {
-  try {
-    const product = ProductInputSchema.parse(data)
+  try {    
     await connectToDatabase()
+    const session = await auth()
+    if (session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
+
+    const product = ProductInputSchema.parse(data)
     await Product.create(product)
     revalidatePath('/admin/products')
     return {
@@ -318,11 +331,15 @@ export async function createProduct(data: IProductInput) {
   }
 }
 
-// UPDATE
+// UPDATE PRODUCT - ADMIN
 export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
   try {
-    const product = ProductUpdateSchema.parse(data)
     await connectToDatabase()
+    const session = await auth()
+    if (session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
+
+    const product = ProductUpdateSchema.parse(data)
     await Product.findByIdAndUpdate(product._id, product)
     revalidatePath('/admin/products')
     return {
@@ -333,7 +350,8 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
     return { success: false, message: formatError(error) }
   }
 }
-// GET ONE PRODUCT BY ID
+
+// GET ONE PRODUCT BY ID - PUBLIC
 export async function getProductById(productId: string) {
   await connectToDatabase()
   const product = await Product.findById(productId)
