@@ -2,13 +2,14 @@
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
 import { IUserName, IUserSignIn, IUserSignUp } from '@/types'
-import { UserSignUpSchema } from '../validator'
+import { UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
 import { formatError } from '../utils'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { PAGE_SIZE } from '../constants'
+import z from 'zod'
 
 // SIGN IN
 export async function signInWithCredentials(user: IUserSignIn) {    
@@ -26,7 +27,7 @@ export const SignInWithGoogle = async () => {
   await signIn('google')
 }
 
-// CREATE USER - ADMIN
+// CREATE USER - PRIVATE
 export async function registerUser(userSignUp: IUserSignUp) {
   try {
 
@@ -39,8 +40,9 @@ export async function registerUser(userSignUp: IUserSignUp) {
 
     await connectToDatabase()
      const session = await auth()
-      if(session?.user.role !== "Admin")
-        throw new Error('Admin permission required')
+    if (!session) {
+      throw new Error('User is not authenticated')
+    }
 
 
 
@@ -54,15 +56,16 @@ export async function registerUser(userSignUp: IUserSignUp) {
   }
 }
 
-// UPDATE USER NAME- ADMIN
+// UPDATE USER NAME- PRIVATE
 export async function updateUserName(user: IUserName) {
   try {
     await connectToDatabase()
     const session = await auth()
-    if(session?.user.role !== "Admin")
-      throw new Error('Admin permission required')
+    if (!session) {
+      throw new Error('User is not authenticated')
+    }
 
-    const currentUser = await User.findById(session?.user?.id)
+    const currentUser = await User.findById(session.user.id)
     if (!currentUser) throw new Error('User not found')
 
     currentUser.name = user.name
@@ -136,6 +139,46 @@ export async function getAllUsers({
     }
  
   }
+
+// GET USER - ADMIN
+export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
+  try {
+    await connectToDatabase()
+    const session = await auth()
+    if(session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
+
+    const dbUser = await User.findById(user._id)
+    if (!dbUser) throw new Error('User not found')
+
+    dbUser.name = user.name
+    dbUser.email = user.email
+    dbUser.role = user.role
+    const updatedUser = await dbUser.save()
+    revalidatePath('/admin/users')
+    
+    return {
+      success: true,
+      message: 'User updated successfully',
+      data: JSON.parse(JSON.stringify(updatedUser)),
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// GET USER BY ID - ADMIN
+export async function getUserById(userId: string) {
+  await connectToDatabase()
+  const session = await auth()
+    if(session?.user.role !== "Admin")
+      throw new Error('Admin permission required')
+
+  const user = await User.findById(userId)
+  if (!user) throw new Error('User not found')
+
+  return JSON.parse(JSON.stringify(user)) as IUser
+}
 
 
 /*
