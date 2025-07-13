@@ -27,7 +27,7 @@ export const SignInWithGoogle = async () => {
   await signIn('google')
 }
 
-// CREATE USER - PRIVATE
+// CREATE USER - PUBLIC
 export async function registerUser(userSignUp: IUserSignUp) {
   try {
 
@@ -39,12 +39,6 @@ export async function registerUser(userSignUp: IUserSignUp) {
     })
 
     await connectToDatabase()
-     const session = await auth()
-    if (!session) {
-      throw new Error('User is not authenticated')
-    }
-
-
 
     await User.create({
       ...user,
