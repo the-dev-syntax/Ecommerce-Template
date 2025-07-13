@@ -9462,39 +9462,184 @@ export async function getAllUsers({
 
 ------------------------------------
 --------------------------------------
-# ----------------------[to handle update session token]-----[auth.ts]----------------------[another]
+# ----------------------[how to use error as a signal from server-side to client side]---------------------------[another]
 ------------------------------------
 --------------------------------------
+
 ```ts
-// or signIn the user again 
+// -------------------- user.actions.ts
   if (isAdminSelfDemoting) {
-await signIn('credentials', {
-        email: originalEmail, // Use the user's unique identifier
-        redirect: true,
-        redirectTo: '/', // Redirect to homepage after re-authentication
-// or 
-await signOut() // Sign out the user and default redirect to sign-in page
-// or
-await signOut({ callbackUrl: '/' }) // Sign out the user and redirect to homepage
-```
-------------------
-auth.ts
-```ts
+await signOut({ redirect: false })
+      redirect('/sign-in');
+
+// ------------------ auth.ts
+
+
 if (trigger === "update" && session?.user) {        
         // if session.user.name is not null/undefined, use it, Otherwise, use the existing token.name.
         token.name = session.user.name ?? token.name
         token.role = session.user.role ?? token.role
       }
+// ------------------ user-edit-form.tsx
+async function onSubmit(values: z.infer<typeof UserUpdateSchema>) {
+    try {
+      const res = await updateUser({
+        ...values,
+        _id: user._id,
+      })
+      if (!res.success)
+        return toast({
+          variant: 'destructive',
+          description: res.message,
+        })
+
+      toast({
+        description: res.message,
+      })
+      form.reset({...values})
+      router.push(`/admin/users`)
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+        if (error.message === 'NEXT_REDIRECT') {
+      // This is expected when the server performs a redirect. Do nothing.
+    return;
+    }
+      toast({
+        variant: 'destructive',
+        description: error.message,
+      })
+    }
+  }
 ```
 
-------------------------------------
---------------------------------------
-# ----------------------[]---------------------------[another]
-------------------------------------
---------------------------------------
+there is redirect() fn in the server action and a router.push() fn in the client component. and a toast "NEXT_REDIRECT" appears after the update is successful, but the page does not redirect to the sign-in page.
 
+### Why the Conflict Occurs (The "NEXT_REDIRECT" Error)
 
+1.  **Server Action:** Your `updateUser` function correctly identifies the admin self-demotion. It calls `signOut` and then `redirect('/sign-in')`.
+2.  **How `redirect()` Works:** In Next.js Server Actions, `redirect()` doesn't just send a simple command. To stop all further execution, it **throws a special, designated error** with the message "NEXT_REDIRECT".
+3.  **Client-Side `catch` Block:** Your `try...catch` block in the `onSubmit` function is doing its job perfectly. It catches the error thrown by the server action.
+4.  **The Result:**
+    *   The `try` block's execution stops immediately. The success toast and the `router.push('/admin/users')` are **never reached**.
+    *   The code jumps to your `catch (error: any)` block.
+    *   `error.message` is `"NEXT_REDIRECT"`.
+    *   Your code then calls `toast({ variant: 'destructive', description: "NEXT_REDIRECT" })`, which is exactly the behavior you are seeing.
+    *   By catching this specific error, you are **preventing the Next.js framework from handling it**. The framework is supposed to see this error and perform the actual browser redirect, but your `catch` block intercepts it.
 
+### The Solution: Make Your Client-Side Code Aware of Redirects
+
+The solution is to make your `catch` block smarter. It should only show a toast for *actual* application errors, not for the special redirect signal.
+
+Here is the corrected code for both your client component and server action.
+
+---
+
+### 1. Update Your Client-Side Form (`user-edit-form.tsx`)
+
+Modify your `onSubmit` function to ignore the `NEXT_REDIRECT` error, allowing the framework to handle it.
+
+```tsx
+// In user-edit-form.tsx
+
+async function onSubmit(values: z.infer<typeof UserUpdateSchema>) {
+  try {
+    const res = await updateUser({
+      ...values,
+      _id: user._id,
+    });
+
+    // This part now only runs if the server action completes WITHOUT a redirect.
+    if (res && res.success) {
+      toast({
+        description: res.message,
+      });
+      form.reset({ ...values });
+      router.push(`/admin/users`);
+    } else if (res && !res.success) {
+      toast({
+        variant: 'destructive',
+        description: res.message,
+      });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    // This is the key change. We check if the error is the special redirect error.
+    // If it is, we do nothing and let Next.js handle the page navigation.
+    // If it's any other error, we show a toast.
+    if (error.message === 'NEXT_REDIRECT') {
+      // This is expected when the server performs a redirect. Do nothing.
+      return;
+    }
+
+    toast({
+      variant: 'destructive',
+      description: 'An unexpected error occurred. Please try again.',
+    });
+  }
+}
+```
+
+### 2. Refine Your Server Action (`user.actions.ts`)
+
+Your server action logic is mostly correct, but it's good practice to ensure it also handles the `NEXT_REDIRECT` error properly, especially if it's wrapped in a larger `try...catch`. You must re-throw the redirect error so Next.js can see it.
+
+```typescript
+// In user.actions.ts
+
+import { signOut } from '@/auth'
+import { redirect } from 'next/navigation'
+// ... other imports
+
+export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
+  try {
+    // ... (connectToDatabase, auth check, find user)
+
+    const isAdminSelfDemoting =
+      session.user.id === dbUser._id.toString() &&
+      dbUser.role === 'Admin' &&
+      user.role !== 'Admin';
+
+    // ... (update user logic, dbUser.save())
+
+    revalidatePath('/admin/users');
+
+    if (isAdminSelfDemoting) {
+      // Sign out to clear the admin session cookie.
+      await signOut({ redirect: false });
+      // This will throw the NEXT_REDIRECT error.
+      redirect('/sign-in');
+    }
+
+    // This return is only reached if the user is NOT self-demoting.
+    return {
+      success: true,
+      message: 'User updated successfully',
+    };
+  } catch (error: any) {
+    // IMPORTANT: If the error is the redirect signal, re-throw it.
+    if (error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
+    
+    // For all other errors, return a formatted error message.
+    return { success: false, message: formatError(error) };
+  }
+}
+```
+
+### Summary of the New Flow
+
+1.  **Admin self-demotes and clicks "Save"**.
+2.  The `updateUser` server action runs, updates the DB, calls `signOut`, and then calls `redirect('/sign-in')`.
+3.  `redirect()` throws the `NEXT_REDIRECT` error.
+4.  The `catch` block in your server action sees this error and re-throws it.
+5.  The client-side `onSubmit` function's `await` promise rejects with the `NEXT_REDIRECT` error.
+6.  Execution jumps to the client-side `catch` block.
+7.  The `if (error.message === 'NEXT_REDIRECT')` condition is `true`. The function simply returns, "swallowing" the error and preventing a toast.
+8.  The Next.js framework, which initiated the fetch, receives the redirect signal and **navigates the browser to `/sign-in`**.
+
+This creates a clean, predictable flow where the server has full control over navigation in critical scenarios, and the client handles standard success/error cases.
 
 
 

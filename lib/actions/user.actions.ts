@@ -160,7 +160,7 @@ export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
     if (isAdminSelfDemoting) {
       // If the updated user is the current session user and their role has changed, sign them out
       await signOut({ redirect: false })
-      redirect('/')      
+      redirect('/sign-in');
     }
 
     return {
@@ -168,7 +168,11 @@ export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
       message: 'User updated successfully',
       data: JSON.parse(JSON.stringify(updatedUser)),
     }
-  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error:any) {
+    if (error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
     return { success: false, message: formatError(error) }
   }
 }

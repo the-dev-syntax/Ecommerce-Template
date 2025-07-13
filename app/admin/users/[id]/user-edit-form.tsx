@@ -54,11 +54,15 @@ const UserEditForm = ({ user }: { user: IUser }) => {
       toast({
         description: res.message,
       })
-      form.reset()
+      form.reset({...values})
       router.push(`/admin/users`)
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
+        if (error.message === 'NEXT_REDIRECT') {
+      // This is expected when the server performs a redirect. Do nothing.
+    return;
+    }
       toast({
         variant: 'destructive',
         description: error.message,
