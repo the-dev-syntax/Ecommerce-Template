@@ -82,10 +82,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.name = user.name || user.email!.split('@')[0]
         token.role = (user as { role: string }).role
       }
-
-      if (session?.user?.name && trigger === 'update') {
-        token.name = session.user.name
+      
+      if (trigger === "update" && session?.user) {        
+        // if session.user.name is not null/undefined, use it, Otherwise, use the existing token.name.
+        token.name = session.user.name ?? token.name
+        token.role = session.user.role ?? token.role
       }
+
       return token
     },
     session: async ({ session, user, trigger, token }) => {

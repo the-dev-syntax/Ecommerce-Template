@@ -9460,20 +9460,32 @@ export async function getAllUsers({
 ```
 
 
-
-
-
-
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[to handle update session token]-----[auth.ts]----------------------[another]
 ------------------------------------
 --------------------------------------
-
-
-
-
-
+```ts
+// or signIn the user again 
+  if (isAdminSelfDemoting) {
+await signIn('credentials', {
+        email: originalEmail, // Use the user's unique identifier
+        redirect: true,
+        redirectTo: '/', // Redirect to homepage after re-authentication
+// or 
+await signOut() // Sign out the user and default redirect to sign-in page
+// or
+await signOut({ callbackUrl: '/' }) // Sign out the user and redirect to homepage
+```
+------------------
+auth.ts
+```ts
+if (trigger === "update" && session?.user) {        
+        // if session.user.name is not null/undefined, use it, Otherwise, use the existing token.name.
+        token.name = session.user.name ?? token.name
+        token.role = session.user.role ?? token.role
+      }
+```
 
 ------------------------------------
 --------------------------------------

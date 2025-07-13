@@ -140,7 +140,7 @@ export async function getAllUsers({
  
   }
 
-// GET USER - ADMIN
+// UPDATE USER - ADMIN
 export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
   try {
     await connectToDatabase()
@@ -151,12 +151,23 @@ export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
     const dbUser = await User.findById(user._id)
     if (!dbUser) throw new Error('User not found')
 
+      // Note: Mongoose _id is an object, so we convert it to a string for comparison.
+      // 3. Check if this update is a demotion from the 'Admin' role
+   const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role
+        
+
     dbUser.name = user.name
     dbUser.email = user.email
     dbUser.role = user.role
     const updatedUser = await dbUser.save()
     revalidatePath('/admin/users')
+
     
+    if (isAdminSelfDemoting) {
+      // If the updated user is the current session user and their role has changed, sign them out
+      await signOut()      
+    }
+
     return {
       success: true,
       message: 'User updated successfully',
