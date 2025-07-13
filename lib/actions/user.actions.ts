@@ -159,7 +159,8 @@ export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
     
     if (isAdminSelfDemoting) {
       // If the updated user is the current session user and their role has changed, sign them out
-      await signOut()      
+      await signOut({ redirect: false })
+      redirect('/')      
     }
 
     return {
