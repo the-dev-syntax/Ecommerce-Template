@@ -9,15 +9,19 @@ import Order from './models/order.model'
 import { IOrderInput, OrderItem, ShippingAddress } from '@/types'
 import { calculateFutureDate, calculatePastDate, generateId, round2 } from '../utils'
 import { AVAILABLE_DELIVERY_DATES } from '../constants'
+import WebPage from './models/web-page.model'
 
 // calling this function give you access to the .env file
 loadEnvConfig(cwd())
 
 const main = async () => {
   try {
-    const { products , users , reviews } = data
+    const { products , users , reviews, webPages } = data
 
     await connectToDatabase(process.env.MONGODB_URI)
+
+    await WebPage.deleteMany()
+    await WebPage.insertMany(webPages)
 
     await User.deleteMany()
     const createdUser = await User.insertMany(users)

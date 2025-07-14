@@ -13,6 +13,8 @@ import {
   ProductUpdateSchema,
   ProductInputFormSchema,
   ProductUpdateFormSchema,
+  WebPageInputSchema,
+  WebPageUpdateSchema,
 } from '@/lib/validator'
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
@@ -31,6 +33,7 @@ export type IProductFormUpdate = z.infer<typeof ProductUpdateFormSchema>
 
 
 export type Data = {
+  webPages: IWebPageInput[]
   users: IUserInput[]
   products: IProductInput[]
     reviews: {
@@ -75,3 +78,7 @@ export type IUserInput = z.infer<typeof UserInputSchema>
 export type IUserSignIn = z.infer<typeof UserSignInSchema>
 export type IUserSignUp = z.infer<typeof UserSignUpSchema>
 export type IUserName = z.infer<typeof UserNameSchema>
+
+// webpage
+export type IWebPageInput = z.infer<typeof WebPageInputSchema>
+export type IWebPageUpdate = z.infer<typeof WebPageUpdateSchema>
