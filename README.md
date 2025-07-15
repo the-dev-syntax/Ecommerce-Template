@@ -115,9 +115,14 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 33. the browsing history stays even after logging out , an there is no browsing history page.
 
-34. if user not logged in no history in the NAV and no history page.
+34. add this: if user not logged in no history in the NAV and no history page:
+  - in userButton.tsx  ==> is hwo to do it as an example.
+  - but history is a item in an array mapped in index.tsx
+  - so filter the menu first with a condition and then map over the resulted array  ==> **[fixed]**
 
 35. logo can be E as it is, but V two outline blue leaves.
+
+36. change Logo+Name to signature style Font here.
 
 
 ---------------------------------------------------------------------------------------------------------------------------
@@ -9967,15 +9972,38 @@ export default AboutPage;
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[fixed bug browsing-history link a visiability ]---------------------------[another]
 ------------------------------------
 --------------------------------------
+```tsx
+export default async function Header() {
++ const session = await auth()
 
++ // Filter the array first to get only the menus that should be visible
+const visibleMenus = data.headerMenus.filter((menu) => {
+  // If the menu is 'Browsing History', only include it if there is a session.
+  if (menu.name === 'Browsing History') {
+    return !!session; // The '!!' converts the session object or null to a true/false boolean
+  }
+  // For all other menus, always include them.
+  return true;
+});
 
+return (
+  <div className='flex items-center flex-wrap gap-3 overflow-hidden   max-h-[42px]'>
+       +   {visibleMenus.map((menu) => (         
+            <Link
+              href={menu.href}
+              key={menu.href}
+              className='header-button !p-2'
+            >
+              {menu.name}
+            </Link>
+          ))}
+        </div>
+)
 
-
-
-
+```
 
 ------------------------------------
 --------------------------------------
