@@ -111,7 +111,13 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 31. Edit and Delete reviews for ADMIN. 
 
-32. 
+32. when i sign-out the cookie is still there , and did not got deleted
+
+33. the browsing history stays even after logging out , an there is no browsing history page.
+
+34. if user not logged in no history in the NAV and no history page.
+
+35. logo can be E as it is, but V two outline blue leaves.
 
 
 ---------------------------------------------------------------------------------------------------------------------------

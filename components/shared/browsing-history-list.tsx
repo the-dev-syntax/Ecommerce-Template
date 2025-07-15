@@ -13,7 +13,7 @@ export default function BrowsingHistoryList({
   const { products } = useBrowsingHistory()
   return (
     products.length !== 0 && (
-      <div className='bg-background'>
+      <div id='browsing-history' className='bg-background'>
         <Separator className={cn('mb-4', className)} />
         <ProductList
           title={"Related to items that you've viewed"}
