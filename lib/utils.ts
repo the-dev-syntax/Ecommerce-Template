@@ -17,16 +17,30 @@ export const formatNumberWithDecimal = (num: number): string => {
 
 // PROMPT: [ChatGTP] create toSlug ts arrow function that convert text to lowercase, remove non-word, non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens
 // PROMPT: [ChatGTP] last line only :non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens  - non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens.- Also replace repeated hyphens in middle with single hyphen
-export const toSlug = (text: string): string =>
-  text
+// export const toSlug = (text: string): string =>
+//   text
+//     .toLowerCase()
+//     .replace(/[^\w\s-]+/g, '')
+//     .replace(/\s+/g, '-')
+//     .replace(/^-+|-+$/g, '')
+//     .replace(/-+/g, '-')
+// .replace(/[^\p{L}\p{N}\-]+/gu, '') // Use Unicode-aware regex for arabic and other languages.
+
+export const slugify = (text: string): string => {
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
     .toLowerCase()
-    .replace(/[^\w\s-]+/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-+/g, '-')
+    .trim()
+    .replace(/\s+/g, '-') // Spaces to dashes
+    .replace(/[^\w\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\-]+/g, '') // Allow Arabic + Latin + dashes
+    .replace(/\-\-+/g, '-') // Collapse multiple dashes
+    .replace(/^-+|-+$/g, '') // Trim leading/trailing dashes
+    .slice(0, 80);
+}
 
 // call in these exported fns to formate the prices
-
 const CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   style: 'currency',
@@ -202,10 +216,11 @@ export const getFilterUrl = ({
 }) => {
   const newParams = { ...params }
   if (category) newParams.category = category
-  if (tag) newParams.tag = toSlug(tag)
+  if (tag) newParams.tag = slugify(tag)
   if (sort) newParams.sort = sort
   if (price) newParams.price = price
   if (rating) newParams.rating = rating
   if (page) newParams.page = page
   return `/search?${new URLSearchParams(newParams).toString()}`
 }
+

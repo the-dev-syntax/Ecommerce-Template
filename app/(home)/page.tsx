@@ -1,6 +1,6 @@
 import { HomeCarousel } from '@/components/shared/home/home-carousel'
 import data from '@/lib/data'
-import { toSlug } from '@/lib/utils'
+import { slugify } from '@/lib/utils'
 import {
   getProductsByTag,
   getProductsForCard,
@@ -40,7 +40,7 @@ export default async function Page() {
       },
       items: categories.map((category) => ({
         name: category,
-        image: `/images/${toSlug(category)}.jpg`,
+        image: `/images/${slugify(category)}.jpg`,
         href: `/search?category=${category}`,
       })),
     },

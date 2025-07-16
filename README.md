@@ -10005,15 +10005,125 @@ return (
 
 ```
 
+- another way
+```tsx
+{data.headerMenus.map((menu) => (
+      // The condition to render is:
+      // EITHER the menu name is NOT 'Browsing History'
+      // OR a session exists.
+      (menu.name !== 'Browsing History' || session) && (
+        <Link
+          href={menu.href}
+          key={menu.href}
+          className='header-button !p-2'
+        >
+          {menu.name}
+
+```
+- another way
+```tsx
+ {data.headerMenus.map((menu) => {
+      // Check for the specific case we want to hide
+      if (menu.name === 'Browsing History' && !session) {
+        return null; // Don't render anything for this item
+      }
+
+      // For all other cases, render the Link
+      return (
+        <Link
+          href={menu.href}
+          key={menu.href}
+          className='header-button !p-2'
+        >
+          {menu.name}
+        </Link>
+      );
+    })}
+
+```
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[again with the conditional type form resolver]---------------------------[another]
 ------------------------------------
 --------------------------------------
+> this gives no error but gemini and chatgpt said it will infer any and no type will be enforced here
+> so i did unify them under WebPageInputSchema
+```tsx
+const schema = type === 'Update' ? WebPageUpdateSchema : WebPageInputSchema
+  type SchemaType = z.infer<typeof schema>
+  console.log(`schema = ${schema} ... SchemaType = ${SchemaType}`)  
 
+  const form = useForm<SchemaType>({
+    resolver: zodResolver(schema),
+    defaultValues:
+      webPage && type === 'Update' ? webPage : webPageDefaultValues,
+  })
+ 
+  async function onSubmit(values: SchemaType) {
+    if (type === 'Create') {
+      const res = await createWebPage(values)
+      if (!res.success) {
+        toast({
+          variant: 'destructive',
+          description: res.message,
+        })
+      } else {
+        toast({
+          description: res.message,
+        })
+        router.push(`/admin/web-pages`)
+      }
+    }
+    if (type === 'Update') {
+      if (!webPageId) {
+        router.push(`/admin/web-pages`)
+        return
+      }
+      const res = await updateWebPage({ ...values, _id: webPageId })
+      if (!res.success) {
+        toast({
+          variant: 'destructive',
+          description: res.message,
+        })
+      } else {
+        router.push(`/admin/web-pages`)
+      }
+    }
+  }
+  ```
+> While form.setValue('content', text) works, it's not the recommended react-hook-form pattern. The field object provided by render already contains an onChange handler that is designed to register the change with the form's state, including managing its isDirty and isTouched status. Using setValue manually can sometimes bypass this internal state management
+```tsx
+// change from:
+<MdEditor
+  // ...
+  onChange={({ text }) => form.setValue('content', text)}
+/>
+// to:
+<MdEditor
+  value={field.value}
+  style={{ height: '500px' }}
+  renderHTML={(text) => <ReactMarkdown>{text}</ReactMarkdown>}
+  // Use the field's own onChange handler
+  onChange={({ text }) => field.onChange(text)}
+/>
 
+```
 
+> editing slug field:
+```tsx
+// UX Improvement: Auto-generate slug from title
+  const watchedTitle = form.watch('title')
+  useEffect(() => {
+    // Only update the slug if the user hasn't typed in it manually
+    // We check this by comparing the current slug with a slugified version of itself.
+    // If they match, it means it's either empty or was auto-generated.
+    const currentSlug = form.getValues('slug')
+    if (currentSlug === slugify(currentSlug)) {
+      form.setValue('slug', slugify(watchedTitle), { shouldValidate: true })
+    }
+  }, [watchedTitle, form])
 
+```
 
 
 ------------------------------------

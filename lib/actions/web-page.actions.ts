@@ -5,6 +5,8 @@ import { auth } from "@/auth"
 import WebPage, { IWebPage } from '../db/models/web-page.model'
 import { revalidatePath } from 'next/cache'
 import { formatError } from '../utils'
+import { IWebPageInput, IWebPageUpdate } from '@/types'
+import { WebPageInputSchema, WebPageUpdateSchema } from '../validator'
 
 
 // DELETE WEB PAGE - ADMIN
@@ -62,4 +64,55 @@ export async function getWebPageBySlug(slug: string) {
   if (!webPage) throw new Error('WebPage not found')
 
   return JSON.parse(JSON.stringify(webPage)) as IWebPage
+}
+
+// CREATE WEB PAGE - ADMIN
+export async function createWebPage(data: IWebPageInput) {
+
+    const session = await auth()
+    if(session?.user.role !== "Admin")
+    throw new Error('Admin permission required')
+
+ try {
+    const webPage = WebPageInputSchema.parse(data)
+    await connectToDatabase()
+    // avoid doublicating slugs which will prevent fetching the page and cause errors
+
+    await WebPage.create(webPage)
+    revalidatePath('/admin/web-pages')
+
+    return {
+      success: true,
+      message: 'WebPage created successfully',
+    }
+
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// UPDATE WEB PAGE - ADMIN
+export async function updateWebPage(data: IWebPageUpdate) {
+    try{
+    const webPage = WebPageUpdateSchema.parse(data)
+
+    await connectToDatabase()
+
+    const session = await auth()
+    if(session?.user.role !== "Admin")
+    throw new Error('Admin permission required')
+
+    // return the new updated page (webPage._id, webPage, { new: true })
+    const updatedPage  = await WebPage.findByIdAndUpdate(webPage._id, webPage)
+    if (!updatedPage ) throw new Error('WebPage not found. Could not perform update.')
+
+    revalidatePath('/admin/web-pages')
+    
+    return {
+      success: true,
+      message: 'WebPage updated successfully',
+    }
+  } catch (error){
+     return { success: false, message: formatError(error) }
+  }
 }

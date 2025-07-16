@@ -10,7 +10,7 @@ import {
 } from '@/lib/actions/product.actions'
 import { IProduct } from '@/lib/db/models/product.model'
 import ProductSortSelector from '@/components/shared/product/product-sort-selector'
-import { getFilterUrl, toSlug } from '@/lib/utils'
+import { getFilterUrl, slugify } from '@/lib/utils'
 import Rating from '@/components/shared/product/rating'
 
 import CollapsibleOnMobile from '@/components/shared/collapsible-on-mobile'
@@ -254,7 +254,7 @@ export default async function SearchPage(props: {
                 {tags.map((t: string) => (
                   <li key={t}>
                     <Link
-                      className={`${toSlug(t) === tag && 'text-primary'}`}
+                      className={`${slugify(t) === tag && 'text-primary'}`}
                       href={getFilterUrl({ tag: t, params })}
                     >
                       {t}

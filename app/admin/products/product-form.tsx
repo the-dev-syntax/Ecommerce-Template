@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { UploadDropzone } from '@/lib/uploadthing'
 import { Checkbox } from '@/components/ui/checkbox'
-import { toSlug } from '@/lib/utils'
+import { slugify } from '@/lib/utils'
 import { IProductInputForm } from '@/types'
 
 
@@ -80,7 +80,7 @@ interface ProductFormUIProps {
                     <button
                       type='button'
                       onClick={() => {
-                        form.setValue('slug', toSlug(form.getValues('name')))
+                        form.setValue('slug', slugify(form.getValues('name')))
                       }}
                       className='absolute right-2 top-2.5'
                     >
@@ -324,7 +324,7 @@ import { IProduct } from '@/lib/db/models/product.model'
 import { UploadButton } from '@/lib/uploadthing'
 import { ProductInputFormSchema, ProductInputSchema, ProductUpdateSchema } from '@/lib/validator'
 import { Checkbox } from '@/components/ui/checkbox'
-import { toSlug } from '@/lib/utils'
+import { slugify } from '@/lib/utils'
 import { IProductInputForm } from '@/types'
 
 const productDefaultValues: IProductInputFo =
@@ -462,7 +462,7 @@ const ProductForm = ({
                     <button
                       type='button'
                       onClick={() => {
-                        form.setValue('slug', toSlug(form.getValues('name')))
+                        form.setValue('slug', slugify(form.getValues('name')))
                       }}
                       className='absolute right-2 top-2.5'
                     >
