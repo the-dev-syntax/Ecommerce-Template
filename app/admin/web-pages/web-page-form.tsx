@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import MDEditor from '@uiw/react-md-editor';
+import ReactMarkdown from 'react-markdown'; 
 
 import { Button } from '@/components/ui/button'
 import {
@@ -23,7 +23,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { slugify } from '@/lib/utils'
 import { IWebPageInput} from '@/types'
 import { useEffect } from 'react'
-import { mdEditorConfig } from '@/lib/markdown-config-uiw';
+import { secureSchema } from '@/lib/markdown-config'
+import { Textarea } from '@/components/ui/textarea';
+import rehypeSanitize from 'rehype-sanitize';
 
 
 const webPageDefaultValues =
@@ -158,25 +160,37 @@ const WebPageForm = ({
             )}
           />
         </div>
-        <div className='flex flex-col gap-5 md:flex-row'>
-          <FormField
+        <div className='flex flex-col gap-5'>
+        <FormField
             control={form.control}
             name='content'
             render={({ field }) => (
-              <FormItem className='w-full'>
-                <FormLabel>Content</FormLabel>
-                <FormControl>
-                  <MDEditor
-                    // value={markdown}
-                    // {...field}
-                    value={field.value}
-                    style={{ height: '500px' }}
-                    onChange={(val) => field.onChange(val || '')}
-                    {...mdEditorConfig}
-                  />
-                  {/* <Textarea placeholder='Enter content' {...field} /> */}
-                </FormControl>
-                <FormMessage />
+              <FormItem>
+                <FormLabel>Page Content</FormLabel>
+               
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 '>       
+                 <div className='flex flex-col gap-2 '>
+                    <h3 className='text-sm font-medium'>Editor</h3>
+                    <FormControl>                      
+                      <Textarea
+                        placeholder='Enter your content in Markdown format...'
+                        className='min-h-[300px]' // Give it some height
+                        {...field}
+                      />
+                    </FormControl>                   
+                    <FormMessage />
+                  </div>
+                  <div className='flex flex-col gap-2'>
+                    <h3 className='text-sm font-medium'>Preview</h3>
+                    <div className='prose dark:prose-invert min-h-[300px] min-w-full rounded-md border bg-muted p-4'>
+                      {/* ReactMarkdown is for display only. It reads the value from the form field. */}
+                      <ReactMarkdown rehypePlugins={[[rehypeSanitize, secureSchema]]}>
+                        {/* Provide a default value to avoid errors if field.value is empty */}
+                        {field.value || '_Nothing to preview yet..._'}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
               </FormItem>
             )}
           />
@@ -214,3 +228,13 @@ const WebPageForm = ({
 }
 
 export default WebPageForm
+
+/*
+<ReactMarkdown                  
+                    value={field.value}
+                    style={{ height: '500px' }}
+                    onChange={(val) => field.onChange(val || '')}
+                    {...mdEditorConfig}
+                  />
+                   {<Textarea placeholder='Enter content' {...field} />  }               
+*/

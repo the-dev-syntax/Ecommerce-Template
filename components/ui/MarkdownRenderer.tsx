@@ -1,6 +1,6 @@
 "use client"; // <-- This is the most important line
 
-import { mdEditorConfig } from '@/lib/markdown-config-uiw';
+import { mdEditorConfig } from '@/lib/markdown-config';
 import ReactMarkdown from 'react-markdown'; 
 
 
