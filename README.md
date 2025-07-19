@@ -124,6 +124,14 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 36. change Logo+Name to signature style Font here.
 
+37. there is a problem with the nav list -the one beside ALL- is not mobile compatable.
+
+38. add some color change to the tailwind/typography in tailwind config for the markdown files.
+
+39. 
+
+40. 
+
 
 ---------------------------------------------------------------------------------------------------------------------------
 #-------------------------git & github----------------- Branches --------------------------------------------------------
@@ -10128,11 +10136,16 @@ const schema = type === 'Update' ? WebPageUpdateSchema : WebPageInputSchema
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[markdown editor]---------------------------[another]
 ------------------------------------
 --------------------------------------
 
+> Using react markdown editor is better if you are going to apply tailwind/typography library (prose).
 
+[why?]
+1. because the markdown/react dose not have a default styling to  it so it will not conflict with the tailwind/typography styling.
+
+2. other libraries like viw or markdown-lite they have some default styling to them which make bugs and conflict when styling with prose.
 
 
 

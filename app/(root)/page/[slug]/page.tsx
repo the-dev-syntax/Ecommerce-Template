@@ -1,6 +1,6 @@
-import ReactMarkdown from 'react-markdown'
 import { notFound } from 'next/navigation'
 import { getWebPageBySlug } from '@/lib/actions/web-page.actions'
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>
@@ -29,11 +29,21 @@ export default async function ProductDetailsPage(props: {
   if (!webPage) notFound()
 
   return (
-    <div className='p-4 max-w-3xl mx-auto'>
-      <h1 className='h1-bold py-4'>{webPage.title}</h1>
-      <section className='text-justify text-lg mb-20 web-page-content'>
-        <ReactMarkdown>{webPage.content}</ReactMarkdown>
-      </section>
+    <div className='w-full max-w-7xl mx-auto px-4'>
+       <article className="prose dark:prose-invert w-full max-w-full sm:max-w-2xl md:max-w-5xl px-4 mx-auto">
+        <h1>{webPage.title}</h1>       
+        <MarkdownRenderer content={webPage.content} />
+      </article>
     </div>
   )
 }
+
+/*
+<MDEditor
+          value={webPage.content}                               
+          previewOptions={{
+              rehypePlugins: [[rehypeSanitize, secureSchema]],
+          }}
+          style={{ width: '100%' }}          
+        />
+*/

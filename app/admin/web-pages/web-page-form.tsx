@@ -3,9 +3,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import MdEditor from 'react-markdown-editor-lite'
-import ReactMarkdown from 'react-markdown'
-import 'react-markdown-editor-lite/lib/index.css'
+import MDEditor from '@uiw/react-md-editor';
+
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -24,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { slugify } from '@/lib/utils'
 import { IWebPageInput} from '@/types'
 import { useEffect } from 'react'
+import { mdEditorConfig } from '@/lib/markdown-config-uiw';
+
 
 const webPageDefaultValues =
   process.env.NODE_ENV === 'development'
@@ -165,15 +166,14 @@ const WebPageForm = ({
               <FormItem className='w-full'>
                 <FormLabel>Content</FormLabel>
                 <FormControl>
-                  <MdEditor
+                  <MDEditor
                     // value={markdown}
                     // {...field}
                     value={field.value}
                     style={{ height: '500px' }}
-                    renderHTML={(text) => <ReactMarkdown>{text}</ReactMarkdown>}
-                    onChange={({ text }) => field.onChange(text)}
+                    onChange={(val) => field.onChange(val || '')}
+                    {...mdEditorConfig}
                   />
-
                   {/* <Textarea placeholder='Enter content' {...field} /> */}
                 </FormControl>
                 <FormMessage />
