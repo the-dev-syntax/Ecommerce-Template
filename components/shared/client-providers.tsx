@@ -15,12 +15,7 @@ export default function ClientProviders({
   const isCartSidebarOpen = useCartSidebar()
 
   return (    
-      <ThemeProvider 
-        attribute='class' 
-        defaultTheme='system 
-        enableSystem
-        disableTransitionOnChange'
-        >
+      <ThemeProvider attribute='class' defaultTheme='system'>
         {isCartSidebarOpen ? (
           <div className='flex min-h-screen'>
             <div className='flex-1 overflow-hidden'>{children}</div>
