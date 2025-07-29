@@ -87,21 +87,17 @@ export function calculateFutureDate(days: number) {
   return currentDate
 }
 
-export function getMonthName(yearAndMonth: string) {
-  
-  const [year, monthNumber] = yearAndMonth.split('-')
+export function getMonthName(yearMonth: string): string {
+  const [year, month] = yearMonth.split('-').map(Number)
+  const date = new Date(year, month - 1)
+  const monthName = date.toLocaleString('default', { month: 'long' })
+  const now = new Date()
 
-  const date = new Date()
-
-  console.log(year)
-
-  date.setMonth(parseInt(monthNumber) - 1)
-  
-  return new Date().getMonth() === parseInt(monthNumber) - 1
-    ? `${date.toLocaleString('default', { month: 'long' })} (ongoing)`
-    : date.toLocaleString('default', { month: 'long' })
+  if (year === now.getFullYear() && month === now.getMonth() + 1) {
+    return `${monthName} (ongoing)`
+  }
+  return monthName
 }
-
 // rename currentDate pastDate
 export function calculatePastDate(days: number) {
   const currentDate = new Date()

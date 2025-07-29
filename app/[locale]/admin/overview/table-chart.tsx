@@ -2,15 +2,16 @@
 import { getMonthName } from '@/lib/utils'
 import Image from 'next/image'
 import Link from 'next/link'
-import React from 'react'
 import ProductPrice from '@/components/shared/product/product-price'
+import { useTranslations } from 'next-intl'
+
 
 
 //"The data prop must be an array. If that array has any items in it, every single one of them must match the specified object shape."
 type TableChartProps = {
   labelType: 'month' | 'product'
   data: {
-    label: string
+    label: string 
     image?: string
     value: number
     id?: string
@@ -45,14 +46,24 @@ export default function TableChart({
   data = [],
 }: TableChartProps) {
 
+  const t = useTranslations('Admin');
   const max = Math.max(...data.map((item) => item.value))
-  
-   // data= monthlySales() in order.actions.tsx 
-  const dataWithPercentage = data.map((x) => ({
+  const dataWithPercentage = data.map((x) => {
+  let finalLabel = x.label;
+
+  if (labelType === 'month') {
+    const monthLabel = getMonthName(x.label); // e.g., "July (ongoing)"
+    finalLabel = monthLabel.includes('ongoing')
+      ? monthLabel.replace('ongoing', t('ongoing'))
+      : monthLabel;
+  }
+
+  return {
     ...x,
-    label: labelType === 'month' ? getMonthName(x.label) : x.label,
+    label: finalLabel,
     percentage: Math.round((x.value / max) * 100),
-  }))
+  };
+});
 
   return (
     <div className='space-y-3'>

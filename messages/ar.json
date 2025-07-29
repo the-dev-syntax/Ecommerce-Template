@@ -422,10 +422,23 @@
     "Preview": "معاينة",
     "Nothing to preview yet": "_ليس هناك شيء للمعاينة_",
     "Enter slug": "أدخل الكود الخاص بالمنتج",
-    "Generate": "اصدار",
-   
+    "Generate": "اصدار",   
     "Status": "الحالة",
+    "ongoing": "الجاري",
+    "January": "يناير",
+    "February": "فبراير",
+    "March": "مارس",
+    "April": "ابريل",
+    "May": "مايو",
+    "June": "يونيو",
+    "July": "يوليو",
+    "August": "اغسطس",
+    "September": "سبتمبر",
+    "October": "اكتوبر",
+    "November": "نوفمبر",
+    "December": "ديسمبر",
     "No orders found": "لم يتم العثور على طلبات",
+    "Admin Dashboard": "لوحة تحكم الادمن",
     "Details": "التفاصيل"
   }
 }

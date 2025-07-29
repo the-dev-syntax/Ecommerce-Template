@@ -12196,10 +12196,46 @@ export default function TableChart({
 *   **Centralized Presentation:** All translation and formatting logic now lives inside the `TableChart` component, where it belongs.
 *   **Product Name Translation:** The logic now includes a placeholder showing how you would handle product name translations, assuming your database returns an object of translations.
 *   **Automatic `alt` Text:** Because you translate the `label` variable once, it's correctly used in all places, including the image `alt` text.
+```tsx
+// export function getMonthNameNewOne(yearMonth: string): string {
+//   const [year, month] = yearMonth.split('-').map(Number)
+//   const date = new Date(year, month - 1)
+//   const monthName = date.toLocaleString('default', { month: 'long' })
+//   const now = new Date()
 
+//   if (year === now.getFullYear() && month === now.getMonth() + 1) {
+//     return `${monthName} Ongoing`
+//   }
+//   return monthName
+// }
+// export function getMonthNameOldOne(yearAndMonth: string) {
+  
+//   const [year, monthNumber] = yearAndMonth.split('-')
 
+//   const date = new Date()
 
+//   console.log(year)
 
+//   date.setMonth(parseInt(monthNumber) - 1)
+  
+//   return new Date().getMonth() === parseInt(monthNumber) - 1
+//     ? `${date.toLocaleString('default', { month: 'long' })} (ongoing)`
+//     : date.toLocaleString('default', { month: 'long' })
+// }
+
+// another one
+export function getMonthName(yearAndMonth: string): { monthName: string, isOngoing: boolean } {
+  const [yearNumber, monthNumber] = yearAndMonth.split('-').map(Number) // ex return [2023, 10] (month passed is October)
+  const date = new Date(yearNumber, monthNumber - 1) //ex return {year: 2023, month: 9, day: 1} (october index is 9)
+  const monthName = date.toLocaleString('default', { month: 'long' }) // ex return 'October'
+  const now = new Date()
+
+   if (yearNumber === now.getFullYear() && monthNumber === now.getMonth() + 1) {
+    return `${date.toLocaleString('default', { month: 'long' })} (ongoing)`
+  }
+  return {monthName, isOngoing: false}
+}
+```
 
 
 

@@ -423,7 +423,21 @@
     "Enter slug": "Entrez le slug du produit",
     "Generate": "Générer",
     "Status": "Statut",
+    "ongoing": "En cours",
+    "January": "Janvier",
+    "February": "Février",
+    "March": "Mars",
+    "April": "Avril",
+    "May": "Mai",
+    "June": "Juin",
+    "July": "Juillet",
+    "August": "Aout",
+    "September": "Septembre",
+    "October": "Octobre",
+    "November": "Novembre",
+    "December": "Décembre",
     "No orders found": "Aucune commande trouvée",
+    "Admin Dashboard": "Tableau de bord Admin",
     "Details": "Détails"
   }
 }
