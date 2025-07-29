@@ -6,7 +6,7 @@ import { connectToDatabase } from '../db'
 import { auth } from '@/auth'
 import { OrderInputSchema } from '../validator'
 import Order, { IOrder } from '../db/models/order.model'
-import { AVAILABLE_DELIVERY_DATES, PAGE_SIZE } from '../constants'
+
 import { paypal } from '../paypal'
 import { sendPurchaseReceipt, sendAskReviewOrderItems } from '@/emails'
 import { revalidatePath } from 'next/cache'
@@ -14,7 +14,9 @@ import mongoose from 'mongoose'
 import { DateRange } from 'react-day-picker'
 import Product from '../db/models/product.model'
 import User from '../db/models/user.model'
+import { getSetting } from './setting.actions'
 
+ 
 
 // CREATE ORDER - PRIVATE
 export const createOrder = async (clientSideCart: Cart) => {
@@ -170,15 +172,17 @@ export const calcDeliveryDateAndPrice = async ({
   
   const session = await auth()
     if (!session) throw new Error('User not authenticated')
-      
+  
+  const { availableDeliveryDates } = await getSetting()
+
   const itemsPrice = round2(
     items.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
  
   const deliveryDate =
-  AVAILABLE_DELIVERY_DATES[
+  availableDeliveryDates[
     deliveryDateIndex === undefined
-      ? AVAILABLE_DELIVERY_DATES.length - 1
+      ? availableDeliveryDates.length - 1
       : deliveryDateIndex
   ]
 
@@ -198,10 +202,10 @@ const totalPrice = round2(
     (taxPrice ? round2(taxPrice) : 0)
 )
 return {
-  AVAILABLE_DELIVERY_DATES,
+  availableDeliveryDates,
   deliveryDateIndex:
     deliveryDateIndex === undefined
-      ? AVAILABLE_DELIVERY_DATES.length - 1
+      ? availableDeliveryDates.length - 1
       : deliveryDateIndex,
   itemsPrice,
   shippingPrice,
@@ -218,7 +222,12 @@ export async function getMyOrders({
   limit?: number
   page: number
 }) {
-  limit = limit || PAGE_SIZE
+
+  const {
+    common: { pageSize },
+  } = await getSetting()
+  
+  limit = limit || pageSize
   await connectToDatabase()
   const session = await auth()
     if (!session) {
@@ -244,10 +253,14 @@ export async function getMyOrders({
 
 // GET ORDERS BY USER - ADMIN
 export async function getOrderSummary(date: DateRange) {
+
   await connectToDatabase()
   const session = await auth()
       if (session?.user.role !== "Admin")
         throw new Error('Admin permission required')
+  const {
+    common: { pageSize },
+  } = await getSetting()
 
   const ordersCount = await Order.countDocuments({
     createdAt: {
@@ -324,7 +337,7 @@ export async function getOrderSummary(date: DateRange) {
   const latestOrders = await Order.find()
     .populate('user', 'name')
     .sort({ createdAt: 'desc' })
-    .limit(PAGE_SIZE)
+    .limit(pageSize)
   return {
     ordersCount,
     productsCount,
@@ -506,7 +519,12 @@ export async function getAllOrders({
   limit?: number
   page: number
 }) {
-  limit = limit || PAGE_SIZE
+  
+  const {
+    common: { pageSize },
+  } = await getSetting()
+
+  limit = limit || pageSize
   await connectToDatabase()
   const session = await auth()
       if (session?.user.role !== "Admin")

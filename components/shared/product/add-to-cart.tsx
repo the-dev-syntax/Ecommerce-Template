@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/use-toast'
 import { OrderItem } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
+  //PROMPT: add quantity state
+ 
 
 export default function AddToCart({
   item,
@@ -24,6 +27,7 @@ export default function AddToCart({
 }) {
   const router = useRouter()
   const { toast } = useToast()
+  const t = useTranslations('Product')
 
   const { addItem } = useCartStore()
 
@@ -36,14 +40,14 @@ export default function AddToCart({
         try {
           addItem(item, 1)
           toast({
-            description: 'Added to Cart',
+             description: t('Added to Cart'),
             action: (
               <Button
                 onClick={() => {
                   router.push('/cart')
                 }}
               >
-                Go to Cart
+                {t('Go to Cart')}
               </Button>
             ),
           })
@@ -55,7 +59,7 @@ export default function AddToCart({
         }
       }}
     >
-      Add to Cart
+      {t('Add to Cart')}
     </Button>
   ) : (
     <div className='w-full space-y-2'>
@@ -64,7 +68,9 @@ export default function AddToCart({
         onValueChange={(i) => setQuantity(Number(i))}
       >
         <SelectTrigger className=''>
-          <SelectValue>Quantity: {quantity}</SelectValue>
+          <SelectValue>
+            {t('Quantity')}: {quantity}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent position='popper'>
           {Array.from({ length: item.countInStock }).map((_, i) => (
@@ -90,7 +96,7 @@ export default function AddToCart({
           }
         }}
       >
-        Add to Cart
+        {t('Add to Cart')}
       </Button>
       <Button
         variant='secondary'
@@ -107,7 +113,7 @@ export default function AddToCart({
         }}
         className='w-full rounded-full '
       >
-        Buy Now
+         {t('Buy Now')}
       </Button>
     </div>
   )

@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "app/admin/products/update"
+    "app/[locale]/admin/products/update"
   ],
   "exclude": [
     "node_modules"

@@ -15,6 +15,12 @@ import {
   ProductUpdateFormSchema,
   WebPageInputSchema,
   WebPageUpdateSchema,
+  CarouselSchema,
+  DeliveryDateSchema,
+  PaymentMethodSchema,
+  SettingInputSchema,
+  SiteCurrencySchema,
+  SiteLanguageSchema,
 } from '@/lib/validator'
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
@@ -33,10 +39,11 @@ export type IProductFormUpdate = z.infer<typeof ProductUpdateFormSchema>
 
 
 export type Data = {
+  settings: ISettingInput[]
   webPages: IWebPageInput[]
   users: IUserInput[]
   products: IProductInput[]
-    reviews: {
+  reviews: {
     title: string
     rating: number
     comment: string
@@ -58,7 +65,6 @@ export type Data = {
 
 // Order
 export type IOrderInput = z.infer<typeof OrderInputSchema>
-
 export type IOrderList = IOrderInput & {
   _id: string
   user: {
@@ -67,11 +73,9 @@ export type IOrderList = IOrderInput & {
   }
   createdAt: Date
 }
-
 export type OrderItem = z.infer<typeof OrderItemSchema>
 export type Cart = z.infer<typeof CartSchema>
 export type ShippingAddress = z.infer<typeof ShippingAddressSchema>
-
 
 // user
 export type IUserInput = z.infer<typeof UserInputSchema>
@@ -82,3 +86,12 @@ export type IUserName = z.infer<typeof UserNameSchema>
 // webpage
 export type IWebPageInput = z.infer<typeof WebPageInputSchema>
 export type IWebPageUpdate = z.infer<typeof WebPageUpdateSchema>
+
+// setting
+export type ICarousel = z.infer<typeof CarouselSchema>
+export type ISettingInput = z.infer<typeof SettingInputSchema>
+export type ClientSetting = ISettingInput & { currency: string }
+export type SiteLanguage = z.infer<typeof SiteLanguageSchema>
+export type SiteCurrency = z.infer<typeof SiteCurrencySchema>
+export type PaymentMethod = z.infer<typeof PaymentMethodSchema>
+export type DeliveryDate = z.infer<typeof DeliveryDateSchema>

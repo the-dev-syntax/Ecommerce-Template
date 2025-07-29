@@ -2,7 +2,7 @@
 
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
-import { PAGE_SIZE } from '../constants'
+// import { PAGE_SIZE } from '../constants'
 
 import { revalidatePath } from 'next/cache'
 import { formatError } from '../utils'
@@ -11,8 +11,11 @@ import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
 import { auth } from '@/auth'
+import { getSetting } from './setting.actions'
 
 
+
+  
 
 //* GET ALL CATEGORIES
 export async function getAllCategories() {
@@ -77,7 +80,7 @@ export async function getProductBySlug(slug: string) {
 export async function getRelatedProductsByCategory({
   category,
   productId,
-  limit = PAGE_SIZE, //how many products per page
+  limit = 4, //how many products per page
   page = 1, //current page number
 }: {
   category: string
@@ -85,6 +88,8 @@ export async function getRelatedProductsByCategory({
   limit?: number
   page: number
 }) {
+
+
   await connectToDatabase()
   const skipAmount = (Number(page) - 1) * limit // explaination down
   const conditions = {
@@ -124,8 +129,12 @@ export async function getAllProducts({
   rating?: string
   sort?: string
 }) {
+  const {
+    common: { pageSize },
+  } = await getSetting()
 
-  limit = limit || PAGE_SIZE
+  limit = limit || pageSize
+ 
 
   await connectToDatabase()
 
@@ -268,7 +277,12 @@ export async function getAllProductsForAdmin({
       if(session?.user.role !== "Admin")
         throw new Error('Admin permission required')
 
-  const pageSize = limit || PAGE_SIZE
+  const {
+    common: { pageSize },
+  } = await getSetting()
+
+  limit = limit || pageSize
+
   const queryFilter =
     query && query !== 'all'
       ? {
@@ -293,8 +307,8 @@ export async function getAllProductsForAdmin({
     ...queryFilter,
   })
     .sort(order)
-    .skip(pageSize * (Number(page) - 1))
-    .limit(pageSize)
+    .skip(limit * (Number(page) - 1))
+    .limit(limit)
     .lean()
 
   const countProducts = await Product.countDocuments({

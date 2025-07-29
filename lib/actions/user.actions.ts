@@ -8,8 +8,8 @@ import User, { IUser } from '../db/models/user.model'
 import { formatError } from '../utils'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { PAGE_SIZE } from '../constants'
 import z from 'zod'
+import { getSetting } from './setting.actions'
 
 // SIGN IN
 export async function signInWithCredentials(user: IUserSignIn) {    
@@ -111,7 +111,10 @@ export async function getAllUsers({
     if(session?.user.role !== "Admin")
       throw new Error('Admin permission required')
 
-    limit = limit || PAGE_SIZE
+    const { common: { pageSize } } = await getSetting()
+    
+    limit = limit || pageSize
+    
     const skipAmount = (Number(page) -1)  * limit
 
     const usersQuery = User.find()

@@ -11,11 +11,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SignOut } from '@/lib/actions/user.actions'
 import { cn } from '@/lib/utils'
-import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-
+import { ChevronDownIcon } from 'lucide-react'
+import { getTranslations } from 'next-intl/server'
+  
 export default async function UserButton() {
   const session = await auth()
+  const t = await getTranslations()
+
   // on header signin or user name, if session true dropdown menu of info , if not dropdown menu signin & sign Up.
   return (
     <div className='flex gap-2 items-center'>
@@ -23,10 +26,13 @@ export default async function UserButton() {
         <DropdownMenuTrigger className='header-button' asChild>
           <div className='flex items-center'>
             <div className='flex flex-col text-xs text-left'>
-              <span>Hello, {session ? session.user.name : 'sign in'}</span>
-              <span className='font-bold'>Account & Orders</span>
+              <span>
+                {t('Header.Hello')},{' '}
+                {session ? session.user.name : t('Header.sign in')}
+              </span>
+              <span className='font-bold'>{t('Header.Account & Orders')}</span>
             </div>
-            <ChevronDown />
+             <ChevronDownIcon />
           </div>
         </DropdownMenuTrigger>
         {session ? (
@@ -43,15 +49,15 @@ export default async function UserButton() {
             </DropdownMenuLabel>
             <DropdownMenuGroup>
               <Link className='w-full' href='/account'>
-                <DropdownMenuItem>Your account</DropdownMenuItem>
+                 <DropdownMenuItem>{t('Header.Your account')}</DropdownMenuItem>
               </Link>
               <Link className='w-full' href='/account/orders'>
-                <DropdownMenuItem>Your orders</DropdownMenuItem>
+                <DropdownMenuItem>{t('Header.Your orders')}</DropdownMenuItem>
               </Link>
 
               {session.user.role === 'Admin' && (
                 <Link className='w-full' href='/admin/overview'>
-                  <DropdownMenuItem>Admin</DropdownMenuItem>
+                   <DropdownMenuItem>{t('Header.Admin')}</DropdownMenuItem>
                 </Link>
               )}
             </DropdownMenuGroup>
@@ -61,7 +67,7 @@ export default async function UserButton() {
                   className='w-full py-4 px-2 h-4 justify-start'
                   variant='ghost'
                 >
-                  Sign out
+                 {t('Header.Sign out')}
                 </Button>
               </form>
             </DropdownMenuItem>
@@ -74,13 +80,14 @@ export default async function UserButton() {
                   className={cn(buttonVariants(), 'w-full')}
                   href='/sign-in'
                 >
-                  Sign in
+                  {t('Header.Sign in')}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuLabel>
               <div className='font-normal'>
-                New Customer? <Link href='/sign-up'>Sign up</Link>
+                {t('Header.New Customer')}?{' '}
+                <Link href='/sign-up'>{t('Header.Sign up')}</Link>
               </div>
             </DropdownMenuLabel>
           </DropdownMenuContent>

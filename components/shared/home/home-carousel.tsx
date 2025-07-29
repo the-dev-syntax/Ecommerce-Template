@@ -12,19 +12,14 @@ import {
 } from '@/components/ui/carousel'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
+import { ICarousel } from '@/types'
 
-//* the passed {items} is a made-up name for what was passed, you can call it sweets, and it is written {sweets} because you are passing an array and the best way to write a passing array of objects is by using destructuring syntax.
-export function HomeCarousel({
-  items,
-}: {
-  items: {
-    image: string
-    url: string
-    title: string
-    buttonCaption: string
-  }[]
-}) {
-  //* above was the type of what was passed ,, under is the inside of the fuction *const and *return
+export function HomeCarousel({ items }: { items: ICarousel[] }) {
+
+  const t = useTranslations('Home')
+  
   const plugin = React.useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })
   )
@@ -50,11 +45,15 @@ export function HomeCarousel({
                   priority
                 />
                 <div className='absolute w-1/3 left-16 md:left-32 top-1/2 transform -translate-y-1/2'>
-                  <h2 className='text-xl md:text-6xl font-bold mb-4 text-primary'>
-                    {item.title}
+                  <h2
+                    className={cn(
+                      'text-xl md:text-6xl font-bold mb-4 text-primary  '
+                    )}
+                  >
+                    {t(`${item.title}`)}
                   </h2>
                   <Button className='hidden md:block'>
-                    {item.buttonCaption}
+                    {t(`${item.buttonCaption}`)}
                   </Button>
                 </div>
               </div>

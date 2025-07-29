@@ -8,17 +8,20 @@ import Review from './models/review.model'
 import Order from './models/order.model'
 import { IOrderInput, OrderItem, ShippingAddress } from '@/types'
 import { calculateFutureDate, calculatePastDate, generateId, round2 } from '../utils'
-import { AVAILABLE_DELIVERY_DATES } from '../constants'
 import WebPage from './models/web-page.model'
+import Setting from './models/setting.model'
 
 // calling this function give you access to the .env file
 loadEnvConfig(cwd())
 
 const main = async () => {
   try {
-    const { products , users , reviews, webPages } = data
+    const { products , users , reviews, webPages, settings } = data
 
     await connectToDatabase(process.env.MONGODB_URI)
+
+    await Setting.deleteMany()
+    const createdSetting = await Setting.insertMany(settings)
 
     await WebPage.deleteMany()
     await WebPage.insertMany(webPages)
@@ -71,6 +74,7 @@ const main = async () => {
       createdProducts,
       createdReviews,
       createdOrders,
+      createdSetting,
       message: 'Seeded database successfully',
     })
 
@@ -175,16 +179,16 @@ export const calcDeliveryDateAndPriceForSeed = ({
   shippingAddress?: ShippingAddress
 }) => {
 
-  // const { AVAILABLE_DELIVERY_DATES } = data.settings[0]
+  const { availableDeliveryDates  } = data.settings[0]
 
   const itemsPrice = round2(
     items.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
 
   const deliveryDate =
-    AVAILABLE_DELIVERY_DATES[
+    availableDeliveryDates[
       deliveryDateIndex === undefined
-        ? AVAILABLE_DELIVERY_DATES.length - 1
+        ? availableDeliveryDates.length - 1
         : deliveryDateIndex
     ]
 
@@ -197,10 +201,10 @@ export const calcDeliveryDateAndPriceForSeed = ({
       (taxPrice ? round2(taxPrice) : 0)
   )
   return {
-    AVAILABLE_DELIVERY_DATES,
+    availableDeliveryDates,
     deliveryDateIndex:
       deliveryDateIndex === undefined
-        ? AVAILABLE_DELIVERY_DATES.length - 1
+        ? availableDeliveryDates.length - 1
         : deliveryDateIndex,
     itemsPrice,
     shippingPrice,

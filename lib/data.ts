@@ -1,7 +1,8 @@
-import { Data, IProductInput, IUserInput, IWebPageInput } from '@/types'
+import { Data, IProductInput, IUserInput, IWebPageInput, ISettingInput } from '@/types'
 import { slugify } from './utils'
 import bcrypt from 'bcryptjs'
-import { APP_NAME } from './constants'
+import { i18n } from '@/i18n-config'
+
 
 
 const users: IUserInput[] = [
@@ -1064,16 +1065,107 @@ const reviews  = [
 ]
 
 
+  const settings: ISettingInput[] = [
+      {
+      common: {
+        freeShippingMinPrice: 35,
+        isMaintenanceMode: false,
+        defaultTheme: 'Light',
+        defaultColor: 'Gold',
+        pageSize: 9,
+      },
+      site: {
+        name: 'Essential Vital',
+        description:
+          'Discover premium, science-backed supplements designed to support your health and wellness goals. Shop natural, high-quality vitamins, minerals, and herbal formulas for energy, immunity, and overall well-being.',
+        keywords: 'Next Ecommerce, Next.js, Tailwind CSS, MongoDB',
+        url: 'https://ev-web-zeta.vercel.app/',
+        logo: '/icons/EV_org-sky.svg',
+        slogan: 'Spend less, enjoy more.',
+        author: 'Next Ecommerce',
+        copyright: '2024-2025, EssentialVital.com, Inc. or its affiliates',
+        email: 'contact@EssentialVital.com',
+        address: '123, Main Street, Anytown, CA, Zip 12345',
+        phone: '+1 (123) 456-7890',
+      },
+      carousels: [
+        {
+          title: 'Most Popular Shoes For Sale',
+          buttonCaption: 'Shop Now',
+          image: '/images/banner3.jpg',
+          url: '/search?category=Shoes',
+        },
+        {
+          title: 'Best Sellers in T-Shirts',
+          buttonCaption: 'Shop Now',
+          image: '/images/banner1.jpg',
+          url: '/search?category=T-Shirts',
+        },
+        {
+          title: 'Best Deals on Wrist Watches',
+          buttonCaption: 'See More',
+          image: '/images/banner2.jpg',
+          url: '/search?category=Wrist Watches',
+        },
+      ],
+      availableLanguages: i18n.locales.map((locale: { code: string; name: string }) => ({
+        code: locale.code,
+        name: locale.name,
+      })),
+      defaultLanguage: 'en-US',
+      availableCurrencies: [
+        {
+          name: 'United States Dollar',
+          code: 'USD',
+          symbol: '$',
+          convertRate: 1,
+        },
+        { name: 'Euro', code: 'EUR', symbol: '€', convertRate: 0.96 },
+        { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 3.67 },
+        { name: 'SAUDI Riyal', code: 'SAR', symbol: 'ريال', convertRate: 3.75 }, // symbol: 'SAR',
+      ],
+      defaultCurrency: 'USD',
+      availablePaymentMethods: [
+        { name: 'PayPal', commission: 0 },
+        { name: 'Stripe', commission: 0 },
+        { name: 'Cash On Delivery', commission: 0 },
+      ],
+      defaultPaymentMethod: 'PayPal',
+      availableDeliveryDates: [
+        {
+          name: 'Tomorrow',
+          daysToDeliver: 1,
+          shippingPrice: 12.9,
+          freeShippingMinPrice: 0,
+        },
+        {
+          name: 'Next 3 Days',
+          daysToDeliver: 3,
+          shippingPrice: 6.9,
+          freeShippingMinPrice: 0,
+        },
+        {
+          name: 'Next 5 Days',
+          daysToDeliver: 5,
+          shippingPrice: 4.9,
+          freeShippingMinPrice: 35,
+        },
+      ],
+      defaultDeliveryDate: 'Next 5 Days',
+    },
+  ]
+
+// const appName = settings[0].site.name as string
 
 const webPages: IWebPageInput[] = [
     {
       title: 'About Us',
       slug: 'about-us',
-      content: `Welcome to **${APP_NAME}**, your trusted destination for quality products and exceptional service. Our journey began with a mission to bring you the best shopping experience by offering a wide range of products at competitive prices, all in one convenient platform.
+      content: `Welcome to **{{appName}}**, your trusted destination for quality products and exceptional service. Our journey began with a mission to bring you the best shopping experience by offering a wide range of products at competitive prices, all in one convenient platform.
 
-At **${APP_NAME}**, we prioritize customer satisfaction and innovation. Our team works tirelessly to curate a diverse selection of items, from everyday essentials to exclusive deals, ensuring there's something for everyone. We also strive to make your shopping experience seamless with fast shipping, secure payments, and excellent customer support.
+At **{{appName}}**, we prioritize customer satisfaction and innovation. Our team works tirelessly to curate a diverse selection of items, from everyday essentials to exclusive deals, ensuring there's something for everyone. We also strive to make your shopping experience seamless with fast shipping, secure payments, and excellent customer support.
 
-As we continue to grow, our commitment to quality and service remains unwavering. Thank you for choosing **${APP_NAME}**—we look forward to being a part of your journey and delivering value every step of the way.`,
+As we continue to grow, our commitment to quality and service remains unwavering. Thank you for choosing **{{appName}}**—we look forward to being a part of your journey and delivering value every step of the way.`,
       isPublished: true,
     },
     {
@@ -1133,7 +1225,7 @@ We strive to ensure all product descriptions, pricing, and availability informat
     {
       title: 'Customer Service',
       slug: 'customer-service',
-      content: `At **${APP_NAME}**, our customer service team is here to ensure you have the best shopping experience. Whether you need assistance with orders, product details, or returns, we are committed to providing prompt and helpful support.
+      content: `At **{{appName}}**, our customer service team is here to ensure you have the best shopping experience. Whether you need assistance with orders, product details, or returns, we are committed to providing prompt and helpful support.
 
 If you have questions or concerns, please reach out to us through our multiple contact options:
 - **Email:** support@example.com
@@ -1192,9 +1284,10 @@ const data: Data = {
   products,
   reviews,
   webPages,
+  settings,
   headerMenus: [
     {
-      name: "Today's Deal",
+      name: "todaysDeals",
       href: '/search?tag=todays-deal',
     },
     {
@@ -1251,7 +1344,6 @@ const data: Data = {
   ],
  
 }
-
 
 
 

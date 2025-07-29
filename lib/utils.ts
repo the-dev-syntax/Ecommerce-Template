@@ -15,16 +15,6 @@ export const formatNumberWithDecimal = (num: number): string => {
   return decimal ? `${int}.${decimal.padEnd(2, '0')}` : int
 }
 
-// PROMPT: [ChatGTP] create toSlug ts arrow function that convert text to lowercase, remove non-word, non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens
-// PROMPT: [ChatGTP] last line only :non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens  - non-whitespace, non-hyphen characters, replace whitespace, trim leading hyphens and trim trailing hyphens.- Also replace repeated hyphens in middle with single hyphen
-// export const toSlug = (text: string): string =>
-//   text
-//     .toLowerCase()
-//     .replace(/[^\w\s-]+/g, '')
-//     .replace(/\s+/g, '-')
-//     .replace(/^-+|-+$/g, '')
-//     .replace(/-+/g, '-')
-// .replace(/[^\p{L}\p{N}\-]+/gu, '') // Use Unicode-aware regex for arabic and other languages.
 
 export const slugify = (text: string): string => {
   return text

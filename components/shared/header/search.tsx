@@ -6,23 +6,26 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { APP_NAME } from '@/lib/constants'
+} from '../../ui/select'
 import { getAllCategories } from '@/lib/actions/product.actions'
-
+import { getSetting } from '@/lib/actions/setting.actions'
+import { getTranslations } from 'next-intl/server'
 
 export default async function Search() {
 
-const categories = await getAllCategories()
+ const { site: { name } } = await getSetting()
+ const t = await getTranslations()
+
+ const categories = await getAllCategories()
 
   return (
     <form action='/search' method='GET' className='flex  items-stretch h-10 '>
       <Select name='category'>
-        <SelectTrigger className='w-auto h-full dark:border-gray-200 bg-gray-100 text-black border-r  rounded-r-none rounded-l-md'>
-          <SelectValue placeholder='All' />
+         <SelectTrigger className='w-auto h-full dark:border-gray-200 bg-gray-100 text-black border-r  rounded-r-none rounded-l-md rtl:rounded-r-md rtl:rounded-l-none  '>
+          <SelectValue placeholder={t('Header.All')} />
         </SelectTrigger>
         <SelectContent position='popper'>
-          <SelectItem value='all'>All</SelectItem>
+          <SelectItem value='all'>{t('Header.All')}</SelectItem>
           {categories.map((category) => (
             <SelectItem key={category} value={category}>
               {category}
@@ -32,7 +35,7 @@ const categories = await getAllCategories()
       </Select>
       <Input
         className='flex-1 rounded-none dark:border-gray-200 bg-gray-100 text-black text-base h-full'
-        placeholder={`Search ${APP_NAME}`}
+         placeholder={t('Header.Search Site', { name })}
         name='q'
         type='search'
       />
