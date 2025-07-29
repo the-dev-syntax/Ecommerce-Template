@@ -48,11 +48,13 @@ export const UpdateProductForm = ({
       defaultValues: product || defaultValues,
   })
 
+  const { reset } = form;
+  
     useEffect(() => {
         if (product) {
-        form.reset(product);
+        reset(product);
         }
-    }, [product, form.reset]);
+    }, [product, reset]);
 
   const onSubmit = async (values: IProductInputForm) => {
 
