@@ -109,7 +109,7 @@ export async function getRelatedProductsByCategory({
 }
 
 
-// GET ALL PRODUCTS
+// GET ALL PRODUCTS FOR SEARCHES AND QUERIES
 export async function getAllProducts({
   query,
   limit,
@@ -372,3 +372,11 @@ export async function getProductById(productId: string) {
   return JSON.parse(JSON.stringify(product)) as IProduct
 }
 
+// GET ALL SLUGS OF PRODUCTS - PUBLIC
+export async function getAllProductSlugs() {
+  await connectToDatabase()
+  // const slugs = await Product.find({}, 'slug -_id').lean(); or 
+    const slugs = await Product.find().select({ slug: 1, _id: 0 });
+ 
+  return JSON.parse(JSON.stringify(slugs))
+}

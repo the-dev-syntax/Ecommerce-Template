@@ -1,7 +1,24 @@
 import { notFound } from 'next/navigation'
-import { getWebPageBySlug } from '@/lib/actions/web-page.actions'
+import { getAllWebPageSlugs, getWebPageBySlug } from '@/lib/actions/web-page.actions'
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { getSetting } from '@/lib/actions/setting.actions';
+import { i18n } from '@/i18n-config';
+
+
+
+export async function generateStaticParams() { 
+  const slugs :{slug: string}[] = await getAllWebPageSlugs(); // return: [{ slug: 't-shirt' }, { slug: 'coffee-mug' }]
+  const locales = i18n.locales;   // Should return an array like ['en-US', 'fr', 'ar']
+
+  const params = locales.flatMap((locale) =>
+    slugs.map((webPageSlug) => ({
+      locale: locale.code, // e.g., 'en-US'
+      slug: webPageSlug.slug,  // e.g., 't-shirt'
+    }))
+  );
+  return params;
+}
+
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>

@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
-import { getProductBySlug, getRelatedProductsByCategory } from '@/lib/actions/product.actions'
+import { getAllProductSlugs, getProductBySlug, getRelatedProductsByCategory } from '@/lib/actions/product.actions'
 import { generateId, round2 } from '@/lib/utils'
 
 import SelectVariant from '@/components/shared/product/select-variant'
@@ -17,6 +17,22 @@ import ReviewList from './review-list'
 import { auth } from '@/auth'
 import RatingSummary from '@/components/shared/product/rating-summary'
 import { getTranslations } from 'next-intl/server'
+import { i18n } from '@/i18n-config'
+
+export async function generateStaticParams() {
+ 
+  const slugs :{slug: string}[] = await getAllProductSlugs(); // return: [{ slug: 't-shirt' }, { slug: 'coffee-mug' }]
+  const locales = i18n.locales;    // Should return an array like ['en-US', 'fr', 'ar']
+
+  // 2. Create a list of all possible paths
+  const params = locales.flatMap((locale) =>
+    slugs.map((productSlug) => ({
+      locale: locale.code, // e.g., 'en-US'
+      slug: productSlug.slug,  // e.g., 't-shirt'
+    }))
+  );
+  return params;
+}
 
 
 export async function generateMetadata(props: {

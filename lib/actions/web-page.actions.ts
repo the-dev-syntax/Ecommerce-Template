@@ -65,6 +65,17 @@ export async function getWebPageBySlug(slug: string) {
 
   return JSON.parse(JSON.stringify(webPage)) as IWebPage
 }
+// GET ALL PAGES BY SLUG - PUBLIC
+export async function getAllWebPageSlugs() {
+  await connectToDatabase()
+
+  // const slugs = await WebPage.find({}, 'slug -_id'); or 
+  const slugs = await WebPage.find().select({ slug: 1, _id: 0 });
+
+  if (!slugs) throw new Error('WebPage not found')
+
+  return JSON.parse(JSON.stringify(slugs)) 
+}
 
 // CREATE WEB PAGE - ADMIN
 export async function createWebPage(data: IWebPageInput) {
