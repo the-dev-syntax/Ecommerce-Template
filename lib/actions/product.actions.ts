@@ -225,7 +225,15 @@ export async function getAllTags() {
     { $group: { _id: null, uniqueTags: { $addToSet: '$tags' } } },
     { $project: { _id: 0, uniqueTags: 1 } },
   ])
-  
+  // const returnedTags = (tags[0]?.uniqueTags
+  //     .sort((a: string, b: string) => a.localeCompare(b))
+  //     .map((x: string) =>
+  //       x
+  //         .split('-')
+  //         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+  //         .join(' ')
+  //     ) as string[]) || []
+  //     console.log(returnedTags)
   return (
     (tags[0]?.uniqueTags
       .sort((a: string, b: string) => a.localeCompare(b))

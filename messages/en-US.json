@@ -328,10 +328,14 @@
     "Wrist Watches": "Wrist Watches"
   },
   "Tags": {
-    "new-arrival":"new-arrival",
-    "featured": "featured",  
-    "best-seller": "best-seller",
-    "todays-deal": "todays-deal"
+    "New Arrival":"New arrival",
+    "Featured": "Featured",  
+    "Best Seller": "Best seller",
+    "Todays Deal": "today's deal",
+    "new-arrival": "New arrival",
+    "featured": "Featured",
+    "best-seller": "Best seller",
+    "todays-deal": "Today's deal"
   },
    "CheckoutFooter": {
     "needHelp": "Need help? Check our <helpLink>Help Center</helpLink> or <contactLink>Contact Us</contactLink>",

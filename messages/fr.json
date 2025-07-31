@@ -327,9 +327,13 @@
     "Shoes": "Chaussures", 
     "Wrist Watches": "Montres" 
   },
-    "Tags": {
+    "Tags": {  
+    "New Arrival": "nouvelle arrivée",
+    "Featured": "destinataire",  
+    "Best Seller": "meilleur vendeur",
+    "Todays Deal": "affaire du jour",
     "new-arrival": "nouvelle arrivée",
-    "featured": "destinataire",  
+    "featured": "destinataire",
     "best-seller": "meilleur vendeur",
     "todays-deal": "affaire du jour"
   },

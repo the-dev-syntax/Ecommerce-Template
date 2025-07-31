@@ -121,6 +121,7 @@ export default async function SearchPage(props: {
 
   const tags = await getAllTags()
 
+
   const data = await getAllProducts({
     query: q,
     category,
@@ -137,8 +138,8 @@ export default async function SearchPage(props: {
         <div className='flex items-center'>
           {data.totalProducts === 0
             ? t('No')
-            : `${data.from}-${data.to} ${t('of')} ${data.totalProducts}`}{' '}
-          ${t('results')}
+            : `${data.from} - ${data.to} ${t('of')} ${data.totalProducts}`}{' '}
+          {t('results')}
           {(q !== 'all' && q !== '') ||
           (category !== 'all' && category !== '') ||
           (tag !== 'all' && tag !== '') ||
@@ -149,7 +150,7 @@ export default async function SearchPage(props: {
           }
           {q !== 'all' && q !== '' && '"' + q + '"'}
           {category !== 'all' && category !== '' && `   ${t('Category')}: ` + category}
-          {tag !== 'all' && tag !== '' && `   ${t('Tag')}: ` + tag}
+          {tag !== 'all' && tag !== '' && <span className='font-bold ml-2 mr-2'>{t('Tag')}: {tTags(tag)}</span> }
           {price !== 'all' && `    ${t('Price')}: ` + price}
           {rating !== 'all' && `    ${t('Rating')}: ` + rating + `  ${t('& Up')}`}
           &nbsp;
@@ -159,7 +160,7 @@ export default async function SearchPage(props: {
           rating !== 'all' ||
           price !== 'all' ? (
             <Button variant={'link'} asChild>
-              <Link href='/search'>{t('Search.Clear')}</Link>
+              <Link href='/search'>{t('Clear')}</Link>
             </Button>
           ) : null}
         </div>

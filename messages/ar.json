@@ -327,9 +327,13 @@
     "Shoes": "احذية",
     "Wrist Watches": "ساعات"
   },
-  "Tags": {
+  "Tags": { 
+    "New Arrival": "جديد",
+    "Featured": "مميز", 
+    "Best Seller": "الاكثر مبيعا",
+    "Todays Deal":  "عرض اليوم",
     "new-arrival": "جديد",
-    "featured": "مميز",  
+    "featured": "مميز",
     "best-seller": "الاكثر مبيعا",
     "todays-deal": "عرض اليوم"
   },
