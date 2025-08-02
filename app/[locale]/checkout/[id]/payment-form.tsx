@@ -165,11 +165,11 @@ export default function OrderPaymentForm({
     <main className='max-w-6xl mx-auto'>
       <div className='grid md:grid-cols-4 gap-6'>
         <div className='md:col-span-3'>
-          {/* Shipping Address */}
+          {/* Shipping address */}
           <div>
             <div className='grid md:grid-cols-3 my-3 pb-3'>
               <div className='text-lg font-bold'>
-                <span>{t('Shipping Address')}</span>
+                <span>{t('Shipping address')}</span>
               </div>
               <div className='col-span-2'>
                 <p>

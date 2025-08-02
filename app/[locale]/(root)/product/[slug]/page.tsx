@@ -72,7 +72,7 @@ export default async function ProductDetails(props: {
 
   const session = await auth()
 
-  const t = await getTranslations('product')
+  const t = await getTranslations('Product')
   
   //used in order: AddToBrowsingHistory, ProductGallery, Rating, Separator, ProductPrice, SelectVariant, Separator, Card, addToCart
   return (
@@ -177,7 +177,7 @@ export default async function ProductDetails(props: {
       <section className='mt-10'>
         <ProductSlider
           products={relatedProducts.data}
-          title={t('Product.Best Sellers in', { name: product.category })}
+          title={t('Best Sellers in', { name: product.category })}
         />
       </section>
       <section>

@@ -210,7 +210,7 @@ interface ProductFormUIProps {
                               if (ready) {
                                 return (
                                   <div>
-                                    {t('Only images are allowed, 10 max.')}
+                                    {t('Only images are allowed, 10 max')}
                                   </div>
                                 );
                               }
@@ -254,7 +254,7 @@ interface ProductFormUIProps {
                   />
                 </FormControl>
                 <FormDescription>
-                  {t('To link to a user or organization, type @ followed by their name.')}
+                  {t('To link to a user or organization, type @ followed by their name')}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -278,7 +278,7 @@ interface ProductFormUIProps {
                         {t('Publish Product')}
                         </FormLabel>
                         <FormDescription>
-                        {t('Make this product visible to customers.')}
+                        {t('Make this product visible to customers')}
                         </FormDescription>
                     </div>
               </FormItem>

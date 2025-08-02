@@ -129,7 +129,7 @@
     "Delete": "حذف",
     "Update": "تحديث",
     "Checkout": "الخروج",
-    "logo": "الشعار",
+    "Logo": "الشعار",
     "Close": "اغلاق",
     "Open": "افتح"
   },
@@ -253,7 +253,7 @@
     "Choose a payment method Paragraph": "اختر طريقة الدفع للمتابعة في إتمام الطلب ستظل لديك فرصة لمراجعة وتعديل طلبك قبل إتمامه",
     "Place Your Order": "إتمام الطلب", 
     "agreementNotice": "بتقديم طلبك، فإنك توافق على <privacyLink>إشعار الخصوصية</privacyLink> و<conditionsLink>شروط الاستخدام</conditionsLink> الخاصة بـ {siteName}",
-    "Enter shipping Address": "أدخل عنوان الشحن",
+    "Enter shipping address": "أدخل عنوان الشحن",
     "Your address": "عنوانك",
     "Full Name": "الاسم الكامل",
     "Enter full name": "أدخل الاسم الكامل",
@@ -284,10 +284,30 @@
     "Stripe Checkout": "الدفع باستريب",
     "PayPal Checkout": "الدفع بباي بال",
     "Purchase": "الشراء",
-    "Shipping Address": "عنوان الشحن",
+    "Shipping address": "عنوان الشحن",
     "Payment Method": "طريقة الدفع",
     "Items and shipping": "العناصر والشحن",
     "Delivery date": "تاريخ التسليم",
+    "Create account": "انشاء حساب",
+    "Sign Up": "اشتراك",
+    "Sign In": "تسجيل الدخول",
+    "Sign Out": "تسجيل الخروج", 
+     "Items": "العناصر",
+
+    "Item": "عنصر",
+    "Quantity": "الكمية",
+    "Price": "السعر",
+    "Delivered at": "تم التسليم في",
+    "Expected delivery at": "توقيت التسليم",
+    "Not delivered": "لم يتم التسليم",
+    "Not paid": "لم يتم الدفع",
+    "Order Items": "عناصر الطلب",
+    "Shipping": "الشحن",
+    "Total": "المجموع",
+    "Pay Order": "دفع الطلب",
+    "Mark as paid": "علم انه تم الدفع",
+    "Mark as delivered":"علم انه تم التسليم",
+
     "Order Total": "إجمالي الطلب"   
   },
    "ProfileManager": {
@@ -312,7 +332,7 @@
     "return": "استرجاع",  
     "cancelAnOrder": "الغاء طلب", 
     "downloadInvoice": "تحميل الفاتورة", 
-    "Or": "او", 
+    "or": "او", 
     "buyAgain": "شراء مرة اخرى",  
     "ManagePassword": "ادارة كلمة المرور", 
     "email": "البريد الالكتروني", 
@@ -443,6 +463,8 @@
     "December": "ديسمبر",
     "No orders found": "لم يتم العثور على طلبات",
     "Admin Dashboard": "لوحة تحكم الادمن",
+     "Admin Products": "منتجات الادمن",
+     "Admin Orders": "طلبات الادمن",
     "Details": "التفاصيل"
   }
 }

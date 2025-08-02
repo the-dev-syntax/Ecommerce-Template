@@ -25,7 +25,7 @@ export default async function UpdateWebPage(props: { params: Promise<{ id: strin
   return (
     <main className='max-w-6xl mx-auto p-4'>
       <div className='flex mb-4'>
-        <Link href='/admin/web-pages'>{t('Web Pages')}</Link>
+        <Link href='/admin/web-pages'>{t('WebPages')}</Link>
         <span className='mx-1'>›</span>
         <Link href={`/admin/web-pages/${webPage._id}`}>{webPage._id}</Link>
       </div>

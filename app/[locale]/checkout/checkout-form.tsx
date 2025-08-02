@@ -162,6 +162,7 @@ const CheckoutForm = () => {
   }
 
   const CheckoutSummary = () => (
+    
     <Card>
       <CardContent className='p-4'>
         {!isAddressSelected && (

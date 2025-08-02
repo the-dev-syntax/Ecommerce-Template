@@ -19,6 +19,7 @@ import { buttonVariants } from '@/components/ui/button'
 import ProductPrice from '../product/product-price'
 import ActionButton from '../action-button'
 import { deliverOrder, updateOrderToPaid } from '@/lib/actions/order.actions'
+import { useTranslations } from 'next-intl'
 
 export default function OrderDetailsForm({
   order,
@@ -27,6 +28,8 @@ export default function OrderDetailsForm({
   order: IOrder
   isAdmin: boolean
 }) {
+
+  const t = useTranslations('Form')
   const {
     shippingAddress,
     items,
@@ -47,7 +50,7 @@ export default function OrderDetailsForm({
       <div className='overflow-x-auto md:col-span-2 space-y-4'>
         <Card>
           <CardContent className='p-4 gap-4'>
-            <h2 className='text-xl pb-4'>Shipping Address</h2>
+            <h2 className='text-xl pb-4'>{t('Shipping address')}</h2>
             <p>
               {shippingAddress.fullName} {shippingAddress.phone}
             </p>
@@ -59,14 +62,14 @@ export default function OrderDetailsForm({
 
             {isDelivered ? (
               <Badge>
-                Delivered at {formatDateTime(deliveredAt!).dateTime}
+                {t('Delivered at')} {formatDateTime(deliveredAt!).dateTime}
               </Badge>
             ) : (
               <div>
                 {' '}
-                <Badge variant='destructive'>Not delivered</Badge>
+                <Badge variant='destructive'>{t('Not delivered')}</Badge>
                 <div>
-                  Expected delivery at{' '}
+                  {t('Expected delivery at')}{' '}
                   {formatDateTime(expectedDeliveryDate!).dateTime}
                 </div>
               </div>
@@ -75,24 +78,24 @@ export default function OrderDetailsForm({
         </Card>
         <Card>
           <CardContent className='p-4 gap-4'>
-            <h2 className='text-xl pb-4'>Payment Method</h2>
+            <h2 className='text-xl pb-4'>{t('Payment Method')}</h2>
             <p>{paymentMethod}</p>
             {isPaid ? (
               <Badge>Paid at {formatDateTime(paidAt!).dateTime}</Badge>
             ) : (
-              <Badge variant='destructive'>Not paid</Badge>
+              <Badge variant='destructive'>{t('Not paid')}</Badge>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardContent className='p-4   gap-4'>
-            <h2 className='text-xl pb-4'>Order Items</h2>
+            <h2 className='text-xl pb-4'>{t('Order Items')}</h2>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Price</TableHead>
+                  <TableHead>{t('Item')}</TableHead>
+                  <TableHead>{t('Quantity')}</TableHead>
+                  <TableHead>{t('Price')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -126,9 +129,9 @@ export default function OrderDetailsForm({
       <div>
         <Card>
           <CardContent className='p-4  space-y-4 gap-4'>
-            <h2 className='text-xl pb-4'>Order Summary</h2>
+            <h2 className='text-xl pb-4'>{t('Order Summary')}</h2>
             <div className='flex justify-between'>
-              <div>Items</div>
+              <div>{t('Items')}</div>
               <div>
                 {' '}
                 <ProductPrice price={itemsPrice} plain />
@@ -142,14 +145,14 @@ export default function OrderDetailsForm({
               </div>
             </div>
             <div className='flex justify-between'>
-              <div>Shipping</div>
+              <div>{t('Shipping')}</div>
               <div>
                 {' '}
                 <ProductPrice price={shippingPrice} plain />
               </div>
             </div>
             <div className='flex justify-between'>
-              <div>Total</div>
+              <div>{t('Total')}</div>
               <div>
                 {' '}
                 <ProductPrice price={totalPrice} plain />
@@ -161,18 +164,18 @@ export default function OrderDetailsForm({
                 className={cn(buttonVariants(), 'w-full')}
                 href={`/checkout/${order._id}`}
               >
-                Pay Order
+                {t('Pay Order')}
               </Link>
             )}
             {isAdmin && !isPaid && paymentMethod === 'Cash On Delivery' && (
               <ActionButton
-                caption='Mark as paid'
+                caption={t('Mark as paid')}
                 action={() => updateOrderToPaid(order._id)}
               />
             )}
             {isAdmin && isPaid && !isDelivered && (
               <ActionButton
-                caption='Mark as delivered'
+                caption={t('Mark as delivered')}
                 action={() => deliverOrder(order._id)}
               />
             )}

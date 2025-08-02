@@ -43,7 +43,6 @@ export default function SignUpForm() {
   const { setting: { site } } = useSettingStore()  
   const tForm = useTranslations('Form')
   const tFooter = useTranslations('Footer')
-  const tHeader = useTranslations('Header')
   
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
@@ -93,9 +92,9 @@ export default function SignUpForm() {
             name='name'
             render={({ field }) => (
               <FormItem className='w-full'>
-                <FormLabel>{tForm('name')}</FormLabel>
+                <FormLabel>{tForm('Name')}</FormLabel>
                 <FormControl>
-                  <Input placeholder={tForm('Enter name')} {...field} />
+                  <Input placeholder={tForm('Enter Name')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -142,7 +141,7 @@ export default function SignUpForm() {
                 <FormControl>
                   <Input
                     type='password'
-                    placeholder={tForm('Confirm password')}
+                    placeholder={tForm('Confirm Password')}
                     {...field}
                   />
                 </FormControl>
@@ -151,7 +150,7 @@ export default function SignUpForm() {
             )}
           />
           <div>
-            <Button type='submit'>{tHeader('Sign Up')}</Button>
+            <Button type='submit'>{tForm('Sign Up')}</Button>
           </div>
           <div className='text-sm'>
             {tForm('By creating an account, you agree to')} {site.name}&apos;s{' '}
@@ -162,7 +161,7 @@ export default function SignUpForm() {
           <div className='text-sm'>
             {tForm('Already have an account')}?{' '}
             <Link className='link' href={`/sign-in?callbackUrl=${callbackUrl}`}>
-              {tHeader('Sign In')}
+              {tForm('Sign In')}
             </Link>
           </div>
         </div>

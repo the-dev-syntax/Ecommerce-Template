@@ -9,7 +9,7 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode
 }) {
-  const t = await getTranslations('footer')
+  const t = await getTranslations('Footer')
   const { site } = await getSetting()
 
   return (

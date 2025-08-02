@@ -141,18 +141,18 @@ export default async function SearchPage(props: {
             : `${data.from} - ${data.to} ${t('of')} ${data.totalProducts}`}{' '}
           {t('results')}
           {(q !== 'all' && q !== '') ||
-          (category !== 'all' && category !== '') ||
-          (tag !== 'all' && tag !== '') ||
-          rating !== 'all' ||
-          price !== 'all'
-            ? ` ${t('for')} `
-            : null
+            (category !== 'all' && category !== '') ||
+            (tag !== 'all' && tag !== '') ||
+            rating !== 'all' ||
+            price !== 'all'
+              ? ` ${t('for')} `
+              : null
           }
           {q !== 'all' && q !== '' && '"' + q + '"'}
-          {category !== 'all' && category !== '' && `   ${t('Category')}: ` + category}
+          {category !== 'all' && category !== '' && <span className='font-bold ml-2 mr-2'>{t('Category')}: {tCategory(category)}</span> }
           {tag !== 'all' && tag !== '' && <span className='font-bold ml-2 mr-2'>{t('Tag')}: {tTags(tag)}</span> }
-          {price !== 'all' && `    ${t('Price')}: ` + price}
-          {rating !== 'all' && `    ${t('Rating')}: ` + rating + `  ${t('& Up')}`}
+          {price !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Price')}: {price}</span> }
+          {rating !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Rating')}: {rating}  {t('& Up')}</span> }
           &nbsp;
           {(q !== 'all' && q !== '') ||
           (category !== 'all' && category !== '') ||

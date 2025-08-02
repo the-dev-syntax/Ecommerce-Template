@@ -129,7 +129,7 @@
     "Delete": "Delete",
     "Update": "Update",
     "Checkout": "Checkout",
-    "logo": "logo",
+    "Logo": "Logo",
     "Close": "Close",
     "Open": "Open"
   },
@@ -187,7 +187,7 @@
     "Redirecting to Google": "Redirecting to Google"
   },
   "Form": {
-    "Name": "Name",
+    "Name": "Name",   
     "Enter Name": "Enter Name",
     "Enter user name": "Enter user name",
     "Email": "Email",
@@ -253,7 +253,7 @@
     "Choose a payment method Paragraph": "Choose a payment method to continue checking out- You'll still have a chance to review and edit your order before it's final",
     "Place Your Order": "Place Your Order",   
     "agreementNotice": "By placing your order, you agree to {siteName}'s <privacyLink>privacy notice</privacyLink> and <conditionsLink>conditions of use</conditionsLink>",
-    "Enter shipping Address": "Enter shipping Address",
+    "Enter shipping address": "Enter shipping address",
     "Your address": "Your address",
     "Full Name": "Full Name",
     "Enter full name": "Enter full name",
@@ -284,10 +284,30 @@
     "Stripe Checkout": "Stripe Checkout",
     "PayPal Checkout": "PayPal Checkout",
     "Purchase": "Purchase",
-    "Shipping Address": "Shipping Address",
+    "Shipping address": "Shipping address",
     "Payment Method": "Payment Method",
     "Items and shipping": "Items and shipping",
     "Delivery date": "Delivery date",
+    "Create account": "Create account",
+    "Sign Up": "Sign Up",
+    "Sign In": "Sign In",
+    "Sign Out": "Sign Out",
+    "Items": "Items",
+    
+    "Item": "Item",
+    "Quantity": "Quantity",
+    "Price": "Price",
+    "Delivered at": "Delivered at",
+    "Expected delivery at": "Expected delivery at",
+    "Not delivered": "Not delivered",
+    "Not paid": "Not paid",
+    "Order Items": "Order Items",
+    "Shipping":"Shipping",
+    "Total":"Total",
+    "Pay Order":"Pay Order",
+    "Mark as paid":"Mark as paid",
+    "Mark as delivered":"Mark as delivered",
+    
     "Order Total": "Order Total"
   },
   "ProfileManager": {
@@ -312,7 +332,7 @@
     "return": "return",
     "cancelAnOrder": "cancel an order",
     "downloadInvoice": "download invoice",
-    "Or": "Or",
+    "or": "or",
     "buyAgain": "buy again",
     "ManagePassword": "Manage password",
     "email": "email",
@@ -408,7 +428,7 @@
     "of": "of",
     "Page": "Page",
     "Edit User": "Edit User",
-    "Admin Users": "Admin Users",
+    "Admin Users": "Admin Users",    
     "Error loading users: Problem with Auth or Database Connection": "Error loading users: Problem with Auth or Database Connection",
     "Email": "Email",
     "Role": "Role",
@@ -443,6 +463,8 @@
     "December": "December",
     "No orders found": "No orders found",
     "Admin Dashboard": "Admin Dashboard",
+    "Admin Products": "Admin Products",
+    "Admin Orders": "Admin Orders",
     "Details": "Details"
   }
 }

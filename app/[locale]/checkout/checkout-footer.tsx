@@ -1,13 +1,18 @@
 
 import Link from 'next/link'
 import React from 'react'
-import { getTranslations } from 'next-intl/server'
-import { getSetting } from '@/lib/actions/setting.actions'
 
-export default async function CheckoutFooter() {
-  const settings = await getSetting()
-  const siteName = settings.site.name
-  const t = await getTranslations('CheckoutFooter')
+
+import { useTranslations } from 'next-intl'
+import useSettingStore from '@/hooks/use-setting-store'
+
+export default function CheckoutFooter() {
+   const {
+    setting: { site },
+  } = useSettingStore()
+  const siteName = site.name
+  const t = useTranslations('CheckoutFooter')
+
   return (
     <div className='border-t-2 space-y-2 my-4 py-4 text-sm text-muted-foreground'>
       <p>

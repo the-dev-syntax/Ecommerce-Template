@@ -129,7 +129,7 @@
     "Delete": "Supprimer",
     "Update": "Mettre à jour",
     "Checkout": "Paiement",
-    "logo": "logo",
+    "Logo": "Logo",
     "Close": "Fermer",
     "Open": "Ouvrir"
   },
@@ -253,7 +253,7 @@
     "Choose a payment method Paragraph": "Choisissez un mode de paiement pour continuer le paiement Vous aurez toujours la possibilité de revoir et de modifier votre commande avant qu'elle ne soit définitive",
     "Place Your Order": "Passer votre commande", 
     "agreementNotice": "En passant votre commande, vous acceptez l'<privacyLink>avis de confidentialité</privacyLink> et les <conditionsLink>conditions d'utilisation</conditionsLink> de {siteName}",
-    "Enter shipping Address": "Entrez l'adresse de livraison",
+    "Enter shipping address": "Entrez l'adresse de livraison",
     "Your address": "Votre adresse",
     "Full Name": "Nom complet",
     "Enter full name": "Entrez le nom complet",
@@ -284,10 +284,30 @@
     "Stripe Checkout": "Stripe Checkout",
     "PayPal Checkout": "PayPal Checkout",
     "Purchase": "Acheter",
-    "Shipping Address": "Adresse de livraison",
+    "Shipping address": "Adresse de livraison",
     "Payment Method": "Méthode de paiement",
     "Items and shipping": "Articles et expédition",
     "Delivery date": "Date de livraison",
+    "Create account": "Créer un compte",
+    "Sign Up": "S'inscrire",
+    "Sign In": "Se connecter",
+    "Sign Out": "Se déconnecter",
+    "Items": "Articles",
+
+    "Item": "Article",
+    "Quantity": "Quantité",
+    "Price": "Prix",
+    "Delivered at": "Livraison",
+    "Expected delivery at": "Livraison estimée",
+    "Order Items": "Articles de la commande",
+    "Shipping": "Expédition",
+    "Total": "Total",
+    "Pay Order": "Payer la commande",
+    "Not delivered": "Non livré",
+    "Not paid": "Non payé",
+    "Mark as paid": "Marquer comme payé",
+    "Mark as delivered": "Marquer comme livré",
+
     "Order Total": "Total de la commande"   
   },
   "ProfileManager": {
@@ -312,7 +332,7 @@
     "return": "retour", 
     "cancelAnOrder": "annuler une commande", 
     "downloadInvoice": "telecharger facture", 
-    "Or": "Ou", 
+    "or": "ou", 
     "buyAgain": "acheter de nouveau",     
     "ManagePassword": "Gerer le mot de passe", 
     "email":  "email", 
@@ -442,6 +462,8 @@
     "December": "Décembre",
     "No orders found": "Aucune commande trouvée",
     "Admin Dashboard": "Tableau de bord Admin",
+     "Admin Products": "Produits Admin",
+     "Admin Orders": "Commandes Admin",
     "Details": "Détails"
   }
 }

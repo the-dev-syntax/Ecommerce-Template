@@ -63,7 +63,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 7. made a humburger menu icon (shadcdn) inside a button .
 
-8. also showed the links in the hearder using map funtion which is a better way to do it.
+8. also showed the links in the hearder using map function which is a better way to do it.
 
 9. to open new tab in vscode ==> code . ==> it has to have space between.
 
@@ -96,9 +96,6 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 --- suggestion: by co-pilot:
 23. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add isDeal={product.isDeal} to it.
-24. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add forListing={true} to it.
-25. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add plain={false} to it.
-26. in product-card.tsx ==> <ProductPrice price={product.price} listPrice={product.listPrice} />  ==> add className='text-orange-700' to it.
 -- end
 
 27. in order.actions.ts fix getTopSalesProducts { $sort: { _id: 1 } }, to { $sort: { value: -1 } },
@@ -153,6 +150,8 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 50. make generate static Params with all generateMetadata().
 
 51. remove this from env.local AUTH_TRUST_HOST=true
+
+52. make a admin carousel page.
 
 
 
@@ -12458,30 +12457,45 @@ You absolutely did the right thing. The build log proves it, and a local product
 
 
 
+------------------------------------
+--------------------------------------
+# ----------------------[product-gallery.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+/*
+> Thumbnail Images:
+1. The images.map() method is used to iterate over the images array and create a thumbnail button for each image.
+Each thumbnail button has an onClick and onMouseOver event handler that calls the setSelectedImage function 
+with the index of the corresponding image. This updates the selectedImage state, causing the main image to change.
+
+> How it Works in Detail:
+1. The component receives an array of image URLs as props.
+2. It displays the first image in the array , index 0
+3. It maps over the images array to create a series of thumbnail buttons. Each button displays a thumbnail image
+and has an event handler that updates the selectedImage state when clicked or hovered.
+4. The main image is rendered using the Next.js Image component, with the src prop set to the image URL at the index stored in the selectedImage state.
+5. The Zoom component wraps the main image, enabling zooming functionality.
+6. When a user clicks or hovers over a thumbnail, the setSelectedImage function is called, updating the selectedImage state.
+7. This causes the main image to re-render with the new image URL, and the selected thumbnail is highlighted.
+*/
 
 
 
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[how to set className of tailwind with variable]---------------------------[another]
 ------------------------------------
 --------------------------------------
-
-
-
-
-
-
-------------------------------------
---------------------------------------
-# ----------------------[]---------------------------[another]
-------------------------------------
---------------------------------------
-
-
-
-
+```tsx
+<div className={`bg-white rounded-lg overflow-hidden ${
+              selectedImage === index
+                ? 'ring-2 ring-blue-500'
+                : 'ring-1 ring-gray-300'
+            }`}
+> </div>
+```
 
 
 
