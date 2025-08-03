@@ -1114,12 +1114,7 @@ const reviews  = [
       })),
       defaultLanguage: 'en-US',
       availableCurrencies: [
-        {
-          name: 'United States Dollar',
-          code: 'USD',
-          symbol: '$',
-          convertRate: 1,
-        },
+        { name: 'United States Dollar', code: 'USD', symbol: '$', convertRate: 1 },
         { name: 'Euro', code: 'EUR', symbol: '€', convertRate: 0.96 },
         { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 3.67 },
         { name: 'SAUDI Riyal', code: 'SAR', symbol: 'ريال', convertRate: 3.75 }, // symbol: 'SAR',

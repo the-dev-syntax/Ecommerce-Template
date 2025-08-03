@@ -348,3 +348,59 @@ export const SettingInputSchema = z.object({
     .min(1, 'At least one delivery date is required'),
   defaultDeliveryDate: z.string().min(1, 'Delivery date is required'),
 })
+export const SettingInputSchemaNoDefaults = z.object({
+  // PROMPT: create fields
+  // codeium, based on the mongoose schema for settings
+  common: z.object({
+    pageSize: z.coerce
+      .number()
+      .min(1, 'Page size must be at least 1')
+      ,
+    isMaintenanceMode: z.boolean(),
+    freeShippingMinPrice: z.coerce
+      .number()
+      .min(0, 'Free shipping min price must be at least 0')
+      ,
+    defaultTheme: z
+      .string()
+      .min(1, 'Default theme is required')
+      ,
+    defaultColor: z
+      .string()
+      .min(1, 'Default color is required')
+      ,
+  }),
+  site: z.object({
+    name: z.string().min(1, 'Name is required'),
+    logo: z.string().min(1, 'logo is required'),
+    slogan: z.string().min(1, 'Slogan is required'),
+    description: z.string().min(1, 'Description is required'),
+    keywords: z.string().min(1, 'Keywords is required'),
+    url: z.string().min(1, 'Url is required'),
+    email: z.string().min(1, 'Email is required'),
+    phone: z.string().min(1, 'Phone is required'),
+    author: z.string().min(1, 'Author is required'),
+    copyright: z.string().min(1, 'Copyright is required'),
+    address: z.string().min(1, 'Address is required'),
+  }),
+  availableLanguages: z
+    .array(SiteLanguageSchema)
+    .min(1, 'At least one language is required'),
+
+  carousels: z
+    .array(CarouselSchema)
+    .min(1, 'At least one language is required'),
+  defaultLanguage: z.string().min(1, 'Language is required'),
+  availableCurrencies: z
+    .array(SiteCurrencySchema)
+    .min(1, 'At least one currency is required'),
+  defaultCurrency: z.string().min(1, 'Currency is required'),
+  availablePaymentMethods: z
+    .array(PaymentMethodSchema)
+    .min(1, 'At least one payment method is required'),
+  defaultPaymentMethod: z.string().min(1, 'Payment method is required'),
+  availableDeliveryDates: z
+    .array(DeliveryDateSchema)
+    .min(1, 'At least one delivery date is required'),
+  defaultDeliveryDate: z.string().min(1, 'Delivery date is required'),
+})
