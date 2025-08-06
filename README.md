@@ -153,6 +153,9 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 52. make a admin carousel page.
 
+53. remove http:localhost:3000 from sitemap.ts file.
+
+54. remove this line in the base one layout.tsx default to the line before it : metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
 
 
 
@@ -13208,14 +13211,56 @@ This is why you see the `eslint-disable-next-line` comment. The linter warns you
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[SEO Optimization]---------------------------[another]
 ------------------------------------
 --------------------------------------
+> source: https://www.youtube.com/watch?v=wTGVHLyV09M
+1. favicon.ico ==> https://realfavicongenerator.net/ 
+2. to show icon with website link in social media , use image 1200x630px called opengraph-image.png
+3. in layout.tsx [inside] generateMetadata(){ [under] description: description, can add 
+    twitter: {card: "summary_large_image"} } this will make the opengraph-image.png look bigger with our posts in twitter.
+4. in layout template: `%s - ${name}`,  means `%s` will be replaced with title of the children page metadata, will look like 
+  ( contact us - Essential Vital ) in the tab. 
+5. https://socialsharepreview.com/  or https://www.opengraph.xyz/ to test how the metadata will look like in social media.
+6. can add an image for any page of the website and make it appear in the social media by adding the image in the metadata page:
 
+```tsx
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Home');
+  return {
+    title: t('Home Page'),
+    description: t('This is the home page of our website.'),
+    openGraph: {
+      title: t('Home Page'),
+      description: t('This is the home page of our website.'),
+      images: [
+        {
+          url: 'any-image-url.png', // override  opengraph-image.png
+          width: 1200,
+          height: 630,
+          alt: t('Open Graph Image'),
+        },
+      ],
+    },
+  };
+}
+```
+7. in all dynamically generated pages under [slug] or [id] ==> 
+```tsx
+// for example :
+export async function generateStaticParams() {
+  const slugs = await getAllSlugs();
+  return slugs.map((slug) => ({ slug }));
+}
+```
+8. inside /app folder ==> create sitemap.tsx 
+  - either make it static or dynamic.
+  - dynamic one so you have to query the database to get all the slugs or ids of the pages an createdAt data.
+  - flatMap the slugs then inside map locale to get the localized URLs.
 
-
-
-
+9. inside /app folder ==> create robots.txt
+  - https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots
+  - 
 
 ------------------------------------
 --------------------------------------

@@ -76,7 +76,7 @@ function addOne(x: number): (y: number) => number {
 const add5 = addOne(5); // Returns a function that adds 5 to its argument
 const result = add5(3);   // result will be 8
 
-console.log(result);
+// console.log(result);
 ------------------------------------------------------
 
 ^ create<BrowsingHistory>() is a fn that Returns a fn that creates the state.

@@ -50,7 +50,9 @@
     "Your browsing history": "Your browsing history",
     "Most Popular Shoes For Sale": "Most Popular Shoes For Sale",
     "Best Sellers in T-Shirts": "Best Sellers in T-Shirts",
-    "Best Deals on Wrist Watches": "Best Deals on Wrist Watches"
+    "Best Deals on Wrist Watches": "Best Deals on Wrist Watches",
+    "Home Page": "Home Page"
+   
   },
   "Product": {
     "Added to Cart": "Added to Cart",
@@ -389,7 +391,7 @@
     "View products": "View products",
     "products": "products",
     "Sales Overview": "Sales Overview",
-    "How much you’re earning": "How much you’re earning",
+    "How much you are earning": "How much you are earning",
     "Estimated": "Estimated",
     "Last 6 months": "Last 6 months",
     "Product Performance": "Product performance",
@@ -545,7 +547,7 @@
     "Enter address": "Enter address",
     "Copyright": "Copyright",
     "Enter copyright": "Enter copyright",
-
+    "Admin Settings": "Admin Settings",
     "Slogan": "Slogan",
 
     "Maintenance Mode": "Maintenance Mode"

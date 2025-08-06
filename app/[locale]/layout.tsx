@@ -29,11 +29,12 @@ export async function generateMetadata() {
   } = await getSetting()
   return {
     title: {
-      template: `%s | ${name}`,
+      template: `%s - ${name}`,
       default: `${name}. ${slogan}`,
     },
     description: description,
-    metadataBase: new URL(url),
+    // metadataBase: new URL(url),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || url ||'http://localhost:3000'),
   }
 }
 

@@ -50,7 +50,8 @@
     "Your browsing history": "سجل التصفح الخاص بك",
     "Most Popular Shoes For Sale": "الأحذية الأكثر طلبا للبيع",
     "Best Sellers in T-Shirts": "الأكثر مبيعًا في التيشيرتات",
-    "Best Deals on Wrist Watches": "أفضل العروض على ساعات المعصم"
+    "Best Deals on Wrist Watches": "أفضل العروض على ساعات المعصم",
+     "Home Page": "الصفحة الرئيسية"
   },
   "Product": {
     "Added to Cart": "أضيف إلى السلة",
@@ -389,7 +390,7 @@
     "View products": "عرض المنتجات",
     "products": "منتجات",
     "Sales Overview": "نظرة عامة على المبيعات",
-    "How much you’re earning": "كم تربح",
+    "How much you are earning": "كم تربح",
     "Estimated": "مُقدَّر",
     "Last 6 months": "آخر 6 أشهر",
     "Product Performance": "أداء المنتج",
@@ -525,27 +526,27 @@
     "Cash On Delivery": "الدفع عند التوصيل",
 
     
-  "Site Name": "اسم الموقع",
-  "Enter site name": "أدخل اسم الموقع",
-  "Enter Url": "أدخل الرابط",
-  "Logo": "الشعار",
-  "Enter Logo Url": "أدخل رابط الشعار",
-  "Description": "الوصف",
-  "Enter description": "أدخل الوصف",
-  "Enter slogan": "أدخل الشعار",
-  "Keywords": "الكلمات المفتاحية",
-  "Enter keywords": "أدخل الكلمات المفتاحية",
-  "Phone": "الهاتف",
-  "Enter phone number": "أدخل رقم الهاتف",
-  "Enter email": "أدخل البريد الإلكتروني",
-  "Address": "العنوان",
-  "Enter address": "أدخل العنوان",
-  "Copyright": "حقوق النشر",
-  "Enter copyright": "أدخل حقوق النشر",
+    "Site Name": "اسم الموقع",
+    "Enter site name": "أدخل اسم الموقع",
+    "Enter Url": "أدخل الرابط",
+    "Logo": "الشعار",
+    "Enter Logo Url": "أدخل رابط الشعار",
+    "Description": "الوصف",
+    "Enter description": "أدخل الوصف",
+    "Enter slogan": "أدخل الشعار",
+    "Keywords": "الكلمات المفتاحية",
+    "Enter keywords": "أدخل الكلمات المفتاحية",
+    "Phone": "الهاتف",
+    "Enter phone number": "أدخل رقم الهاتف",
+    "Enter email": "أدخل البريد الإلكتروني",
+    "Address": "العنوان",
+    "Enter address": "أدخل العنوان",
+    "Copyright": "حقوق النشر",
+    "Enter copyright": "أدخل حقوق النشر",
 
     "Slogan": "الشعار",
     
-
+    "Admin Settings": "اعدادات الادمن",
 
     "Maintenance Mode": "وضع الصيانة"
   }

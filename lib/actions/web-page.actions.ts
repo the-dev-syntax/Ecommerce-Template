@@ -65,7 +65,7 @@ export async function getWebPageBySlug(slug: string) {
 
   return JSON.parse(JSON.stringify(webPage)) as IWebPage
 }
-// GET ALL PAGES BY SLUG - PUBLIC
+// GET ALL PAGES SLUGS - PUBLIC
 export async function getAllWebPageSlugs() {
   await connectToDatabase()
 
@@ -126,4 +126,16 @@ export async function updateWebPage(data: IWebPageUpdate) {
   } catch (error){
      return { success: false, message: formatError(error) }
   }
+}
+
+// GET ALL WEB PAGES FOR SITEMAP - PUBLIC
+export async function getAllWebPagesForSitemap() {
+  await connectToDatabase()
+  const webPages = await WebPage.find({ isPublished: true }, 'slug updatedAt')
+    .sort({ updatedAt: -1 })
+    .lean()
+
+  if (!webPages) throw new Error('WebPages not found')
+
+  return JSON.parse(JSON.stringify(webPages)) as { slug: string; updatedAt: Date }[]
 }

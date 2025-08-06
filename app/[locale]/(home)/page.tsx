@@ -11,6 +11,16 @@ import { Card, CardContent } from '@/components/ui/card'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { getTranslations } from 'next-intl/server'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'
+import { Metadata } from 'next'
+
+
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Home');
+  return {
+    title: t('Home Page'),
+  };
+}
 
 export default async function Page() {
 

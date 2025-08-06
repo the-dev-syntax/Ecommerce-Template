@@ -51,8 +51,6 @@ export async function POST(req: NextRequest) {
 }
 
 /*
-
-
      await order.save()
     const response = NextResponse.json({
       message: 'Webhook received. Order updated.',

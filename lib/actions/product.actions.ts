@@ -385,6 +385,20 @@ export async function getAllProductSlugs() {
   await connectToDatabase()
   // const slugs = await Product.find({}, 'slug -_id').lean(); or 
     const slugs = await Product.find().select({ slug: 1, _id: 0 });
+
+     if (!slugs) throw new Error('Products not found')
  
   return JSON.parse(JSON.stringify(slugs))
+}
+
+// GET ALL PRODUCTS FOR SITEMAP- PUBLIC
+export async function getAllProductsForSitemap() {
+  await connectToDatabase()
+  const products = await Product.find({ isPublished: true }, 'slug updatedAt')
+    .sort({ updatedAt: -1 })
+    .lean()
+
+  if (!products) throw new Error('Products not found')
+
+  return JSON.parse(JSON.stringify(products)) as { slug: string; updatedAt: Date }[]
 }

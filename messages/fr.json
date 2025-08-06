@@ -50,7 +50,8 @@
     "Your browsing history": "Votre historique de navigation",
     "Most Popular Shoes For Sale": "Chaussures les plus populaires à vendre",
     "Best Sellers in T-Shirts": "Meilleures ventes de t-shirts",
-    "Best Deals on Wrist Watches": "Meilleures offres sur les montres-bracelets"
+    "Best Deals on Wrist Watches": "Meilleures offres sur les montres-bracelets",
+     "Home Page": "Page d'accueil"
   },
   "Product": {
     "Added to Cart": "Ajouté au panier",
@@ -389,7 +390,7 @@
     "View products": "Voir les produits",
     "products": "produits",
     "Sales Overview": "Aperçu des ventes",
-    "How much you’re earning": "Combien gagnez-vous",
+    "How much you are earning": "Combien gagnez-vous",
     "Estimated": "Estimé",
     "Last 6 months": "6 derniers mois",
     "Product Performance": "Performance des produits",
@@ -512,7 +513,6 @@
     "Next 3 Days": "Dans 3 jours",
     "Next 5 Days": "Dans 5 jours",
     "Commission": "Commission",
-
     "Add Language": "Ajouter une langue",
     "Default Language": "Langue par défaut",
     "Select a language": "Sélectionnez une langue",
@@ -521,29 +521,26 @@
     "French": "Français",
      "PayPal": "PayPal",
     "Stripe": "Stripe",
-    "Cash On Delivery": "Paye en livraison",
-
-    
-  "Site Name": "Nom du site",
-  "Enter site name": "Entrez le nom du site",
-  "Enter Url": "Entrez l'URL",
-  "Logo": "Logo",
-  "Enter Logo Url": "Entrez l'URL du logo",
-  "Description": "Description",
-  "Enter description": "Entrez la description",
-  "Enter slogan": "Entrez le slogan",
-  "Keywords": "Mots-clés",
-  "Enter keywords": "Entrez les mots-clés",
-  "Phone": "Téléphone",
-  "Enter phone number": "Entrez le numéro de téléphone",
-  "Enter email": "Entrez l'e-mail",
-  "Address": "Adresse",
-  "Enter address": "Entrez l'adresse",
-  "Copyright": "Droits d’auteur",
-  "Enter copyright": "Entrez les droits d’auteur",
-
+    "Cash On Delivery": "Paye en livraison",    
+    "Site Name": "Nom du site",
+    "Enter site name": "Entrez le nom du site",
+    "Enter Url": "Entrez l'URL",
+    "Logo": "Logo",
+    "Enter Logo Url": "Entrez l'URL du logo",
+    "Description": "Description",
+    "Enter description": "Entrez la description",
+    "Enter slogan": "Entrez le slogan",
+    "Keywords": "Mots-clés",
+    "Enter keywords": "Entrez les mots-clés",
+    "Phone": "Téléphone",
+    "Enter phone number": "Entrez le numéro de téléphone",
+    "Enter email": "Entrez l'e-mail",
+    "Address": "Adresse",
+    "Enter address": "Entrez l'adresse",
+    "Copyright": "Droits d’auteur",
+    "Enter copyright": "Entrez les droits d’auteur",
     "Slogan": "Slogan",
-
+    "Admin Settings": "Paramètres Admin",    
     "Maintenance Mode": "Mode maintenance"
   }
 }
