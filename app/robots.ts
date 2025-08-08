@@ -17,7 +17,6 @@ export default function robots(): MetadataRoute.Robots {
         '/login',
         '/orders',
      ];
-
       // Paths to disallow for the Google Ads bot (it needs to see products, but not the checkout funnel)
     const adsBotDisallowedPaths = [
         '/cart',
@@ -27,14 +26,9 @@ export default function robots(): MetadataRoute.Robots {
         '/sign-up',
     ];
 
-    // const disallowedPathsWithLocale = disallowedPaths.flatMap((path) =>
-    //   locales.map((locale) => `${locale === 'en-US' ? '' : "/" + locale}${path}`)
-    // );
-    
     const getLocalizedPaths = (paths: string[]) => {
         return paths.flatMap(path =>
             locales.map(locale => {
-                // Default 'en-US' locale has no prefix, others do.
                 const prefix = locale === 'en-US' ? '' : `/${locale}`;
                 return `${prefix}${path}`;
             })
@@ -45,7 +39,6 @@ export default function robots(): MetadataRoute.Robots {
         rules: [
         {
             userAgent: '*',
-            allow: '/',
             disallow: [
                 ...getLocalizedPaths(disallowedPaths),
                 '/api/',
@@ -53,46 +46,34 @@ export default function robots(): MetadataRoute.Robots {
                 '/*?*tag=*',                  
                 '/*?*price=*',                  
                 '/*?*rating=*',                  
-                // Blocks URLs from faceted navigation/filtering. e.g., /search?color=blue&size=large
-                // The '*?*&' pattern blocks any URL with more than one query parameter, a common
-                // source of infinite crawlable URLs.
                 '/*?*&*',
-                // Blocks specific tracking & preview parameters that create duplicate pages
                 '/*?*oseid=*',
                 '/*preview_theme_id*',
                 '/*preview_script_id*',
             ]
         },
         {
-                userAgent: 'adsbot-google',
-                disallow: getLocalizedPaths(adsBotDisallowedPaths),
-            },
-
-            // Rule Group 3: Block specific, non-essential crawlers completely
-            {
-                userAgent: 'Nutch',
-                disallow: '/',
-            },
-            
-            // Rule Group 4: Throttle aggressive but potentially useful SEO crawlers
-            {
-                userAgent: [
-                    'AhrefsBot',
-                    'AhrefsSiteAudit',
-                    'MJ12bot',
-                    'SemrushBot', // Added Semrush as it's another common one
-                ],
-                // Ask these bots to wait 10 seconds between requests to protect server resources
-                crawlDelay: 10,
-            },
-
-            // Rule Group 5: Be lenient with high-value social media bots
-            {
-                userAgent: 'Pinterest',
-                crawlDelay: 1, // A short delay is still a good practice
-            },
+            userAgent: 'adsbot-google',
+            disallow: getLocalizedPaths(adsBotDisallowedPaths),
+        },
+        {
+            userAgent: 'Nutch',
+            disallow: '/',
+        },
+        {
+            userAgent: [
+                'AhrefsBot',
+                'AhrefsSiteAudit',
+                'MJ12bot',
+                'SemrushBot',
+            ],
+            crawlDelay: 10,
+        },
+        {
+            userAgent: 'Pinterest',
+            crawlDelay: 1,
+        },
     ],
         sitemap: `${siteUrl}/sitemap.xml`
-
     }
 }

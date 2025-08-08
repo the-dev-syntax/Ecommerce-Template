@@ -49,7 +49,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 # [My-notes]
 
-1. You can move the Primary Side Bar to the right hand side by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).
+1. You can move the Primary Side Bar to the right handside by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).
 
 2. changes happened to setting json of vscode
 
@@ -13260,7 +13260,164 @@ export async function generateStaticParams() {
 
 9. inside /app folder ==> create robots.txt
   - https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots
-  - 
+  - telling the robots of google and other search engines which pages to crawl and which ones to ignore.
+
+```ts
+import type { MetadataRoute } from 'next'
+import { i18n } from '@/i18n-config' 
+ 
+export default function robots(): MetadataRoute.Robots {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const locales = i18n.locales.map((locale) => locale.code);
+     const disallowedPaths = [
+        '/auth',
+        '/admin',
+        '/api/',
+        '/checkout',
+        '/account',
+        '/cart',
+        '/sign-in',
+        '/sign-up',
+        '/register',
+        '/login',
+        '/orders',
+     ];
+
+      // Paths to disallow for the Google Ads bot (it needs to see products, but not the checkout funnel)
+    const adsBotDisallowedPaths = [
+        '/cart',
+        '/checkout',
+        '/orders',
+        '/sign-in',
+        '/sign-up',
+    ];
+
+    // const disallowedPathsWithLocale = disallowedPaths.flatMap((path) =>
+    //   locales.map((locale) => `${locale === 'en-US' ? '' : "/" + locale}${path}`)
+    // );
+    
+    const getLocalizedPaths = (paths: string[]) => {
+        return paths.flatMap(path =>
+            locales.map(locale => {
+                // Default 'en-US' locale has no prefix, others do.
+                const prefix = locale === 'en-US' ? '' : `/${locale}`;
+                return `${prefix}${path}`;
+            })
+        );
+    };
+
+    return {
+        rules: [
+        {
+            userAgent: '*',
+            allow: '/',
+            disallow: [
+                ...getLocalizedPaths(disallowedPaths),
+                '/api/',
+                '/*?*sort=*',                    
+                '/*?*tag=*',                  
+                '/*?*price=*',                  
+                '/*?*rating=*',                  
+                // Blocks URLs from faceted navigation/filtering. e.g., /search?color=blue&size=large
+                // The '*?*&' pattern blocks any URL with more than one query parameter, a common
+                // source of infinite crawlable URLs.
+                '/*?*&*',
+                // Blocks specific tracking & preview parameters that create duplicate pages
+                '/*?*oseid=*',
+                '/*preview_theme_id*',
+                '/*preview_script_id*',
+            ]
+        },
+        {
+                userAgent: 'adsbot-google',
+                disallow: getLocalizedPaths(adsBotDisallowedPaths),
+            },
+
+            // Rule Group 3: Block specific, non-essential crawlers completely
+            {
+                userAgent: 'Nutch',
+                disallow: '/',
+            },
+            
+            // Rule Group 4: Throttle aggressive but potentially useful SEO crawlers
+            {
+                userAgent: [
+                    'AhrefsBot',
+                    'AhrefsSiteAudit',
+                    'MJ12bot',
+                    'SemrushBot', // Added Semrush as it's another common one
+                ],
+                // Ask these bots to wait 10 seconds between requests to protect server resources
+                crawlDelay: 10,
+            },
+
+            // Rule Group 5: Be lenient with high-value social media bots
+            {
+                userAgent: 'Pinterest',
+                crawlDelay: 1, // A short delay is still a good practice
+            },
+    ],
+        sitemap: `${siteUrl}/sitemap.xml`
+
+    }
+}
+
+```
+10. https://search.google.com/search-console/about 
+  - in NameCheap ==> advanced DNS settings, under Host records (A Record , CNAME Record,TXT Record ==> `add a new Record` )
+    - Type ==> TEXT Record ==> first field:  @     , the second field: the google code , 3rd: automatic , check.
+    - in google verify.
+    - the left menu , under indexing in sitemap add its url.
+    - this will make it appear on google search ==> check it by search in google ==> site:yourwebsite.com
+    - varcel analytics is $20 per month, simpler.
+
+11. google analytics too.
+  - https://analytics.google.com/analytics/web/    
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[MDX with Nextjs]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+>  https://nextjs.org/docs/app/guides/mdx
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
 
 ------------------------------------
 --------------------------------------
