@@ -1,5 +1,4 @@
 import Link from 'next/link'
-
 import Pagination from '@/components/shared/pagination'
 import ProductCard from '@/components/shared/product/product-card'
 import { Button } from '@/components/ui/button'
@@ -13,35 +12,11 @@ import ProductSortSelector from '@/components/shared/product/product-sort-select
 import { getFilterUrl, slugify } from '@/lib/utils'
 import Rating from '@/components/shared/product/rating'
 import { getTranslations } from 'next-intl/server'
-
-
 import CollapsibleOnMobile from '@/components/shared/collapsible-on-mobile'
+import { SORT_ORDERS, PRICE_RANGES } from '@/lib/constants';
 
 
 
-
-const sortOrders = [
-  { value: 'price-low-to-high', name: 'Price: Low to high' },
-  { value: 'price-high-to-low', name: 'Price: High to low' },
-  { value: 'newest-arrivals', name: 'Newest arrivals' },
-  { value: 'avg-customer-review', name: 'Avg. customer review' },
-  { value: 'best-selling', name: 'Best selling' },
-]
-
-const prices = [
-  {
-    name: '$1 to $20',
-    value: '1-20',
-  },
-  {
-    name: '$21 to $50',
-    value: '21-50',
-  },
-  {
-    name: '$51 to $1000',
-    value: '51-1000',
-  },
-]
 
 export async function generateMetadata(props: {
   searchParams: Promise<{
@@ -80,13 +55,10 @@ export async function generateMetadata(props: {
     }
   } else {
     return {
-      title: 'Search Products',
+      title: t('Search Products'),
     }
   }
 }
-
-
-
 
 export default async function SearchPage(props: {
   searchParams: Promise<{
@@ -101,9 +73,14 @@ export default async function SearchPage(props: {
 }) {
   const searchParams = await props.searchParams
 
-  const t = await getTranslations('Search')
-  const tCategory = await getTranslations('Category')
-  const tTags = await getTranslations('Tags')
+  // const t = await getTranslations('Search')
+  // const tCategory = await getTranslations('Category')
+  // const tTags = await getTranslations('Tags')
+const [t, tCategory, tTags] = await Promise.all([
+  getTranslations('Search'),
+  getTranslations('Category'),
+  getTranslations('Tags')
+])
 
   const {
     q = 'all',
@@ -117,56 +94,60 @@ export default async function SearchPage(props: {
 
   const params = { q, category, tag, price, rating, sort, page }
 
-  const categories = await getAllCategories()
+  const [categories, tags, data] = await Promise.all([
+    getAllCategories(),
+    getAllTags(),
+    getAllProducts({
+      query: q,
+      category,
+      tag,
+      price,
+      rating,
+      sort,
+      page: Number(page),
+    }),
+  ])
 
-  const tags = await getAllTags()
+  const noProducts = data.products.length === 0;
+  if (noProducts) {
+    return <div className='text-center'>{t('No product found')}</div>
+  }
 
-
-  const data = await getAllProducts({
-    query: q,
-    category,
-    tag,
-    price,
-    rating,
-    sort,
-    page: Number(page),
-  })
+  const havingQueryValue = (q !== 'all' && q !== '') ||
+              (category !== 'all' && category !== '') ||
+              (tag !== 'all' && tag !== '') ||
+              rating !== 'all' ||
+              price !== 'all';
 
   return (
     <div>
       <div className='mb-2 py-2 md:border-b flex-between flex-col md:flex-row '>
         <div className='flex items-center'>
-          {data.totalProducts === 0
-            ? t('No')
-            : `${data.from} - ${data.to} ${t('of')} ${data.totalProducts}`}{' '}
-          {t('results')}
-          {(q !== 'all' && q !== '') ||
-            (category !== 'all' && category !== '') ||
-            (tag !== 'all' && tag !== '') ||
-            rating !== 'all' ||
-            price !== 'all'
-              ? ` ${t('for')} `
-              : null
+          {
+            data.totalProducts === 0
+              ? t('No')
+              : `${data.from} - ${data.to} ${t('of')} ${data.totalProducts}`
           }
-          {q !== 'all' && q !== '' && '"' + q + '"'}
-          {category !== 'all' && category !== '' && <span className='font-bold ml-2 mr-2'>{t('Category')}: {tCategory(category)}</span> }
-          {tag !== 'all' && tag !== '' && <span className='font-bold ml-2 mr-2'>{t('Tag')}: {tTags(tag)}</span> }
-          {price !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Price')}: {price}</span> }
-          {rating !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Rating')}: {rating}  {t('& Up')}</span> }
+          {' '}
+          {t('results')}
+          { havingQueryValue ? ` ${t('for')} `: null }
+          { q !== 'all' && q !== '' && '"' + q + '"' }
+          { category !== 'all' && category !== '' && <span className='font-bold ml-2 mr-2'>{t('Category')}: {tCategory(category)}</span> }
+          { tag !== 'all' && tag !== '' && <span className='font-bold ml-2 mr-2'>{t('Tag')}: {tTags(tag)}</span> }
+          { price !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Price')}: {price}</span> }
+          { rating !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Rating')}: {rating}  {t('& Up')}</span> }
           &nbsp;
-          {(q !== 'all' && q !== '') ||
-          (category !== 'all' && category !== '') ||
-          (tag !== 'all' && tag !== '') ||
-          rating !== 'all' ||
-          price !== 'all' ? (
-            <Button variant={'link'} asChild>
-              <Link href='/search'>{t('Clear')}</Link>
-            </Button>
-          ) : null}
+          {
+            havingQueryValue ? (
+                <Button variant={'link'} asChild>
+                  <Link href='/search'>{t('Clear')}</Link>
+                </Button>
+            ) : null
+          }
         </div>
         <div>  
           <ProductSortSelector
-            sortOrders={sortOrders}
+            sortOrders={SORT_ORDERS}
             sort={sort}
             params={params}
           />
@@ -175,6 +156,16 @@ export default async function SearchPage(props: {
       <div className='bg-card grid md:grid-cols-5 md:gap-4'>
         <CollapsibleOnMobile title={t('Filters')}> 
           <div className='space-y-4'>
+            <div className='font-semibold'>
+              <Link
+                    className={`${
+                      ('all' === category || '' === category) && 'text-primary'
+                    }`}
+                    href={getFilterUrl({  params:{...params, q:'all'} })}
+                  >
+                    {t('All Products')}
+                  </Link>             
+               </div>
             <div>
               <div className='font-bold'>{t('Department')}</div>
               <ul>
@@ -211,7 +202,7 @@ export default async function SearchPage(props: {
                      {t('All')}
                   </Link>
                 </li>
-                {prices.map((p) => (
+                {PRICE_RANGES.map((p) => (
                   <li key={p.value}>
                     <Link
                       className={`${p.value === price && 'text-primary'}`}
@@ -282,7 +273,7 @@ export default async function SearchPage(props: {
           </div>
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2  lg:grid-cols-3  '>
-            {data.products.length === 0 && <div> {t('No product found')}</div>}
+            {noProducts && <div> {t('No product found')}</div>}
             {data.products.map((product: IProduct) => (
               <ProductCard key={product._id} product={product} />
             ))}

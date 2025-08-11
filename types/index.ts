@@ -21,6 +21,7 @@ import {
   SettingInputSchema,
   SiteCurrencySchema,
   SiteLanguageSchema,
+  UserEmailSchema,
 } from '@/lib/validator'
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
@@ -82,6 +83,7 @@ export type IUserInput = z.infer<typeof UserInputSchema>
 export type IUserSignIn = z.infer<typeof UserSignInSchema>
 export type IUserSignUp = z.infer<typeof UserSignUpSchema>
 export type IUserName = z.infer<typeof UserNameSchema>
+export type IUserEmail = z.infer<typeof UserEmailSchema>
 
 // webpage
 export type IWebPageInput = z.infer<typeof WebPageInputSchema>

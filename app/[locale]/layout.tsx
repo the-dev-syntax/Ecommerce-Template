@@ -8,6 +8,7 @@ import { routing } from '@/i18n/routing'
 import { notFound } from 'next/navigation'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { cookies } from 'next/headers'
+import { Metadata } from 'next/types'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -23,10 +24,14 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
 }
 
-export async function generateMetadata() {
+export async function generateMetadata(props: {
+  params:  Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await props.params
   const {
     site: { slogan, name, description, url },
   } = await getSetting()
+
   return {
     title: {
       template: `%s - ${name}`,
@@ -35,6 +40,56 @@ export async function generateMetadata() {
     description: description,
     // metadataBase: new URL(url),
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || url ||'http://localhost:3000'),
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+      },
+    },
+    // Helps search engines understand the different language versions of your pages
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        'en-US': '/en-US',
+        fr: '/fr',
+        ar: '/ar',
+      },
+    },
+    // --- Open Graph (for Facebook, Pinterest, etc.) ---
+    openGraph: {
+      title: {
+        template: `%s - ${name}`,
+        default: `${name} | ${slogan}`,
+      },
+      description: description,
+      url: '/',
+      siteName: name,
+      images: [
+        {
+          url: '/og-preview.jpg', // Default preview image
+          width: 1200,
+          height: 630,
+          alt: `Default Open Graph image for ${name}`,
+        },
+      ],
+      locale: locale, // Important for i18n
+      type: 'website',
+    },
+    // --- Twitter Card ---
+    twitter: {
+      card: 'summary_large_image',
+      title: {
+        template: `%s - ${name}`,
+        default: `${name} | ${slogan}`,
+      },
+      description: description,
+      images: [`${url}/og-preview.jpg`], // Must be an absolute URL
+    },
+    // Optional: other useful tags
+    // themeColor: '#ffffff',
+    // manifest: '/manifest.json',
   }
 }
 

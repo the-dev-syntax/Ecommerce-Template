@@ -4,6 +4,8 @@ import { clsx, type ClassValue } from 'clsx'
 // import { cloneElement } from 'react'
 import { twMerge } from 'tailwind-merge'
 import qs from 'query-string'
+import { nanoid } from 'nanoid'
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -50,9 +52,9 @@ export function formatNumber(number: number) {
 export const round2 = (num: number) =>
   Math.round((num + Number.EPSILON) * 100) / 100
 
-// not secure use uuid or nanoid
-export const generateId = () =>
-  Array.from({ length: 24 }, () => Math.floor(Math.random() * 10)).join('')
+// generate a unique id for each item
+export const generateId = () => nanoid()
+
 
 // 1- zod error , then 2- mongoose validation error ,then 3- mongoDB error for doublicate key , 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -210,3 +212,6 @@ export const getFilterUrl = ({
   return `/search?${new URLSearchParams(newParams).toString()}`
 }
 
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}

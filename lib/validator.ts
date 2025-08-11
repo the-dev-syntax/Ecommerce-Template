@@ -404,3 +404,7 @@ export const SettingInputSchemaNoDefaults = z.object({
     .min(1, 'At least one delivery date is required'),
   defaultDeliveryDate: z.string().min(1, 'Delivery date is required'),
 })
+
+export const UserEmailSchema = z.object({
+  email: Email
+})

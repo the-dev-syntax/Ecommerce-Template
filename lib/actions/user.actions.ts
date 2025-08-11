@@ -1,8 +1,8 @@
 'use server'
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
-import { IUserName, IUserSignIn, IUserSignUp } from '@/types'
-import { UserSignUpSchema, UserUpdateSchema } from '../validator'
+import { IUserEmail, IUserName, IUserSignIn, IUserSignUp } from '@/types'
+import { UserEmailSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
 import { formatError } from '../utils'
@@ -50,7 +50,7 @@ export async function registerUser(userSignUp: IUserSignUp) {
   }
 }
 
-// UPDATE USER NAME- PRIVATE
+// UPDATE USER NAME- PRIVATE -
 export async function updateUserName(user: IUserName) {
   try {
     await connectToDatabase()
@@ -193,6 +193,66 @@ export async function getUserById(userId: string) {
   return JSON.parse(JSON.stringify(user)) as IUser
 }
 
+
+// Update User Email - PRIVATE - corrected
+export async function updateUserEmail(values: IUserEmail) {
+  const session = await auth()
+    if (!session) {
+          throw new Error('User is not authenticated')
+    }
+  const userId = session.user.id
+    if (!userId) {
+      return { success: false, message: 'Authentication required.' }
+    }
+
+  const validatedFields = UserEmailSchema.safeParse(values)
+    if (!validatedFields.success) {
+      return { success: false, message: 'Invalid data provided.' }
+    }
+  const { email } = validatedFields.data
+
+
+  try {    
+    await connectToDatabase()
+    // Check if the new email is already in use by another user
+    const existingUser = await User.findOne({ email }).lean();
+      if (existingUser && existingUser._id.toString() !== userId) {
+        return { success: false, message: 'This email is already in use.' };
+      }
+
+    const currentUser = await User.findById(userId).select('email').lean()
+      if (!currentUser) throw new Error('User not found')  
+
+    if (currentUser.email === email) {
+      return { success: false, message: 'New email is the same as current email.' };
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { $set: { 
+              email: email,
+              emailVerified: null,  
+            } }, // The update operation
+      { new: true } // Return the updated document
+    ).lean();
+    console.log(`Updating user ${currentUser.name} email to ${email}. Replace with your DB call.`);
+    console.log(updatedUser);
+
+    revalidatePath('/account/manage')
+
+    return {
+      success: true,
+      message: 'Your email has been updated successfully. Please check your inbox to verify the new address',
+      data: { email },
+    }
+  } catch (error) {
+    console.error('Error updating user email:', error)
+    return {
+      success: false,
+      message: 'An unexpected error occurred. Please try again',
+    }
+  }
+}
 
 /*
 ? zod validated the data client side , now validated again with zod server side

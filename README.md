@@ -48,45 +48,40 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 ---
 
 # [My-notes]
-
-1. You can move the Primary Side Bar to the right handside by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).
-
-2. changes happened to setting json of vscode
-
-3. [alt+z] to wrap code lines
-
-4. in lib utils.ts ==> change generate id to something secure like uuid or nanoid
-
-5. change slogans in lib/constants.ts and .env.local
-
-6. change category array inside search.tsx to array from database
-
-7. made a humburger menu icon (shadcdn) inside a button .
-
-8. also showed the links in the hearder using map function which is a better way to do it.
-
+3. [alt+z] to wrap code lines  ==> `this is a Note`
+7. made a humburger menu icon (shadcdn) inside a button. `This is a Note`
+8. also showed the links in the hearder using map function which is a better way to do it. `This is a Note`
 9. to open new tab in vscode ==> code . ==> it has to have space between.
-
 10. ctrl c to get out of the running terminal.
 
+# [Deployment]
 11. only limit network access of mongodb to varcel and my laptop.
-
-12. change JWT token
-
 13. change to production in env.local
+15. add NEXT_PUBLIC_APP_COPYRIGHT value to env.local  
 
-14. replacement for ---------[user.actions.ts]
 
-15. add NEXT_PUBLIC_APP_COPYRIGHT value to env.local
+# [My-bugs]
+
+1. You can move the Primary Side Bar to the right handside by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).  ==> `more explanation needed`
+
+2. changes happened to setting json of vscode  ==> `yes`
+
+4. in lib utils.ts ==> change generate id to something secure like uuid or nanoid  `done ==> no seed yet`
+
+5. change slogans in lib/constants.ts and .env.local  `relocated to settings store`
+
+6. change category array inside search.tsx to array from database `inside constants.ts`
+
+12. change JWT token `NO, it is good enough`
 
 16. add editing Password ,Email and adresses implemented in account page manager. ???
 
-17. after adding item to cart remove redirect to checkout page.
+17. after adding item to cart remove redirect to checkout page. `Done`
 
 18. components/shared/collapsible-on-mobile.tsx ==>only mobile and desktop used (there is others check!!!) (new page code available).
 
-19. possible bug here in product.actions.ts > getAllProducts( > const products = await Product.find({ have isPublished:true
-    but const countProducts = await Product.countDocuments({...}   does not have isPublished at all.
+19. possible bug here in product.actions.ts > getAllProducts( > const products = await Product.find({ have isPublished:true }) )
+    but const countProducts = await Product.countDocuments({...})   does not have isPublished at all.
 
 20. sortOrder array in search/page.tsx need to be in constant.ts ??!! MAYBE.
 
@@ -157,6 +152,11 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 54. remove this line in the base one layout.tsx default to the line before it : metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
 
+55. Seed again after nanoId change in lib/utils.ts
+
+56. PRICE_RANGES and SORT_ORDERS , should be added to settings store, i think !!
+
+57. add normalizeEmail function to form output and to create user page.
 
 
 ---------------------------------------------------------------------------------------------------------------------------
@@ -7105,34 +7105,49 @@ export default async function SearchPage(props: {
     <div>
       <div className='mb-2 py-2 md:border-b flex-between flex-col md:flex-row '>
         <div className='flex items-center'>
-        {// no results or 0-200 of 200 (or more if isPublished-false added) results for q cat:best-seller pr:$10-$20
+        { // id no products ==> "No results" , else ==> 1 - 9 of 100 results 
+        // 1. If no products found, ==> "No results"
+        // 2. is it show all as(all or "") ==> "for"
+        // 3. if query is not (all or "") ==> query   ex. results for "laptop"
+        // 4. if category is not (all or "") ==> category: category   ex. results for "laptop" Category: "Electronics"
+        // 5. if tag is not (all or "") ==> tag: tag   ex. results for "laptop" Category: "Electronics" Tag: "New"
+        // 6. if price is not (all or "") ==> price: price   ex. results for "laptop" Category: "Electronics" Tag: "New" Price: "$10-$20"
+        // 7. if rating is not (all or "") ==> rating: rating   ex. results for "laptop" Category: "Electronics" Tag: "New" Price: "$10-$20" Rating: "4 & up"
+        // 8. if any q or category or tag or rating or price has a value other than "all" or "" ==> "Clear" link to clear the filters.
         }
-          {data.totalProducts === 0  
-            ? 'No'
-            : `${data.from}-${data.to} of ${data.totalProducts}`}{' '}
-          results
-          {(q !== 'all' && q !== '') ||
-          (category !== 'all' && category !== '') ||
-          (tag !== 'all' && tag !== '') ||
-          rating !== 'all' ||
-          price !== 'all'
-            ? ` for `
-            : null}
+          {
+            data.totalProducts === 0
+            ? t('No')
+            : `${data.from} - ${data.to} ${t('of')} ${data.totalProducts}`
+          }
+          {' '}
+          {t('results')}
+          {
+            (q !== 'all' && q !== '') ||
+            (category !== 'all' && category !== '') ||
+            (tag !== 'all' && tag !== '') ||
+            rating !== 'all' ||
+            price !== 'all'
+              ? ` ${t('for')} `
+              : null
+          }
           {q !== 'all' && q !== '' && '"' + q + '"'}
-          {category !== 'all' && category !== '' && `  Category: ` + category}
-          {tag !== 'all' && tag !== '' && `   Tag: ` + tag}
-          {price !== 'all' && `    Price: ` + price}
-          {rating !== 'all' && `   Rating: ` + rating + ` & up`}
+          {category !== 'all' && category !== '' && <span className='font-bold ml-2 mr-2'>{t('Category')}: {tCategory(category)}</span> }
+          {tag !== 'all' && tag !== '' && <span className='font-bold ml-2 mr-2'>{t('Tag')}: {tTags(tag)}</span> }
+          {price !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Price')}: {price}</span> }
+          {rating !== 'all' && <span className='font-bold ml-2 mr-2'>{t('Rating')}: {rating}  {t('& Up')}</span> }
           &nbsp;
-          {(q !== 'all' && q !== '') ||
-          (category !== 'all' && category !== '') ||
-          (tag !== 'all' && tag !== '') ||
-          rating !== 'all' ||
-          price !== 'all' ? (
-            <Button variant={'link'} asChild>
-              <Link href='/search'>Clear</Link>
-            </Button>
-          ) : null}
+          {
+            (q !== 'all' && q !== '') ||
+            (category !== 'all' && category !== '') ||
+            (tag !== 'all' && tag !== '') ||
+            rating !== 'all' ||
+            price !== 'all' ? (
+              <Button variant={'link'} asChild>
+                <Link href='/search'>{t('Clear')}</Link>
+              </Button>
+            ) : null
+          }
         </div>
         <div>
           <ProductSortSelector
@@ -13374,7 +13389,85 @@ export default function robots(): MetadataRoute.Robots {
 11. google analytics too.
   - https://analytics.google.com/analytics/web/    
 
+12. metadata changes and addition to dynamic routes:
 
+```tsx
+// In: app/[locale]/product/[slug]/page.tsx
+
+import type { Metadata } from 'next'
+// Your data fetching functions
+// import { getProductBySlug } from '@/lib/actions/product.actions'
+// import { getSetting } from '@/lib/actions/settings.actions'
+
+type Props = {
+  params: { slug: string; locale: string }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // 1. Fetch data specific to this product
+  const product = await getProductBySlug(params.slug)
+
+  // You might need the site name for the title template, but you can fetch it again or pass it
+  const { site } = await getSetting();
+
+  // If the product doesn't exist, you can return default or 'not found' metadata
+  if (!product) {
+    return {
+      title: 'Product not found',
+    }
+  }
+
+  // 2. Generate dynamic metadata based on the product data
+  return {
+    // --- Core Metadata (overrides the root layout) ---
+    title: product.name, // This will become "Awesome T-Shirt - MyStore" because of the template
+    description: product.shortDescription || product.description,
+
+    // --- SEO ---
+    // Override the default canonical URL with the specific product URL
+    alternates: {
+      canonical: `/${params.locale}/product/${product.slug}`,
+      languages: {
+        'en-US': `/en-US/product/${product.slug}`,
+        fr: `/fr/product/${product.slug}`,
+        ar: `/ar/product/${product.slug}`,
+      },
+    },
+
+    // --- Open Graph (overrides the root layout's OG data) ---
+    openGraph: {
+      title: product.name,
+      description: product.shortDescription || product.description,
+      // Use the specific product image, not the default one!
+      images: [
+        {
+          url: product.imageUrl, // e.g., 'https://cdn.mysite.com/images/product-123.jpg'
+          width: 800,
+          height: 600,
+          alt: `Image of ${product.name}`,
+        },
+      ],
+      // Let crawlers know it's a product page
+      type: 'article', 
+    },
+
+    // --- Twitter Card (overrides the root layout's Twitter data) ---
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.shortDescription || product.description,
+      images: [product.imageUrl], // Use the specific product image
+    },
+  }
+}
+
+// ... rest of your page component
+export default function ProductPage({ params }: Props) {
+  // ... page JSX
+}
+
+
+```
 ------------------------------------
 --------------------------------------
 # ----------------------[MDX with Nextjs]---------------------------[another]
@@ -13388,20 +13481,76 @@ export default function robots(): MetadataRoute.Robots {
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[Promise.All -- and how to make a retry for it ]---------------------------[another]
 ------------------------------------
 --------------------------------------
+> example here for search/page.tsx
+* cons of using it :
+  - Adds complexity to the code. 
+  - Increases page load time during failures. 
+  - Can hide underlying persistent problems.
+* Pros:
+  - Can automatically recover from transient errors, improving resilience.
+  - Seamless for the user if successful.
 
 
+```typescript
+// in lib/utils.ts or a new file lib/async.ts
 
+export async function retryPromise<T>(
+  promiseFn: () => Promise<T>,
+  retries: number = 3,
+  delay: number = 1000
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await promiseFn(); // Attempt to resolve the promise
+    } catch (error) {
+      if (i === retries - 1) throw error; // If it's the last retry, throw the error
+      console.log(`Attempt ${i + 1} failed. Retrying in ${delay}ms...`);
+      await new Promise(res => setTimeout(res, delay)); // Wait before retrying
+    }
+  }
+  // This part is technically unreachable but satisfies TypeScript
+  throw new Error("Retry logic failed unexpectedly.");
+}
+```
 
+```typescript
+// app/search/page.tsx
 
+import { retryPromise } from '@/lib/utils';
+
+export default async function SearchPage({ searchParams }) {
+  // ...
+  try {
+    const [categories, tags, data] = await Promise.all([
+      retryPromise(() => getAllCategories()),
+      retryPromise(() => getAllTags()),
+      retryPromise(() => getAllProducts({ /* params */ })),
+    ]);
+
+    // ... render successful UI ...
+
+  } catch (error) {
+    // This now only runs after all retries have failed
+    console.error("Failed to fetch search data after multiple retries:", error);
+    // You can return a simple message or re-throw to trigger error.tsx
+    // For a better UX, triggering error.tsx is recommended
+    throw error;
+  }
+}
+```
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[OTP SMS verification]---------------------------[another]
 ------------------------------------
 --------------------------------------
+> https://taqnyat.sa/en/offers/packages/   lowest  5000 SMS = 529 SAR
+> https://oursms.com/pricing/   lowest  1000 SMS = 130 SAR
+* Expensive , not at first , can be added Later.
+
 
 
 

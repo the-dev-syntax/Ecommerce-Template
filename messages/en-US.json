@@ -160,6 +160,7 @@
     "No product found": "No product found",
     "Next": "Next",
     "Previous": "Previous",
+    "All Products": "All Products",
     "Page": "Page"
   },
   "Footer": {
@@ -308,8 +309,8 @@
     "Total":"Total",
     "Pay Order":"Pay Order",
     "Mark as paid":"Mark as paid",
-    "Mark as delivered":"Mark as delivered",
-    
+    "Mark as delivered":"Mark as delivered", 
+    "New email": "New email address",
     "Order Total": "Order Total"
   },
   "ProfileManager": {
@@ -341,7 +342,10 @@
     "and": "and",
     "mobileNumber": "mobile number",
     "Addresses": "Addresses",
-    "Edit, remove or set default address": "Edit, remove or set default address"
+    "Edit, remove or set default address": "Edit, remove or set default address",
+    "ChangeEmail": "Change Email",
+    "CurrentEmail": "Your current email is",
+    "EmailChangeWarning": "After changing your email address, you will need to use the new email to log in to your account. For security, we recommend verifying your new email address."
   },
   "Category": {
     "T-Shirts":"T-Shirts",

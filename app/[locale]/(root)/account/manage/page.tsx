@@ -46,14 +46,12 @@ export default async function ProfilePage() {
           <Separator />
           <CardContent className='p-4 flex justify-between flex-wrap'>
             <div>
-              <h3 className='font-bold'>{t('Email')}</h3>
-              <p>{session?.user.email}</p>
-              <p>will be implemented in the next version</p>
+              <h3 className='font-bold'>{tForm('Email')}</h3>
+              <p>{session?.user.email}</p>              
             </div>
             <div>
-              <Link href='#'>
-                <Button
-                  disabled
+              <Link href='/account/manage/email'>
+                <Button                  
                   className='rounded-full w-32'
                   variant='outline'
                 >
@@ -65,14 +63,12 @@ export default async function ProfilePage() {
           <Separator />
           <CardContent className='p-4 flex justify-between flex-wrap'>
             <div>
-              <h3 className='font-bold'>{t('Password')}</h3>
-              <p>************</p>
-              <p>will be implemented in the next version</p>
+              <h3 className='font-bold'>{tForm('Password')}</h3>
+              <p>************</p>               
             </div>
             <div>
-              <Link href='#'>
-                <Button
-                  disabled
+              <Link href='/account/manage/password'>
+                <Button                  
                   className='rounded-full w-32'
                   variant='outline'
                 >

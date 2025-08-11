@@ -159,6 +159,7 @@
     "No product found": "Aucun produit trouvé",
     "Next": "Suivant",
     "Previous": "Précédent",
+    "All Products": "Tous les produits",
     "Page": "Page"
   },
   "Footer": {
@@ -294,7 +295,6 @@
     "Sign In": "Se connecter",
     "Sign Out": "Se déconnecter",
     "Items": "Articles",
-
     "Item": "Article",
     "Quantity": "Quantité",
     "Price": "Prix",
@@ -308,7 +308,7 @@
     "Not paid": "Non payé",
     "Mark as paid": "Marquer comme payé",
     "Mark as delivered": "Marquer comme livré",
-
+    "New email": "Nouvelle adresse email",
     "Order Total": "Total de la commande"   
   },
   "ProfileManager": {
@@ -340,7 +340,10 @@
     "and": "et", 
     "mobileNumber": "numero de telephone",
     "Addresses": "Adresses", 
-    "Edit, remove or set default address": "Modifier, supprimer ou choisir comme adresse par defaut"
+    "Edit, remove or set default address": "Modifier, supprimer ou choisir comme adresse par defaut",
+    "ChangeEmail": "Changer l'adresse e-mail",
+    "CurrentEmail": "Votre adresse e-mail actuelle est",
+    "EmailChangeWarning": "Après avoir changé votre adresse e-mail, vous devrez utiliser la nouvelle adresse pour vous connecter à votre compte. Pour des raisons de sécurité, nous vous recommandons de vérifier votre nouvelle adresse e-mail."
   },
      "Category": {
     "T-Shirts": "Chemises",
