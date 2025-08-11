@@ -75,6 +75,8 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 12. change JWT token `NO, it is good enough`
 
 16. add editing Password ,Email and adresses implemented in account page manager. ???
+    - Email implementation:  nodemailer.
+    - 
 
 17. after adding item to cart remove redirect to checkout page. `Done`
 

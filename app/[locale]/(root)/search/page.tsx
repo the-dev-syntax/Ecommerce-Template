@@ -157,12 +157,7 @@ const [t, tCategory, tTags] = await Promise.all([
         <CollapsibleOnMobile title={t('Filters')}> 
           <div className='space-y-4'>
             <div className='font-semibold'>
-              <Link
-                    className={`${
-                      ('all' === category || '' === category) && 'text-primary'
-                    }`}
-                    href={getFilterUrl({  params:{...params, q:'all'} })}
-                  >
+              <Link className='text-primary' href='/search'>
                     {t('All Products')}
                   </Link>             
                </div>
