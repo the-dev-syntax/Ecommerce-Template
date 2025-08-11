@@ -11,6 +11,7 @@ import { revalidatePath } from 'next/cache'
 import z from 'zod'
 import { getSetting } from './setting.actions'
 
+
 // SIGN IN
 export async function signInWithCredentials(user: IUserSignIn) {    
   return await signIn('credentials', { ...user, redirect: false })
@@ -250,6 +251,7 @@ export async function updateUserEmail(values: IUserEmail) {
     return {
       success: false,
       message: 'An unexpected error occurred. Please try again',
+      data: { error: formatError(error) },  
     }
   }
 }

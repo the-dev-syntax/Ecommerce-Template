@@ -55,7 +55,7 @@ export const EmailForm = () => {
       ...session,
       user: {
         ...session?.user,
-        email: data.email,
+        email: data?.email,
       },
     }
     await update(newSession)
