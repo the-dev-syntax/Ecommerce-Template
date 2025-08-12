@@ -162,13 +162,15 @@ const UserName = z
   .max(50, { message: 'Username must be at most 30 characters' })
 const Email = z.string().min(1, 'Email is required').email('Email is invalid')
 const Password = z.string().min(3, 'Password must be at least 3 characters')
-const UserRole = z.string().min(1, 'role is required')
+const UserRole = z.enum(['user', 'admin']);
 
 export const UserInputSchema = z.object({
   name: UserName,
   email: Email,
   image: z.string().optional(),
   emailVerified: z.boolean(),
+  verificationToken: z.string().optional(),
+  verificationTokenExpires: z.date().optional(),
   role: UserRole,
   password: Password,
   paymentMethod: z.string().min(1, 'Payment method is required'),
@@ -198,6 +200,13 @@ export const UserSignUpSchema = UserSignInSchema.extend({
 
 export const UserNameSchema = z.object({
   name: UserName,
+})
+
+export const UserUpdateSchema = z.object({
+  _id: MongoId,
+  name: UserName,
+  email: Email,
+  role: UserRole,
 })
 
 
@@ -240,12 +249,7 @@ export const ProductUpdateFormSchema = ProductInputFormSchema.extend({
   _id: z.string()
 })
 
-export const UserUpdateSchema = z.object({
-  _id: MongoId,
-  name: UserName,
-  email: Email,
-  role: UserRole,
-})
+
 
 export const WebPageInputSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),

@@ -31,7 +31,7 @@ export const getSetting = async (): Promise<ISettingInput> => {
 export const updateSetting = async (newSetting: ISettingInput) => {  
 
     const session = await auth()
-    if (session?.user.role !== "Admin"){
+    if (session?.user.role !== "admin"){
       throw new Error('Admin permission required')
     }
 

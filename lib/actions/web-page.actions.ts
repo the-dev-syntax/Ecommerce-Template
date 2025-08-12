@@ -14,7 +14,7 @@ export const deleteWebPage = async (id:string) => {
     try{
         await (connectToDatabase())
         const session = await auth()
-        if(session?.user.role !== "Admin")
+        if(session?.user.role !== "admin")
             throw new Error('Admin permission required')
 
         const res = await WebPage.findByIdAndDelete(id)
@@ -37,7 +37,7 @@ export const getAllWebPages = async () => {
   await connectToDatabase()
 
   const session = await auth()
-  if(session?.user.role !== "Admin")
+  if(session?.user.role !== "admin")
   throw new Error('Admin permission required')
 
   const WebPages = await WebPage.find()
@@ -81,7 +81,7 @@ export async function getAllWebPageSlugs() {
 export async function createWebPage(data: IWebPageInput) {
 
     const session = await auth()
-    if(session?.user.role !== "Admin")
+    if(session?.user.role !== "admin")
     throw new Error('Admin permission required')
 
  try {
@@ -110,7 +110,7 @@ export async function updateWebPage(data: IWebPageUpdate) {
     await connectToDatabase()
 
     const session = await auth()
-    if(session?.user.role !== "Admin")
+    if(session?.user.role !== "admin")
     throw new Error('Admin permission required')
 
     // return the new updated page (webPage._id, webPage, { new: true })

@@ -21,6 +21,8 @@ import { updateUserEmail } from '@/lib/actions/user.actions'
 import { UserEmailSchema } from '@/lib/validator'
 import { IUserEmail } from '@/types'
 
+
+
 export const EmailForm = () => {
   const tForm = useTranslations('Form')
   const tProduct = useTranslations('Product')

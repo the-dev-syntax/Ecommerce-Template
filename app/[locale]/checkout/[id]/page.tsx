@@ -37,7 +37,7 @@ const CheckoutPaymentPage = async (props: { params: Promise<{ id: string }> }) =
     <PaymentForm
       order={order}
       paypalClientId={process.env.PAYPAL_CLIENT_ID || 'sb'}
-      isAdmin={session?.user?.role === 'Admin' || false}
+      isAdmin={session?.user?.role === 'admin' || false}
       clientSecret = { client_secret }
     />
   )

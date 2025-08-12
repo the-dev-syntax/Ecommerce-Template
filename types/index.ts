@@ -22,7 +22,11 @@ import {
   SiteCurrencySchema,
   SiteLanguageSchema,
   UserEmailSchema,
+  UserUpdateSchema,
 } from '@/lib/validator'
+import { type DefaultSession } from 'next-auth';
+import 'next-auth/jwt';
+
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
 export type IReviewDetails = IReviewInput & {
@@ -84,6 +88,7 @@ export type IUserSignIn = z.infer<typeof UserSignInSchema>
 export type IUserSignUp = z.infer<typeof UserSignUpSchema>
 export type IUserName = z.infer<typeof UserNameSchema>
 export type IUserEmail = z.infer<typeof UserEmailSchema>
+export type IUserUpdate = z.infer<typeof UserUpdateSchema>
 
 // webpage
 export type IWebPageInput = z.infer<typeof WebPageInputSchema>
@@ -97,3 +102,26 @@ export type SiteLanguage = z.infer<typeof SiteLanguageSchema>
 export type SiteCurrency = z.infer<typeof SiteCurrencySchema>
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>
 export type DeliveryDate = z.infer<typeof DeliveryDateSchema>
+
+type UserRole = 'user' | 'admin';
+
+// This augments the JWT type
+declare module 'next-auth/jwt' {
+  interface JWT {
+    role: UserRole;
+  }
+}
+
+// This augments the Session and the initial User object
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      role: UserRole;
+    } & DefaultSession['user'];
+  }
+
+  // This tells NextAuth what your User object from the DB looks like
+  interface User {
+    role: UserRole;
+  }
+}

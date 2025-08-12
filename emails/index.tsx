@@ -3,6 +3,7 @@ import PurchaseReceiptEmail from './purchase-receipt'
 import { IOrder } from '@/lib/db/models/order.model'
 import { SENDER_EMAIL, SENDER_NAME } from '@/lib/constants'
 import AskReviewOrderItemsEmail from './ask-review-order-items'
+import VerificationEmail from './verify-email'
  
 
 
@@ -28,3 +29,21 @@ export const sendAskReviewOrderItems = async ({ order }: { order: IOrder }) => {
     scheduledAt: oneDayFromNow,
   })
 }
+
+export const sendVerificationEmail = async ( name: string, email: string, token: string, ) => {
+
+  try {
+
+  await resend.emails.send({
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+    to: email,
+    subject: `Verify your email address`,
+    react: <VerificationEmail email={email} token={token} name={name} />,
+  })
+  console.log(`Verification email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    throw error;
+  }
+}
+

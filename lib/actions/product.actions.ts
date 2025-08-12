@@ -252,7 +252,7 @@ export async function deleteProduct(id: string) {
   try {
     await connectToDatabase()
     const session = await auth()
-        if(session?.user.role !== "Admin")
+        if(session?.user.role !== "admin")
           throw new Error('Admin permission required')
 
     const res = await Product.findByIdAndDelete(id)
@@ -282,7 +282,7 @@ export async function getAllProductsForAdmin({
 }) {
   await connectToDatabase()
   const session = await auth()
-      if(session?.user.role !== "Admin")
+      if(session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
   const {
@@ -338,7 +338,7 @@ export async function createProduct(data: IProductInput) {
   try {    
     await connectToDatabase()
     const session = await auth()
-    if (session?.user.role !== "Admin")
+    if (session?.user.role !== "admin")
       throw new Error('Admin permission required')
 
     const product = ProductInputSchema.parse(data)
@@ -358,7 +358,7 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
   try {
     await connectToDatabase()
     const session = await auth()
-    if (session?.user.role !== "Admin")
+    if (session?.user.role !== "admin")
       throw new Error('Admin permission required')
 
     const product = ProductUpdateSchema.parse(data)

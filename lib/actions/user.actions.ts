@@ -1,15 +1,15 @@
 'use server'
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
-import { IUserEmail, IUserName, IUserSignIn, IUserSignUp } from '@/types'
-import { UserEmailSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
+import { IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate } from '@/types'
+import { UserEmailSchema, UserSignUpSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
-import { formatError } from '../utils'
+import { formatError, generateVerificationToken, normalizeEmail } from '../utils'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import z from 'zod'
 import { getSetting } from './setting.actions'
+import { sendVerificationEmail } from '@/emails'
 
 
 // SIGN IN
@@ -30,26 +30,52 @@ export const SignInWithGoogle = async () => {
 
 // CREATE USER - PUBLIC
 export async function registerUser(userSignUp: IUserSignUp) {
+
+  const normalizedEmail = normalizeEmail(userSignUp.email) 
+
+  const user = await UserSignUpSchema.parseAsync({
+    name: userSignUp.name,
+    email: normalizedEmail,
+    password: userSignUp.password,
+    confirmPassword: userSignUp.confirmPassword,
+  })
+
+  if (user.password !== user.confirmPassword) {
+    throw new Error('Passwords do not match')
+  }
+
   try {
-
-    const user = await UserSignUpSchema.parseAsync({
-      name: userSignUp.name,
-      email: userSignUp.email,
-      password: userSignUp.password,
-      confirmPassword: userSignUp.confirmPassword,
-    })
-
     await connectToDatabase()
+    // Check if the email is already in use
+    const existingUser = await User.findOne({ email: normalizedEmail }).lean()
+    if (existingUser) {
+      return { success: false, message: 'Email is already in use' }
+    }
+
+    const { token, hashedToken } = generateVerificationToken()
 
     await User.create({
       ...user,
-      password: await bcrypt.hash(user.password, 5),
+      password: await bcrypt.hash(user.password, 12),
+      emailVerified: false,
+      verificationToken: hashedToken,
+      verificationTokenExpires: Date.now() + 1000 * 60 * 30 ,// 30 minutes
     })
+
+    console.log('user created:', user)
+
+    await sendVerificationEmail( user.name, user.email, token,)
+
     return { success: true, message: 'User created successfully' }
   } catch (error) {
     return { success: false, error: formatError(error) }
   }
 }
+
+// user.emailVerified = true
+// user.verificationToken = undefined
+// user.verificationTokenExpires = undefined
+// await user.save()
 
 // UPDATE USER NAME- PRIVATE -
 export async function updateUserName(user: IUserName) {
@@ -81,7 +107,7 @@ export async function deleteUser(id:string) {
   try {
     await connectToDatabase()
     const session = await auth()
-    if(session?.user.role !== "Admin")
+    if(session?.user.role !== "admin")
       throw new Error('Admin permission required')
 
     const res = await User.findByIdAndDelete(id)
@@ -109,7 +135,7 @@ export async function getAllUsers({
   }) {   
     await connectToDatabase()
     const session = await auth()
-    if(session?.user.role !== "Admin")
+    if(session?.user.role !== "admin")
       throw new Error('Admin permission required')
 
     const { common: { pageSize } } = await getSetting()
@@ -138,24 +164,32 @@ export async function getAllUsers({
  
   }
 
-// UPDATE USER - ADMIN
-export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
+// UPDATE USER - BY ADMIN
+export async function updateUser(user: IUserUpdate) {
   try {
     await connectToDatabase()
+
     const session = await auth()
-    if(session?.user.role !== "Admin")
+    if(session?.user.role !== "admin")
       throw new Error('Admin permission required')
 
     const dbUser = await User.findById(user._id)
     if (!dbUser) throw new Error('User not found')
 
-      // Note: Mongoose _id is an object, so we convert it to a string for comparison.
-      // 3. Check if this update is a demotion from the 'Admin' role
-   const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role
+    const normalizedEmail = normalizeEmail(user.email)  
+
+    const existingUser = await User.findOne({ normalizedEmail }).lean();
+    if (existingUser) {
+      return { success: false, message: 'This email is already in use' };
+    }
+
+    // Note: Mongoose _id is an object, so we convert it to a string for comparison.
+    // 3. Check if this update is a demotion from the 'Admin' role
+    const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role
         
 
     dbUser.name = user.name
-    dbUser.email = user.email
+    dbUser.email = normalizedEmail
     dbUser.role = user.role
     const updatedUser = await dbUser.save()
     revalidatePath('/admin/users')
@@ -185,8 +219,8 @@ export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
 export async function getUserById(userId: string) {
   await connectToDatabase()
   const session = await auth()
-    if(session?.user.role !== "Admin")
-      throw new Error('Admin permission required')
+  if(session?.user.role !== "admin")
+    throw new Error('Admin permission required')
 
   const user = await User.findById(userId)
   if (!user) throw new Error('User not found')
@@ -195,48 +229,52 @@ export async function getUserById(userId: string) {
 }
 
 
-// Update User Email - PRIVATE - corrected
+// Update User Email - PRIVATE BY USER - corrected
 export async function updateUserEmail(values: IUserEmail) {
   const session = await auth()
-    if (!session) {
-          throw new Error('User is not authenticated')
-    }
+  if (!session) {
+        throw new Error('User is not authenticated')
+  }
+
   const userId = session.user.id
-    if (!userId) {
-      return { success: false, message: 'Authentication required.' }
-    }
+  if (!userId) {
+    return { success: false, message: 'Authentication required.' }
+  }
 
   const validatedFields = UserEmailSchema.safeParse(values)
-    if (!validatedFields.success) {
-      return { success: false, message: 'Invalid data provided.' }
-    }
+  if (!validatedFields.success) {
+    return { success: false, message: 'Invalid data provided.' }
+  }
   const { email } = validatedFields.data
 
+  const normalizedEmail = normalizeEmail(email)
 
   try {    
     await connectToDatabase()
+
     // Check if the new email is already in use by another user
-    const existingUser = await User.findOne({ email }).lean();
+    const existingUser = await User.findOne({ normalizedEmail }).lean();
       if (existingUser && existingUser._id.toString() !== userId) {
-        return { success: false, message: 'This email is already in use.' };
+        return { success: false, message: 'This email is already in use' };
       }
 
     const currentUser = await User.findById(userId).select('email').lean()
-      if (!currentUser) throw new Error('User not found')  
+    if (!currentUser) throw new Error('User not found')  
 
-    if (currentUser.email === email) {
-      return { success: false, message: 'New email is the same as current email.' };
+    if (currentUser.email === normalizedEmail ) {
+      return { success: false, message: 'New email is the same as current email' };
     }
 
     const updatedUser = await User.findOneAndUpdate(
       { _id: userId },
       { $set: { 
-              email: email,
+              email : normalizedEmail,
               emailVerified: null,  
             } }, // The update operation
       { new: true } // Return the updated document
     ).lean();
-    console.log(`Updating user ${currentUser.name} email to ${email}. Replace with your DB call.`);
+
+    console.log(`Updating user ${currentUser.name} email to ${normalizedEmail}. Replace with your DB call`);
     console.log(updatedUser);
 
     revalidatePath('/account/manage')
@@ -246,6 +284,7 @@ export async function updateUserEmail(values: IUserEmail) {
       message: 'Your email has been updated successfully. Please check your inbox to verify the new address',
       data: { email },
     }
+
   } catch (error) {
     console.error('Error updating user email:', error)
     return {
@@ -255,6 +294,11 @@ export async function updateUserEmail(values: IUserEmail) {
     }
   }
 }
+
+
+
+
+
 
 /*
 ? zod validated the data client side , now validated again with zod server side

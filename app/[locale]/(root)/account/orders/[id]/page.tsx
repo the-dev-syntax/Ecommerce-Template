@@ -47,7 +47,7 @@ export default async function OrderDetailsPage(props: {
       <h1 className='h1-bold py-4'>{t('Order')} {formatId(order._id)}</h1>
       <OrderDetailsForm
         order={order}
-        isAdmin={session?.user?.role === 'Admin' || false}
+        isAdmin={session?.user?.role === 'admin' || false}
       />
     </>
   )

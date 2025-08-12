@@ -34,7 +34,7 @@ export default async function AdminUser(props: {
   const t = await getTranslations('Admin')
 
   const session = await auth()
-  if (session?.user.role !== 'Admin')
+  if (session?.user.role !== 'admin')
     throw new Error('Admin permission required')
 
   const page = Number(searchParams.page) || 1

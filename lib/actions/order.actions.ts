@@ -256,7 +256,7 @@ export async function getOrderSummary(date: DateRange) {
 
   await connectToDatabase()
   const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
   const {
     common: { pageSize },
@@ -355,7 +355,7 @@ export async function getOrderSummary(date: DateRange) {
 async function getSalesChartData(date: DateRange) {
 
   const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
 
@@ -403,7 +403,7 @@ async function getSalesChartData(date: DateRange) {
 async function getTopSalesProducts(date: DateRange) {
  
   const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
   const result = await Order.aggregate([
@@ -460,7 +460,7 @@ async function getTopSalesProducts(date: DateRange) {
 async function getTopSalesCategories(date: DateRange, limit = 5) {
 
   const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
 
@@ -496,7 +496,7 @@ export async function deleteOrder(id: string) {
   try {
     await connectToDatabase()
     const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
     const res = await Order.findByIdAndDelete(id)
@@ -527,7 +527,7 @@ export async function getAllOrders({
   limit = limit || pageSize
   await connectToDatabase()
   const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
   const skipAmount = (Number(page) - 1) * limit
@@ -549,7 +549,7 @@ export async function updateOrderToPaid(orderId: string) {
     await connectToDatabase()
     const session = await auth()
       if (!session) throw new Error('User not authenticated')
-        if (session.user.role !== "Admin")
+        if (session.user.role !== "admin")
           throw new Error('Admin permission required')
 
     const order = await Order.findById(orderId).populate<{
@@ -578,7 +578,7 @@ export async function updateOrderToPaid(orderId: string) {
 //! replaced Mongoose session ==> sessionM to avoid conflict with Auth session.
 const updateProductStock = async (orderId: string) => {
   const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
 
   const sessionM = await mongoose.connection.startSession()
@@ -620,7 +620,7 @@ export async function deliverOrder(orderId: string) {
   try {
     await connectToDatabase()
        const session = await auth()
-      if (session?.user.role !== "Admin")
+      if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
     
     const order = await Order.findById(orderId).populate<{

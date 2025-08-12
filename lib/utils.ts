@@ -5,6 +5,8 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import qs from 'query-string'
 import { nanoid } from 'nanoid'
+import crypto from 'crypto'
+
 
 
 export function cn(...inputs: ClassValue[]) {
@@ -215,3 +217,21 @@ export const getFilterUrl = ({
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+export function generateVerificationToken() {
+  const token = crypto.randomBytes(32).toString('hex') // raw token to email
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex') // store in DB
+  return { token, hashedToken }
+}
+
+// COMPARING RECEIVED TOKEN:
+// const hashedReceivedToken = crypto.createHash('sha256').update(receivedToken).digest('hex');
+// const user = await User.findOne({ verificationToken: hashedReceivedToken });
+
+
+// FOR PASSWORD RESET:
+// export function generatePasswordResetToken() {
+//   const token = crypto.randomBytes(32).toString('hex') // raw token to email
+//   const hashedToken = crypto.createHash('sha256').update(token).digest('hex') // store in DB
+//   return { token, hashedToken }
+// }

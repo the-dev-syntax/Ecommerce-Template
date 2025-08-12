@@ -16,7 +16,7 @@ import Google from 'next-auth/providers/google'
 declare module 'next-auth' {
   // eslint-disable-next-line no-unused-vars
   interface Session {
-    user: { role: string } & DefaultSession['user'] }
+    user: { role: 'user' | 'admin' } & DefaultSession['user'] }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -80,7 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
         }
         token.name = user.name || user.email!.split('@')[0]
-        token.role = (user as { role: string }).role
+        token.role = user.role
       }
       
       if (trigger === "update" && session?.user) {        
@@ -93,7 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session: async ({ session, user, trigger, token }) => {
       session.user.id = token.sub as string
-      session.user.role = token.role as string
+      session.user.role = token.role as 'user' | 'admin'
       session.user.name = token.name
       if (trigger === 'update') {
         session.user.name = user.name

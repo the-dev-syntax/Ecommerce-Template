@@ -53,7 +53,9 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 8. also showed the links in the hearder using map function which is a better way to do it. `This is a Note`
 9. to open new tab in vscode ==> code . ==> it has to have space between.
 10. ctrl c to get out of the running terminal.
-
+* - the line above the code: gitlens.toggleLineBlame or Toggle Line Blame Annotation
+* - also the line above the code: from codium - windsurf.
+ 
 # [Deployment]
 11. only limit network access of mongodb to varcel and my laptop.
 13. change to production in env.local
@@ -158,8 +160,13 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 56. PRICE_RANGES and SORT_ORDERS , should be added to settings store, i think !!
 
-57. add normalizeEmail function to form output and to create user page.
+57. add normalizeEmail function to form output and to create user page , to all admin checks it is "admin" not "Admin"
 
+58. change password length validation to be between 6 in validator.ts
+
+59. make browsing history if there is no length dont show title ==>  
+
+60. make browsing history lazy loading.
 
 ---------------------------------------------------------------------------------------------------------------------------
 #-------------------------git & github----------------- Branches --------------------------------------------------------
@@ -13551,7 +13558,179 @@ export default async function SearchPage({ searchParams }) {
 --------------------------------------
 > https://taqnyat.sa/en/offers/packages/   lowest  5000 SMS = 529 SAR
 > https://oursms.com/pricing/   lowest  1000 SMS = 130 SAR
+> https://auth0.com/docs         free start
 * Expensive , not at first , can be added Later.
+
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[Nodemailer]---------------------------[another]
+------------------------------------
+--------------------------------------
+> https://nodemailer.com/
+> npm install nodemailer
+
+verify-email.tsx with nodemailer:
+```tsx
+import nodemailer from 'nodemailer'
+
+export async function sendVerificationEmail(email: string, token: string, name: string) {
+  // TODO: Replace with your app's frontend base URL
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`
+
+  // ✅ Replace with your SMTP config
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+
+  const mailOptions = {
+    from: `"Your App" <${process.env.SMTP_FROM}>`,
+    to: email,
+    subject: 'Verify your email address',
+    html: `
+      <h2>Verify your email</h2>
+      <p>Click the link below to verify your email address:</p>
+      <a href="${verifyUrl}">${verifyUrl}</a>
+      <p>This link will expire in 1 hour.</p>
+    `,
+  }
+
+  await transporter.sendMail(mailOptions)
+}
+
+```
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[OTP with Nodemailer]---------------------------[another]
+------------------------------------
+--------------------------------------
+> Plan:
+
+# Plan (high level — we’ll do this step-by-step, page by page)
+
+1. **Discovery & constraints (you provide)**
+
+   * You paste your existing `User` schema (e.g. `models/User.ts` or `user.model.ts`) and your DB connect helper (if any).
+   * Tell me what auth system you use (`/auth` in your repo — NextAuth, custom, or something else).
+   * Tell me whether you want to **block sign-in until email verified** or allow sign-in with limited features.
+
+2. **Design decisions (we agree together)**
+
+   * Token approach: **random token (sent raw)** + **hash before storing** (best practice).
+   * Expiry: default **60 minutes** (you can change).
+   * Resend policy: rate-limited endpoint (we’ll add basic protection or notes to add IP/email rate-limiting).
+   * Email provider: SMTP (Nodemailer) vs. provider API (SendGrid/Postmark). Choose one.
+   * Backwards compatibility: add new optional fields to user schema (`emailVerified`, `verificationToken`, `verificationTokenExpires`, and optionally `pendingEmail`) and default them so existing users keep working.
+
+3. **Implementation tasks (order we’ll execute)**
+
+   * Utilities
+
+     * `lib/utils.ts` (normalizeEmail, generateToken, hashToken, sendEmail wrapper)
+   * DB helper
+
+     * `lib/mongoose.ts` (if you don’t already have one; otherwise we’ll reuse yours)
+   * Model update (only after you share your model)
+
+     * Add fields: `emailVerified?: boolean`, `verificationToken?: string`, `verificationTokenExpires?: Date`, optional `pendingEmail?: string`.
+     * Prefer pre-save hooks for normalization / password hashing only if you don’t already have them — otherwise adapt.
+     * Plan migration/backfill (optional): mark existing user emails as verified or leave `emailVerified: false` and let users verify on next login.
+   * Server endpoints (API routes / server actions)
+
+     * `POST /api/register` — create user with hashed verification token and send email.
+     * `GET /api/verify-email` — verify token, flip `emailVerified = true`.
+     * `POST /api/resend-verification` — resend link, create/replace token.
+     * (Optional) `POST /api/verify-change-email` — for email-change flow using `pendingEmail`.
+   * Frontend pages & UX
+
+     * Update SignUp form handler (show “check your email” message / redirect to `/check-your-email`).
+     * Create `/check-your-email` page (resend button).
+     * Create `/verify-email/success` and `/verify-email/failed` pages for UX after verification.
+     * Update SignIn to check `emailVerified` (block or warn) depending on your choice.
+   * Tests & safety
+
+     * Manual test plan for signup → email → verify → sign in.
+     * Suggestions for rate-limiting and logging (Sentry or simple logs).
+   * Deployment checklist
+
+     * Add env vars (SMTP, BASE\_URL, token expiry).
+     * Test against staging.
+
+4. **Backward-compat & minimal breaking approach**
+
+   * We will *not* force any restructuring of your existing auth code. Instead:
+
+     * Add optional fields to the schema (non-breaking).
+     * Only change sign-in handler to check `emailVerified` if you want blocking; otherwise show warning.
+     * If you have migration needs (e.g., set `emailVerified=true` for all existing users), I’ll provide a safe script to run manually.
+
+5. **Step-by-step workflow (how I’ll work with you)**
+
+   * I’ll ask for a single file (e.g., your `User` schema). You paste it.
+   * I’ll inspect and reply “OK to keep” or “small changes required” and show the exact patch (diff/commented code) to add verification fields and hooks — nothing is changed until you say “apply”.
+   * After you approve the model patch, I’ll produce the next file (utils or API route) and tests for it. We’ll iterate page by page.
+
+# Short checklist of files we will create/modify (rough)
+
+* `lib/utils.ts` (new or merge)
+* `lib/mongoose.ts` (if you don’t have)
+* `models/User.ts` (modify) — I’ll ask for your version first
+* `app/api/register/route.ts` (new)
+* `app/api/verify-email/route.ts` (new)
+* `app/api/resend-verification/route.ts` (new)
+* `lib/actions/user.actions.ts` (update client side)
+* `app/check-your-email/page.tsx` (new)
+* `app/verify-email/success/page.tsx` (new)
+* Update `signup-form` onSubmit (small change)
+* Update sign-in logic to check `emailVerified` (small change — I’ll show both options)
+
+# Questions I need from you to start (paste these items)
+
+1. **Paste your current `User` model file** (exact source code). File path and filename (e.g. `models/User.ts` or `user.model.ts`).
+
+   * I’ll only suggest the minimal diff to add verification fields if needed.
+2. **Do you already have a DB connect helper?** If yes, paste it (e.g. `lib/mongoose.ts` or `lib/db.ts`). If not — I’ll add one.
+3. **What does `auth()` (the function you import in pages) look like?** Paste the file or tell me if you use NextAuth. This helps preserve sessions & sign-in flow.
+4. **Do you want to block login until verified?** (`yes` / `no` / `soft` where soft = allow login but restrict features)
+5. **Email provider preference?** `SMTP (Nodemailer)` or `SendGrid/Postmark/etc` (if you have credentials already, confirm later in env vars).
+6. **Token expiry preference** (default 60 minutes — OK?).
+7. **Do you want email change verification flow now or later?** (this adds `pendingEmail` and a second token flow).
+
+---
+
+When you paste your `User` model (and optionally your `connectToDatabase` and `auth` implementation), I’ll:
+
+* Review it and produce a minimal patch (exact code to add) so nothing else breaks.
+* Then we’ll implement `lib/utils.ts` and `app/api/register/route.ts` and test that flow next.
+
+Which file would you like to start with? (Paste the `User` model when ready — I’ll wait for it and then produce the exact diff.)
+
+
+* You cannot use bcrypt to create a searchable hash because it generates a different result each time due to its internal salting. It's designed for comparison, not for lookup.
+* Therefore, the pattern must change. You'll still use crypto to generate the token, but you will store the original, unhashed token in the database and then compare it directly.
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
 
 
 
@@ -13564,6 +13743,55 @@ export default async function SearchPage({ searchParams }) {
 # ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
+
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+
+
+
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[]---------------------------[another]
+------------------------------------
+--------------------------------------
+
 
 
 
