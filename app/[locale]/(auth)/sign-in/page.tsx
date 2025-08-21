@@ -27,7 +27,7 @@ export default async function SignIn(props: { searchParams: Promise<{ callbackUr
     return redirect(callbackUrl)
   }
 
-  const {site  } = await getSetting()
+  const { site } = await getSetting()
 
   return (
     <div className='w-full'>

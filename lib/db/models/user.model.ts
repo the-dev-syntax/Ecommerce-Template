@@ -21,9 +21,9 @@ const userSchema = new Schema<IUser>(
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     password: { type: String },
     image: { type: String },
-    emailVerified: { type: Boolean, default: false },
-    verificationToken: { type: String },
-    verificationTokenExpires: { type: Date }
+    emailVerified: { type: Date, default: null },
+    verificationToken: { type: String, default: null },
+    verificationTokenExpires: { type: Date, default: null }
   },
   {
     timestamps: true,

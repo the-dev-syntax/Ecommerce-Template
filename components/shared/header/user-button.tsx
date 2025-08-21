@@ -9,15 +9,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { SignOut } from '@/lib/actions/user.actions'
+// import { SignOut } from '@/lib/actions/user.actions'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { ChevronDownIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
+import { SignOutButton } from '../signOutButton'
   
 export default async function UserButton() {
   const session = await auth()
   const t = await getTranslations()
+  const verified = session?.user.emailVerified
 
   // on header signin or user name, if session true dropdown menu of info , if not dropdown menu signin & sign Up.
   return (
@@ -48,13 +50,28 @@ export default async function UserButton() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuGroup>
-              <Link className='w-full' href='/account'>
-                 <DropdownMenuItem>{t('Header.Your account')}</DropdownMenuItem>
-              </Link>
-              <Link className='w-full' href='/account/orders'>
-                <DropdownMenuItem>{t('Header.Your orders')}</DropdownMenuItem>
-              </Link>
-
+              {verified ? (
+                <Link className='w-full' href='/account'>
+                   <DropdownMenuItem>{t('Header.Your account')}</DropdownMenuItem>
+                </Link>
+                ) : (
+                  <DropdownMenuItem disabled>{t('Header.Your account')}</DropdownMenuItem>
+                )}
+                {verified ? (
+                  <Link className='w-full' href='/account/orders'>
+                    <DropdownMenuItem>{t('Header.Your orders')}</DropdownMenuItem>
+                  </Link>
+                ) : (
+                  <DropdownMenuItem disabled>{t('Header.Your orders')}</DropdownMenuItem>
+                )}
+                {verified ? (
+                null
+                ) : (
+                   <Link className='w-full' href='/verify-email'>
+                    <DropdownMenuItem>{t('Header.Verify Your Email')}</DropdownMenuItem>
+                  </Link>
+                )}
+                
               {session.user.role === 'admin' && (
                 <Link className='w-full' href='/admin/overview'>
                    <DropdownMenuItem>{t('Header.Admin')}</DropdownMenuItem>
@@ -62,14 +79,14 @@ export default async function UserButton() {
               )}
             </DropdownMenuGroup>
             <DropdownMenuItem className='p-0 mb-1'>
-              <form action={SignOut} className='w-full'>
+              <div className='w-full'>
                 <Button
                   className='w-full py-4 px-2 h-4 justify-start'
                   variant='ghost'
                 >
-                 {t('Header.Sign out')}
+                 <SignOutButton />
                 </Button>
-              </form>
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         ) : (

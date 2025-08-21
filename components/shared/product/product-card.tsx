@@ -11,6 +11,7 @@ import Rating from './rating'
 import ProductPrice from './product-price'
 import AddToCart from './add-to-cart'
 import ImageHover from './image-hover'
+import { Skeleton } from '@/components/ui/skeleton'
 
 
 const ProductCard = ({
@@ -26,26 +27,27 @@ const ProductCard = ({
 }) => {
   // ProductImage () ==>links using product.slug , if  image >1 , use imageHover(usestate, timeout) if one image display normally.
   const ProductImage = () => (
-    <Link href={`/product/${product.slug}`}>
-      <div className='relative h-52'>
-        {product.images.length > 1 ? (
-          <ImageHover
-            src={product.images[0]}
-            hoverSrc={product.images[1]}
-            alt={product.name}
-          />
-        ) : (
-          <div className='relative h-52'>
-            <Image
-              src={product.images[0]}
-              alt={product.name}
-              fill
-              sizes='80vw'
-              className='object-contain'
-            />
-          </div>
-        )}
-      </div>
+    <Link href={`/product/${product.slug}`}> 
+     <div className='relative h-52'>
+      {(!product || !product.images || product.images.length === 0) ? (
+        <Skeleton className='h-full w-full' />
+        ) : ( product.images.length > 1 ? (
+              <ImageHover
+                src={product.images[0]}
+                hoverSrc={product.images[1]}
+                alt={product.name}
+              />
+            ) : (              
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  fill
+                  sizes='80vw'
+                  className='object-contain'
+                />             
+            )
+             )}
+          </div>      
     </Link>
   )
   //ProductDetail()==> brand, name, <rating {pass props}/>, how many Reviews? and formatNumber it, price () using <ProductPrice {pass props}/>,
@@ -129,3 +131,29 @@ const ProductCard = ({
 }
 
 export default ProductCard
+/*
+
+<Link href={`/product/${product.slug}`}>
+      {(!product || !product.images || product.images.length === 0) ? (
+        <Skeleton className='h-52' />
+        ) : (
+          <div className='relative h-52'>
+            {product.images.length > 1 ? (
+              <ImageHover
+                src={product.images[0]}
+                hoverSrc={product.images[1]}
+                alt={product.name}
+              />
+            ) : (
+              <div className='relative h-52'>
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  fill
+                  sizes='80vw'
+                  className='object-contain'
+                />
+              </div>
+            )}
+
+*/

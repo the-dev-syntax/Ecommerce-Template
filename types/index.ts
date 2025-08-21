@@ -25,7 +25,7 @@ import {
   UserUpdateSchema,
 } from '@/lib/validator'
 import { type DefaultSession } from 'next-auth';
-import 'next-auth/jwt';
+import 'next-auth/jwt'
 
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
@@ -107,21 +107,25 @@ type UserRole = 'user' | 'admin';
 
 // This augments the JWT type
 declare module 'next-auth/jwt' {
-  interface JWT {
+  interface JWT{   
     role: UserRole;
+    emailVerified: Date | null;
+    
   }
 }
 
-// This augments the Session and the initial User object
+// This augments the Session and the initial User object for client-side.
 declare module 'next-auth' {
   interface Session {
     user: {
+      id: string;
       role: UserRole;
-    } & DefaultSession['user'];
+      emailVerified: Date | null;
+     } & DefaultSession['user'];
   }
-
   // This tells NextAuth what your User object from the DB looks like
-  interface User {
+  interface User {   
     role: UserRole;
+    emailVerified: Date | null;  // for middleware not auth.ts
   }
 }

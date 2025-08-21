@@ -29,7 +29,7 @@ export const EmailForm = () => {
   const router = useRouter()
   const { data: session, update } = useSession()
   const { toast } = useToast()
-
+  
   const form = useForm<IUserEmail>({
     resolver: zodResolver(UserEmailSchema),
     defaultValues: {
@@ -38,12 +38,14 @@ export const EmailForm = () => {
   })
 
   async function onSubmit(values: IUserEmail) {
-    // Note: In a real-world scenario, you should add a verification step.
-    // The user would enter their new email, and you'd send a confirmation link
-    // to that new address before making the change permanent.
-    
+        if (!session) {
+      return toast({
+        variant: 'destructive',
+        description: tForm('SessionExpired'),
+      })
+    }    
     const res = await updateUserEmail(values)
-
+ 
     if (!res.success) {
       return toast({
         variant: 'destructive',
@@ -53,7 +55,7 @@ export const EmailForm = () => {
 
     const { data, message } = res
     // Update the session in the client to reflect the change immediately
-    const newSession = {
+        const newSession = {
       ...session,
       user: {
         ...session?.user,
@@ -61,8 +63,7 @@ export const EmailForm = () => {
       },
     }
     await update(newSession)
-
-    toast({
+        toast({
       description: message,
     })
     

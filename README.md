@@ -66,19 +66,21 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 1. You can move the Primary Side Bar to the right handside by right-clicking the Activity Bar and selecting Move Primary Side Bar Right or toggle its visibility (Ctrl+B).  ==> `more explanation needed`
 
-2. changes happened to setting json of vscode  ==> `yes`
+2. changes happened to setting json of vscode  ==> `yes` ✅
 
-4. in lib utils.ts ==> change generate id to something secure like uuid or nanoid  `done ==> no seed yet`
+4. in lib utils.ts ==> change generate id to something secure like uuid or nanoid  `done` ✅
 
-5. change slogans in lib/constants.ts and .env.local  `relocated to settings store`
+5. change slogans in lib/constants.ts and .env.local  `relocated to settings store` ✅
 
-6. change category array inside search.tsx to array from database `inside constants.ts`
+6. change category array inside search.tsx to array from database `inside constants.ts` ✅
 
-12. change JWT token `NO, it is good enough`
+12. change JWT token `NO, it is good enough` ✅
 
-16. add editing Password ,Email and adresses implemented in account page manager. ???
-    - Email implementation:  nodemailer.
-    - 
+16. add editing Password, Email implemented in account page manager. ???
+    - Edit Email :  RESEND.
+    - Delete Account in account/manage
+    - Edit Password :
+
 
 17. after adding item to cart remove redirect to checkout page. `Done`
 
@@ -168,12 +170,21 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 60. make browsing history lazy loading.
 
----------------------------------------------------------------------------------------------------------------------------
-#-------------------------git & github----------------- Branches --------------------------------------------------------
----------------------------------------------------------------------------------------------------------------------------
-       --> v1-dont-change 
-main --|
-       --> admin-orders
+61. Sanitize all form fields before submission.
+
+62. if not logged in , the user add to cart a messgae appear user not authenticated , should be redirected to sign-in page with a callbackUrl query parameter.
+
+63. in case of signing out , reset cart , delete user session.
+
+64. // const { auth } = NextAuth(authConfig) // import NextAuth ,import authConfig ,  ==> delete it from  middleware.ts  
+
+65. make User Schema better - search here for [User-Schema Should be]
+
+66. all throw new error will stop the application and show only the default error page.
+
+
+
+
 
 ---------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------ in header/index.tsx --------------------------------------------------------
@@ -2756,6 +2767,20 @@ In essence, this file configures NextAuth to:
 *   Customize the JWT to include the user's role and name.
 *   Customize the client-side session object to also include this role, name, and user ID.
 And then it exports the main functions (`auth`, `signIn`, `signOut`, `handlers`) that your application will use to interact with this authentication system.
+
+> Here's the flow:>
+> Request 1 (Login):
+* authorize runs.
+* jwt callback runs.
+* if (user) is true. token.sub and other properties are set from the user object.
+* if (token.sub) is also true. The code re-fetches from the DB (a bit redundant on this very first call, but harmless) and ensures the token is fresh. A JWT is created and sent to the client as a cookie.
+> Request 2 (e.g., User navigates to /account):
+* The browser sends the JWT cookie.
+* The middleware/server reads the cookie.
+* The jwt callback is invoked with the decoded token. The user object is undefined.
+* The if (user) block is skipped.
+* The code proceeds to if (token.sub). This check is now essential to know we are dealing with an authenticated user's token.
+* It connects to the DB and fetches the latest user data (dbUser). This is powerful! If an admin changed the user's role from 'user' to 'admin' in the database, this lookup will fetch the new role and update the token. The user's permissions are updated on their very next page load.
 ------------------------------------
 --------------------------------------
 # ----------------------[why-there-is-two-ways-to-connect-to-DB]---------------------------[another]
@@ -8588,31 +8613,31 @@ If value is null or undefined, result will be fallback.
 ------------------------------------
 --------------------------------------
 
-1. Click on the branch name at the bottom-left of the VS Code window (main).
+  1. Click on the branch name at the bottom-left of the VS Code window (main).
 
-2. Select "Create new branch from..."
+  2. Select "Create new branch from..."
 
-3. Choose main as the base.
+  3. Choose main as the base.
 
-4. Enter the new branch name: v1.0.2.
+  4. Enter the new branch name: v1.0.2.
 
-5. go to source control tab, up up beside the branch name, click on the "Publish Branch" button to Github repo.
+  5. go to source control tab, up up beside the branch name, click on the "Publish Branch" button to Github repo.
 
 > to branch from another branch:
-6. git checkout feature/login        # switch to the branch you want to branch from
-7. git checkout -b feature/login-ui  # create and switch to the new branch
+  6. git checkout feature/login        # switch to the branch you want to branch from
+  7. git checkout -b feature/login-ui  # create and switch to the new branch
 
 > 8. Switch to the main branch
-git checkout main
+ git checkout main
 
 > 9. Update it with latest remote changes (if working with a team and the main branch may have been updated)
-git pull origin main
+ git pull origin main
 
 > 10. Merge your feature branch into main
-git merge your-branch-name
+ git merge your-branch-name
 
 > 11. Push the updated main branch to remote
-git push origin main
+ git push origin main
 
 > 12. delete the branch locally after merging 
  git branch -d your-branch-name
@@ -13731,8 +13756,462 @@ Which file would you like to start with? (Paste the `User` model when ready — 
 # ----------------------[]---------------------------[another]
 ------------------------------------
 --------------------------------------
+1. add change to user schema ==> verification part (verificationToken and verificationTokenExpires).
+2. add generateVerificationToken in utils
+3. adjust registerUser to add sendVerificationEmail, and to show schema change user.actions.ts
+4. sendverificationemail by using RESEND in emails/index
+5. create verify-email.tsx to show Email structure.
+6. applied Email normalization to lower case at registration time and update in user.actions.ts
+7. https://upstash.com/pricing for a serverless IP address limit email verification requests, from varcel storage marketplace upstash/redis.
+8. `npm install @upstash/redis` NOT npm install @vercel/kv
+  - lib/redis.ts ==>
+  - lib/rate-limit.ts ==>
+9. add the await checkEmailRateLimit(normalizedEmail); and await setEmailRateLimit(normalizedEmail); for checking email verification requests limit.
+10. create a API route to handle clicking the link in the email for verification.
+11. add suspense and searchParam to ?verified:'true' to the client side to the form , so if verified is true, show a success message.
+12. edited auth.ts to check DB for new info after update, and remove redundant trigger=== update in session.
+13. test `delivered@resend.dev`  p:test
+14. add emailVerified to auth.ts and to type index declare model JWT and Session , it is hard coded to be Date|null
+15. had to change it in the original [validator] UserSchema and [user.model]for DB and for all users saved in the DB [data.ts]
+16. not checkout nor account routes should be accessible without email verification first.
+   - so this is why adding emailVerified to auth.ts is the first step.
+   - also admin should verify their email too.
+   - adjusting middleware to allow /verify-email
+   - create a verify-email/page.tsx and verify-email/VerifyClientToken.tsx to take token from searchParams
+   - add in user.actions.ts verifyEmailToken fn.
+17. i want to make contact and order in the dropdown menu (sign in) contains manage and orders disabled if not verified 
+    and a verify your email under it.
 
 
+
+
+> Pending :
+ 1. where did i extract email and userName from google and other OAUth Providers ???
+ 2. make verify-email conditional both for  Verif updated email or new user Verif email.
+ 3. rate limit password entry
+ 4. can't access checkout without emailVerified=true
+ 5. after update email, a countdown should start to prevent access to edit email form & edit button in /manage should be disabled for a period. 
+ 6. fix all redirects without [locale] added to new URL()
+ -----
+Q1: it suppose to give an error when signing up with the same email given that email exist already ?
+Q2: in validator.ts with zod , email is unique , how is that enforced ?
+Q3: where should i check after the a new user or a user want to update his email if the entered email is unique and is not saved before in the database
+Q4: how to limit a sign-in user from accessing checkout page if not verified his email ?
+--------------------------------------
+# ----------------------[build for NOW]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+
+Route (app)                                                            Size  First Load JS    
+┌ ○ /_not-found                                                       990 B         103 kB
+├ ● /[locale]                                                       4.25 kB         325 kB
+├   ├ /en-US
+├   ├ /fr
+├   └ /ar
+├ ● /[locale]/account                                               2.95 kB         323 kB
+├   ├ /en-US/account
+├   ├ /fr/account
+├   └ /ar/account
+├ ● /[locale]/account/manage                                        3.34 kB         266 kB
+├   ├ /en-US/account/manage
+├   ├ /fr/account/manage
+├   └ /ar/account/manage
+├ ● /[locale]/account/manage/email                                  4.25 kB         296 kB
+├   ├ /en-US/account/manage/email
+├   ├ /fr/account/manage/email
+├   └ /ar/account/manage/email
+├ ● /[locale]/account/manage/name                                   4.22 kB         296 kB
+├   ├ /en-US/account/manage/name
+├   ├ /fr/account/manage/name
+├   └ /ar/account/manage/name
+├ ● /[locale]/account/orders                                        3.38 kB         324 kB
+├   ├ /en-US/account/orders
+├   ├ /fr/account/orders
+├   └ /ar/account/orders
+├ ƒ /[locale]/account/orders/[id]                                     159 B         284 kB
+├ ● /[locale]/admin/orders                                          1.78 kB         290 kB
+├   ├ /en-US/admin/orders
+├   ├ /fr/admin/orders
+├   └ /ar/admin/orders
+├ ƒ /[locale]/admin/orders/[id]                                       160 B         284 kB
+├ ● /[locale]/admin/overview                                         142 kB         441 kB
+├   ├ /en-US/admin/overview
+├   ├ /fr/admin/overview
+├   └ /ar/admin/overview
+├ ● /[locale]/admin/products                                        4.06 kB         280 kB
+├   ├ /en-US/admin/products
+├   ├ /fr/admin/products
+├   └ /ar/admin/products
+├ ƒ /[locale]/admin/products/[id]                                     879 B         325 kB
+├ ● /[locale]/admin/products/create                                   744 B         325 kB
+├   ├ /en-US/admin/products/create
+├   ├ /fr/admin/products/create
+├   └ /ar/admin/products/create
+├ ● /[locale]/admin/settings                                        6.14 kB         364 kB
+├   ├ /en-US/admin/settings
+├   ├ /fr/admin/settings
+├   └ /ar/admin/settings
+├ ● /[locale]/admin/users                                           2.51 kB         278 kB
+├   ├ /en-US/admin/users
+├   ├ /fr/admin/users
+├   └ /ar/admin/users
+├ ƒ /[locale]/admin/users/[id]                                      5.09 kB         321 kB
+├ ● /[locale]/admin/web-pages                                       1.57 kB         277 kB
+├   ├ /en-US/admin/web-pages
+├   ├ /fr/admin/web-pages
+├   └ /ar/admin/web-pages
+├ ƒ /[locale]/admin/web-pages/[id]                                    224 B         334 kB
+├ ● /[locale]/admin/web-pages/create                                  212 B         334 kB
+├   ├ /en-US/admin/web-pages/create
+├   ├ /fr/admin/web-pages/create
+├   └ /ar/admin/web-pages/create
+├ ● /[locale]/cart                                                  2.55 kB         323 kB
+├   ├ /en-US/cart
+├   ├ /fr/cart
+├   └ /ar/cart
+├ ƒ /[locale]/cart/[itemId]                                         2.31 kB         323 kB
+├ ● /[locale]/checkout                                              12.1 kB         346 kB
+├   ├ /en-US/checkout
+├   ├ /fr/checkout
+├   └ /ar/checkout
+├ ƒ /[locale]/checkout/[id]                                         14.4 kB         287 kB
+├ ƒ /[locale]/checkout/[id]/stripe-payment-success                  1.86 kB         122 kB
+├ ● /[locale]/page/[slug]                                             566 B         138 kB
+├   ├ /en-US/page/about-us
+├   ├ /en-US/page/contact-us
+├   ├ /en-US/page/help
+├   └ [+36 more paths]
+├ ● /[locale]/product/[slug]                                        13.1 kB         367 kB
+├   ├ /en-US/product/nike-mens-slim-fit-long-sleeve-t-shirt
+├   ├ /en-US/product/jerzees-long-sleeve-heavyweight-blend-t-shirt
+├   ├ /en-US/product/jerzees-men-long-sleeve-t-shirt
+├   └ [+69 more paths]
+├ ● /[locale]/search                                                6.85 kB         315 kB
+├   ├ /en-US/search
+├   ├ /fr/search
+├   └ /ar/search
+├ ● /[locale]/sign-in                                               1.88 kB         303 kB
+├   ├ /en-US/sign-in
+├   ├ /fr/sign-in
+├   └ /ar/sign-in
+├ ● /[locale]/sign-up                                               3.64 kB         305 kB
+├   ├ /en-US/sign-up
+├   ├ /fr/sign-up
+├   └ /ar/sign-up
+├ ● /[locale]/verify-email                                          3.34 kB         263 kB
+├   ├ /en-US/verify-email
+├   ├ /fr/verify-email
+├   └ /ar/verify-email
+├ ƒ /api/auth/[...nextauth]                                           161 B         102 kB
+├ ƒ /api/products/browsing-history                                    161 B         102 kB
+├ ƒ /api/uploadthing                                                  161 B         102 kB
+├ ƒ /api/webhooks/stripe                                              161 B         102 kB
+├ ○ /opengraph-image.png                                                0 B            0 B
+├ ○ /robots.txt                                                       161 B         102 kB
+└ ○ /sitemap.xml                                                      161 B         102 kB
++ First Load JS shared by all                                        102 kB
+  ├ chunks/1684-06ad485a04799eae.js                                 46.4 kB
+  ├ chunks/4bd1b696-0681509fce3978ba.js                             53.2 kB
+  └ other shared chunks (total)                                     2.05 kB
+
+
+ƒ Middleware                                                         134 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+```tsx
+// in user.action.ts ==>  console.log(session.user):
+{
+  name: 'test',
+  name: 'test',
+  email: 'delivered@resend.dev',
+  email: 'delivered@resend.dev',
+  id: '68a1d309886dc83526e6161d',
+  id: '68a1d309886dc83526e6161d',
+  role: 'user',
+  emailVerified: '2025-08-17T14:16:49.454Z'
+}
+```
+i am using postman extension for the first time to test the email verification route , sending the email to resend , and verifying the link sent to the email , that it will make the user verified , and make sure the user before verification cant access checkout and account route , and there is a limit to sending a verification email , check the limit to   
+
+------------------------------------
+--------------------------------------
+# ----------------------[api/email-verification/route.tsx]---------------------------[another]
+------------------------------------
+--------------------------------------
+```tsx
+
+/*
+import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db';
+import crypto from 'crypto';
+import { incrementIPEmailTokenAttempt, resetIPAttempt } from '@/lib/rate-limit';
+import User from '@/lib/db/models/user.model';
+
+export async function GET(request: NextRequest) {
+  try {
+    // 1. CHECK AND INCREMENT IP ATTEMPT
+    // This will throw an error if the IP is locked out, which our catch block will handle.
+    await incrementIPEmailTokenAttempt();
+
+    const token = request.nextUrl.searchParams.get('token')
+
+    if (!token) {
+      return NextResponse.json({ message: 'Token is missing' }, { status: 400 });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+
+    await connectToDatabase();
+
+    const user = await User.findOne({
+      verificationToken: hashedToken,
+      verificationTokenExpires: { $gt: Date.now() },
+    });
+    
+    // If user not found or token expired, the attempt is invalid.
+    // The IP counter has already been incremented.
+    if (!user) {
+      return NextResponse.json(
+        { message: 'Token is invalid or has expired' },
+        { status: 400 }
+      );
+    }
+
+    // SUCCESS! Token is valid.
+    user.emailVerified = new Date();
+    user.verificationToken = null; // Use null to remove field from MongoDB doc
+    user.verificationTokenExpires = null;
+    await user.save();
+
+    // 2. RESET IP ATTEMPT COUNTER ON SUCCESS
+    await resetIPAttempt();
+
+    // 3. REDIRECT to a success page or login page
+    const redirectUrl = new URL('/sign-in?verified=true', request.nextUrl.origin);
+    return NextResponse.redirect(redirectUrl);
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error : any) {
+    // catch the "Too many invalid attempts" error from our rate limiter
+    if (error.message.startsWith('Too many invalid attempts')) {
+      return NextResponse.json({ message: error.message }, { status: 429 }); // 429 Too Many Requests
+    }
+    
+    console.error('Email verification error:', error);
+    return NextResponse.json({ message: 'An internal error occurred.' }, { status: 500 });
+  }
+}
+*/
+
+```
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[auth.ts and auth.config.ts]---------------------------[another]
+------------------------------------
+--------------------------------------
+> auth.config.ts this is the father.
+1. Auth.ts takes from it and override it with a complete Auth structure.
+2. middleware.ts takes from config directly.
+
+> both auth.config.ts and middleware.ts has to be edge runtime compatible.
+> not Auth.ts that is why it can call DB.
+
+> Flow:
+1.  **Login Time (Node.js Environment):**
+    *   A user submits their credentials.
+    *   The request is handled by the API route from `auth.ts`.
+    *   It uses the **full, merged configuration** (the one inside `auth.ts`).
+    *   Its `authorize` and `jwt` callbacks run. It connects to the database and **creates a rich JWT** with `role` and `emailVerified` inside it.
+    *   This encrypted, rich JWT is set as a cookie in the user's browser.
+
+2.  **Middleware Time (Edge Environment):**
+    *   The user now navigates to a protected page.
+    *   The browser sends the cookie containing the **already-rich JWT**.
+    *   The middleware runs. It uses **only the `auth.config.ts` configuration**.
+    *   The `auth` helper decrypts the JWT. It now has the payload that was created by `auth.ts` in step 1.
+    *   The middleware then runs the `session` callback from `auth.config.ts` to transform that rich token payload into a `session` object.
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[User-Schema Should be]---------------------------[another]
+------------------------------------
+--------------------------------------
+
+Excellent questions. This gets to the heart of good database schema design for an e-commerce application.
+
+### Part 1: Should you add a cart array to the User object?
+
+It's a common thought, but the answer is a firm **no, it is not a good idea**. Storing the cart directly inside the User document is an anti-pattern that leads to several problems.
+
+**Why it's a bad idea:**
+
+1.  **Performance:** Every time you fetch a user (which happens often, even just for authentication checks), you would also be fetching their entire cart. This is inefficient and adds unnecessary data load to common operations.
+2.  **Scalability:** A user's cart is transactional and changes frequently. Updating a sub-array inside a large user document is less efficient than updating a dedicated, smaller cart document.
+3.  **Single Responsibility Principle:** The `User` model's job is to manage user identity, authentication, and profile data. The `Cart`'s job is to manage the state of a shopping session. Mixing them violates this core design principle, making your code harder to reason about and maintain.
+4.  **Document Size Limits:** MongoDB has a 16MB document size limit. While a cart is unlikely to hit this, embedding large, growing arrays is a bad practice that can lead to problems down the road.
+
+---
+
+### The Best Practice: A Separate `Cart` Collection
+
+The standard and much better solution is to create a separate `Cart` model and collection. You then link the cart to the user.
+
+**Here's how you would model it:**
+
+**1. Define the Cart Schema:**
+Create a new file, e.g., `lib/db/models/cart.model.ts`.
+
+```ts
+import { Schema, model, models, Document, Types } from 'mongoose'
+
+// Interface for a single item in the cart
+export interface ICartItem {
+  productId: Types.ObjectId
+  name: string
+  image: string
+  price: number // Store the price at the time of adding to cart
+  quantity: number
+}
+
+// Interface for the entire Cart document
+export interface ICart extends Document {
+  userId: Types.ObjectId
+  items: ICartItem[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+const CartItemSchema = new Schema<ICartItem>({
+  productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+  name: { type: String, required: true },
+  image: { type: String, required: true },
+  price: { type: Number, required: true },
+  quantity: { type: Number, required: true, min: 1, default: 1 },
+})
+
+const cartSchema = new Schema<ICart>(
+  {
+    // Link to the User model
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    items: [CartItemSchema],
+  },
+  {
+    timestamps: true,
+  }
+)
+
+const Cart = models.Cart || model<ICart>('Cart', cartSchema)
+export default Cart
+```
+
+**Workflow:**
+
+*   **When a logged-in user adds an item:**
+    1.  You find their cart in the `carts` collection using their `userId`.
+    2.  If a cart doesn't exist, you create a new one for them.
+    3.  You add or update the item in the `items` array of their cart document.
+*   **For guest users:** You can continue to use Zustand/localStorage. When they log in, you can merge their local cart with their persistent DB cart.
+
+---
+
+### Part 2: What else is common and best practice to add to the User schema?
+
+Here are some excellent and common additions to your `userSchema`, categorized for clarity.
+
+**1. Multiple Shipping Addresses**
+Instead of a single address object, allow users to save multiple addresses.
+
+**2. Order History**
+Just like the cart, **do not embed full orders**. Instead, store an array of references to a separate `Order` collection.
+
+**3. Payment Integration IDs**
+Store customer IDs from payment gateways like Stripe. This is essential for saved payment methods and subscriptions.
+
+**4. Security Fields**
+For features like "Forgot Password".
+
+**5. User Preferences**
+A flexible object to store user settings.
+
+### Updated `userSchema` with Best Practices:
+
+Here's how your `userSchema` could look with these improvements.
+
+```tsx
+// mongoose schema in user.model.ts
+import { Schema, model, models, Document, Types } from 'mongoose'
+
+// A sub-document schema for addresses
+const AddressSchema = new Schema({
+  fullName: { type: String, required: true },
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  province: { type: String, required: true },
+  postalCode: { type: String, required: true },
+  country: { type: String, required: true },
+  phone: { type: String, required: true },
+})
+
+const userSchema = new Schema<IUser>(
+  {
+    // --- Core Fields ---
+    email: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    password: { type: String }, // Optional for OAuth users
+    image: { type: String },
+
+    // --- Authentication & Verification ---
+    emailVerified: { type: Date, default: null },
+    verificationToken: { type: String, default: null },
+    verificationTokenExpires: { type: Date, default: null },
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
+    
+    // --- E-commerce Fields ---
+    addresses: [AddressSchema], // An array of addresses
+    paymentMethod: { type: String }, // Default payment method
+    
+    // Store customer IDs from payment providers
+    stripeCustomerId: { type: String, unique: true, sparse: true }, 
+
+    // An array of references to the Order collection
+    orderHistory: [{ type: Types.ObjectId, ref: 'Order' }],
+    
+    // An array of references to saved products
+    wishlist: [{ type: Types.ObjectId, ref: 'Product' }],
+
+    // --- User Preferences ---
+    preferences: {
+        theme: { type: String, enum: ['light', 'dark'], default: 'light' },
+        receiveNewsletter: { type: Boolean, default: false }
+    }
+  },
+  {
+    timestamps: true,
+  }
+)
+```
+This schema is far more robust, scalable, and follows best practices by separating concerns into different collections and linking them with references (`ref`).
+
+
+------------------------------------
+--------------------------------------
+# ----------------------[testing email verification and Auth]---------------------------[another]
+------------------------------------
+--------------------------------------
+delivered@resend.dev tota1
+* normal new sign up `done`
+* normal new sign up + email verification `done`
+* normal new sign up + email verification + resend verification email `done`
+* normal new sign up + email verification + resend verification email + have access to order and account and no Admin access`done`
+* normal new sign up + email verification + resend verification email + rate limit 
 
 
 
@@ -13744,9 +14223,164 @@ Which file would you like to start with? (Paste the `User` model when ready — 
 ------------------------------------
 --------------------------------------
 
+Of course. This is a great set of security features to have. Here is a comprehensive, step-by-step plan to test every aspect of your rate-limiting and token expiration logic.
+
+### **Phase 0: Preparation & Tools**
+
+Before you start, you'll need a few tools to observe what's happening behind the scenes.
+
+1.  **API Client:** Use a tool like **Postman**, Insomnia, or `curl` to make direct requests to your API endpoints (`/api/auth/sign-up`, `/api/auth/send-verification-email`, `/api/auth/email-verification`).
+2.  **Redis CLI:** Open a terminal and run `redis-cli`. This is essential for watching keys being created, their values, and their Time-To-Live (TTL). The most useful commands will be:
+    *   `MONITOR`: See all commands being executed in real-time.
+    *   `KEYS *`: List all keys (use with caution on production databases).
+    *   `GET "key-name"`: Get the value of a key.
+    *   `TTL "key-name"`: Get the remaining time-to-live of a key in seconds.
+3.  **Browser Developer Tools:** Use the "Network" tab to watch API requests and the "Application" (or "Storage") tab to inspect cookies.
+4.  **Test User:** Use a consistent email for testing, for example, `delivered@resend.dev`.
+
+---
+
+### **Phase 1: Testing Email Resend Rate Limiting**
+
+**Goal:** Verify a user cannot spam the "resend verification email" endpoint.
+**Key to watch in Redis:** `resend-limit:delivered@resend.dev`
+**Cooldown:** 120 seconds (2 minutes)
+
+**Test Scenario 1.1: Initial Request (Happy Path)**
+1.  **Action:** Sign up `delivered@resend.dev` or trigger the "resend verification email" API endpoint for this user.
+2.  **Expected Outcome:** The request succeeds, and an email is sent.
+3.  **Verification (in Redis CLI):**
+    *   Run `GET "resend-limit:delivered@resend.dev"`. The result should be `"sent"`.
+    *   Run `TTL "resend-limit:delivered@resend.dev"`. The result should be a number less than or equal to 120.
+
+**Test Scenario 1.2: Cooldown Period (Throttled Path)**
+1.  **Action:** Immediately (within 2 minutes of the first request) call the "resend verification email" endpoint again for `delivered@resend.dev`.   ==> http://localhost:3000/verify-email
+2.  **Expected Outcome:** The API request **must fail** with a `429 Too Many Requests` status and the error message: `Please wait X more seconds before requesting another email`.
+3.  **Verification (in Redis CLI):**
+    *   Run `TTL "resend-limit:delivered@resend.dev"`. The key should still exist and its TTL should be decreasing.
+
+**Test Scenario 1.3: After Cooldown Expires**
+1.  **Action:** Wait for the full 120 seconds to pass.
+2.  **Verification (in Redis CLI):**
+    *   Run `GET "resend-limit:delivered@resend.dev"`. The result should be `(nil)` because the key has expired.
+3.  **Action:** Call the "resend verification email" endpoint one more time for `delivered@resend.dev`.
+4.  **Expected Outcome:** The request succeeds again.
+5.  **Verification (in Redis CLI):**
+    *   A new key `resend-limit:delivered@resend.dev` should be created with a new TTL of ~120 seconds.
+
+---
+
+### **Phase 2: Testing IP Lockout for Invalid Tokens**
+
+**Goal:** Verify a single IP address gets locked out after 3 invalid verification attempts.
+**Key to watch in Redis:** `invalid-token-attempt:YOUR_IP` (e.g., `invalid-token-attempt:127.0.0.1` for local testing).
+**Lockout:** 3 attempts, then locked for 900 seconds (15 minutes).
+
+**Test Scenario 2.1: Invalid Attempts Leading to Lockout**
+1.  **Action (Attempt 1):** Sign up `delivered@resend.dev`. Then, try to verify the email using a deliberately **incorrect** token (e.g., change a character in the token).
+2.  **Expected Outcome:** The request fails with an "Invalid Token" message.
+3.  **Verification (in Redis CLI):**
+    *   Run `GET "invalid-token-attempt:127.0.0.1"`. The result should be `"1"`.
+    *   Run `TTL "invalid-token-attempt:127.0.0.1"`. The result should be ~900.
+4.  **Action (Attempt 2):** Send another verification request with an incorrect token.
+5.  **Expected Outcome:** The request fails with "Invalid Token".
+6.  **Verification (in Redis CLI):**
+    *   Run `GET "invalid-token-attempt:127.0.0.1"`. The result should be `"2"`.
+7.  **Action (Attempt 3):** Send a third verification request with an incorrect token.
+8.  **Expected Outcome:** The request fails with "Invalid Token".
+9.  **Verification (in Redis CLI):**
+    *   Run `GET "invalid-token-attempt:127.0.0.1"`. The result should be `"3"`.
+10. **Action (Attempt 4 - The Lockout Trigger):** Send a fourth request (it can be with the correct or incorrect token, it doesn't matter).
+11. **Expected Outcome:** The API request **must fail** with the specific lockout message: `Too many invalid attempts - Please try again in 15 minutes`.
+
+**Test Scenario 2.2: Reset on Successful Verification**
+1.  **Action:** Make one invalid attempt.
+2.  **Verification (in Redis CLI):** Confirm the key `invalid-token-attempt:127.0.0.1` exists and has a value of `"1"`.
+3.  **Action:** Now send a verification request with the **correct** token.
+4.  **Expected Outcome:** The verification succeeds. The user's `emailVerified` field in the database is updated.
+5.  **Verification (in Redis CLI):**
+    *   Run `GET "invalid-token-attempt:127.0.0.1"`. The result **must be `(nil)`**. The key should have been deleted by `resetIPAttempt()`.
+
+---
+
+### **Phase 3: Testing Token Lifecycles**
+
+**Goal:** Verify that both the verification and session tokens expire correctly.
+
+**Test Scenario 3.1: Verification Token Expiration**
+1.  **Setup:** Your verification token is set to expire in **2 minutes**.
+2.  **Action:** Sign up `delivered@resend.dev` or resend a verification email. Get the correct verification token from your logs or email.
+3.  **Action:** **Wait for 2-3 minutes.**
+4.  **Action:** Now try to verify the email using the correct (but now expired) token.
+5.  **Expected Outcome:** The verification **must fail** with a "Token has expired" or similar message. Your database logic should catch that `verificationTokenExpires` is in the past.
+
+**Test Scenario 3.2: Session Token Expiration (Inactivation)**
+1.  **Setup:** Your session `maxAge` is set to **5 minutes**.
+2.  **Action:** Successfully sign in with a verified user. You will receive a session cookie.
+3.  **Verification:** Navigate to a protected page on your website. You should have access.
+4.  **Action:** **Wait for 5-6 minutes.** Do not interact with the website during this time.
+5.  **Action:** Refresh the protected page or try to navigate to another protected page.
+6.  **Expected Outcome:** You **must be logged out** and redirected to the sign-in page. The `auth()` helper will find that the session JWT is expired, effectively inactivating your session.
+7.  **Verification (in Browser Dev Tools):** Go to the Application/Storage tab and check your cookies. The `authjs.session-token` (or similarly named) cookie should be gone or its expiration date will be in the past.
 
 
+------------------------------------
+--------------------------------------
+# ----------------------[delete later- placeholder]---------------------------[another]
+------------------------------------
+--------------------------------------
+```tsx
+export async function updateUser(user: IUserUpdate) {
+  try {
+    await connectToDatabase()
 
+    const session = await auth()
+    if(session?.user.role !== "admin")
+      throw new Error('Admin permission required')
+
+    const dbUser = await User.findById(user._id)
+    if (!dbUser) throw new Error('User not found')
+
+    const normalizedEmail = normalizeEmail(user.email)  
+
+    const existingUser = await User.findOne({ email: normalizedEmail })
+    if (existingUser) {
+      return { success: false, message: 'This email is already in use' };
+    }
+
+    // Mongoose _id is an object, so we convert it to a string for comparison.
+    // Check if this update is a demotion from the 'Admin' role
+    const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role        
+
+    dbUser.name = user.name
+    dbUser.email = normalizedEmail
+    dbUser.role = user.role
+    const updatedUser = await dbUser.save()
+    
+    revalidatePath('/admin/users')
+
+    
+    if (isAdminSelfDemoting) {
+      // If the updated user is the current session user and their role has changed, sign them out
+      await signOut({ redirect: false })
+      redirect('/sign-in');
+    }
+
+    return {
+      success: true,
+      message: 'User updated successfully',
+      data: JSON.parse(JSON.stringify(updatedUser)),
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error:any) {
+    if (error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
+    return { success: false, message: formatError(error) }
+  }
+}
+
+```
 
 
 
@@ -13756,29 +14390,6 @@ Which file would you like to start with? (Paste the `User` model when ready — 
 ------------------------------------
 --------------------------------------
 
-
-
-
-
-
-
-------------------------------------
---------------------------------------
-# ----------------------[]---------------------------[another]
-------------------------------------
---------------------------------------
-
-
-
-
-
-
-
-------------------------------------
---------------------------------------
-# ----------------------[]---------------------------[another]
-------------------------------------
---------------------------------------
 
 
 

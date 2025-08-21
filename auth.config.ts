@@ -15,5 +15,16 @@ export default {
       if (protectedPaths.some((p) => p.test(pathname))) return !!auth
       return true
     },
+    jwt({ token }) {
+      return token
+    },
+    session({ session, token }) {
+      if (token.sub && session.user) {
+        session.user.id = token.sub
+        session.user.role = token.role 
+        session.user.emailVerified = token.emailVerified 
+      }
+      return session
+    },
   },
 } satisfies NextAuthConfig

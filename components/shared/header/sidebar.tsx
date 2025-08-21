@@ -2,7 +2,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { X, ChevronRight, UserCircle, MenuIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SignOut } from '@/lib/actions/user.actions'
+// import { SignOut } from '@/lib/actions/user.actions'
 import {
   Drawer,
   DrawerClose,
@@ -15,6 +15,7 @@ import {
 import { auth } from '@/auth'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { getDirection } from '@/i18n-config'
+import { SignOutButton } from '../signOutButton'
 
 
 export default async function Sidebar({
@@ -25,6 +26,8 @@ export default async function Sidebar({
   const locale = await getLocale()
   const t = await getTranslations()  
   const session = await auth()
+
+
 
   return (
     <Drawer direction={getDirection(locale) === 'rtl' ? 'right' : 'left'}>
@@ -107,14 +110,14 @@ export default async function Sidebar({
               </Link>
             </DrawerClose>
             {session ? (
-              <form action={SignOut} className='w-full'>
+              <div className='w-full'>
                 <Button
                   className='w-full justify-start item-button text-base'
                   variant='ghost'
                 >
-                  {t('Header.Sign out')}
+                 <SignOutButton />
                 </Button>
-              </form>
+              </div>
             ) : (
               <Link href='/sign-in' className='item-button'>
                 {t('Header.Sign in')}

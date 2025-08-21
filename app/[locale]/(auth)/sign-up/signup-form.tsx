@@ -65,11 +65,17 @@ export default function SignUpForm() {
         })
         return
       }
+      toast({
+        title: 'Success',
+        description: 'Account created successfully!, A verification Email was sent',
+      })
       await signInWithCredentials({
         email: data.email,
         password: data.password,
-      })
+      })  
+      
       redirect(callbackUrl)
+
     } catch (error) {
       if (isRedirectError(error)) {
         throw error

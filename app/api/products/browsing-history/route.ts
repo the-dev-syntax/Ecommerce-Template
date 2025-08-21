@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Product from '@/lib/db/models/product.model'
 import { connectToDatabase } from '@/lib/db'
 
-export const GET = async (request: NextRequest) => {
+export async function GET(request: NextRequest) {
   const listType = request.nextUrl.searchParams.get('type') || 'history'
   const productIdsParam = request.nextUrl.searchParams.get('ids')
   const categoriesParam = request.nextUrl.searchParams.get('categories')
@@ -22,7 +22,7 @@ export const GET = async (request: NextRequest) => {
       ? {
           _id: { $in: productIds },
         }
-      : { category: { $in: categories }, _id: { $nin: productIds } }
+      : { category: { $in: categories }, _id: { $nin: productIds } } // not history
 
   await connectToDatabase()
 
@@ -36,6 +36,7 @@ export const GET = async (request: NextRequest) => {
           productIds.indexOf(b._id.toString())
       )
     )
+    // not history return
   return NextResponse.json(products)
 }
 

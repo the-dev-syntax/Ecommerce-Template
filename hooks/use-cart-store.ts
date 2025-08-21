@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-
 import { Cart, OrderItem, ShippingAddress } from '@/types'
 import { calcDeliveryDateAndPrice } from '@/lib/actions/order.actions'
+
 // explaination in readme
+
 
 const initialState: Cart = {
   items: [],
@@ -166,17 +167,12 @@ const useCartStore = create(
         })
       },
       clearCart: () => {
-        set({
-          cart: {
-            ...get().cart,
-            items: [],
-          },
-        })
+        set({ cart: initialState });
       },
     }),   
     
     {
-      name: 'cart-store',
+      name: 'EV-cart',
     }
   )
 )

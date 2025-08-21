@@ -10,6 +10,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getSetting } from './setting.actions'
 import { sendVerificationEmail } from '@/emails'
+import { incrementIPEmailTokenAttempt, checkEmailRateLimit, resetIPAttempt, setEmailRateLimit } from '@/lib/rate-limit';
+import crypto from 'crypto';
+
 
 
 // SIGN IN
@@ -18,7 +21,7 @@ export async function signInWithCredentials(user: IUserSignIn) {
 }
 
 // SIGN OUT
-export const SignOut = async () => {
+export const SignOut = async () => { 
   const redirectTo = await signOut({ redirect: false })
   redirect(redirectTo.redirect)
 }
@@ -45,37 +48,42 @@ export async function registerUser(userSignUp: IUserSignUp) {
   }
 
   try {
+
+    await checkEmailRateLimit(normalizedEmail);
+
     await connectToDatabase()
     // Check if the email is already in use
-    const existingUser = await User.findOne({ email: normalizedEmail }).lean()
+    const existingUser = await User.findOne({ email: normalizedEmail })
     if (existingUser) {
       return { success: false, message: 'Email is already in use' }
     }
 
     const { token, hashedToken } = generateVerificationToken()
 
-    await User.create({
+    const createdUser = await User.create({
       ...user,
       password: await bcrypt.hash(user.password, 12),
-      emailVerified: false,
+      emailVerified: null,
       verificationToken: hashedToken,
-      verificationTokenExpires: Date.now() + 1000 * 60 * 30 ,// 30 minutes
+      verificationTokenExpires: Date.now() + 1000 * 60 * 60 * 24, // a day
     })
 
-    console.log('user created:', user)
+    console.log('user created:', createdUser)
 
-    await sendVerificationEmail( user.name, user.email, token,)
+    const verificationProps = {
+      name: createdUser.name,
+      email: normalizedEmail,
+      token,
+    }
+    await sendVerificationEmail(verificationProps)
+
+    await setEmailRateLimit(normalizedEmail);
 
     return { success: true, message: 'User created successfully' }
   } catch (error) {
     return { success: false, error: formatError(error) }
   }
 }
-
-// user.emailVerified = true
-// user.verificationToken = undefined
-// user.verificationTokenExpires = undefined
-// await user.save()
 
 // UPDATE USER NAME- PRIVATE -
 export async function updateUserName(user: IUserName) {
@@ -176,22 +184,28 @@ export async function updateUser(user: IUserUpdate) {
     const dbUser = await User.findById(user._id)
     if (!dbUser) throw new Error('User not found')
 
-    const normalizedEmail = normalizeEmail(user.email)  
+    const normalizedEmail = normalizeEmail(user.email)   
 
-    const existingUser = await User.findOne({ normalizedEmail }).lean();
-    if (existingUser) {
-      return { success: false, message: 'This email is already in use' };
-    }
+    // Mongoose _id is an object, so we convert it to a string for comparison.
+    // Check if this update is a demotion from the 'Admin' role
+    const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role      
 
-    // Note: Mongoose _id is an object, so we convert it to a string for comparison.
-    // 3. Check if this update is a demotion from the 'Admin' role
-    const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role
-        
+    const updatedUser = await User.findOneAndUpdate(
+          { _id: user._id }, // Find condition
+          { 
+            $set: {
+              name: user.name,
+              email: normalizedEmail,
+              role: user.role
+            }
+          },
+          { new: true }
+          // Note: The default for findOneAndUpdate returns the *original* document before the update.
+          // If you needed the *new* document, you would add .
+        );
 
-    dbUser.name = user.name
-    dbUser.email = normalizedEmail
-    dbUser.role = user.role
-    const updatedUser = await dbUser.save()
+    if (!updatedUser) throw new Error('User not found')
+    
     revalidatePath('/admin/users')
 
     
@@ -233,12 +247,12 @@ export async function getUserById(userId: string) {
 export async function updateUserEmail(values: IUserEmail) {
   const session = await auth()
   if (!session) {
-        throw new Error('User is not authenticated')
+    throw new Error('User is not authenticated')
   }
 
   const userId = session.user.id
   if (!userId) {
-    return { success: false, message: 'Authentication required.' }
+    return { success: false, message: 'Authentication required' }
   }
 
   const validatedFields = UserEmailSchema.safeParse(values)
@@ -249,11 +263,13 @@ export async function updateUserEmail(values: IUserEmail) {
 
   const normalizedEmail = normalizeEmail(email)
 
-  try {    
+  try {   
+    await checkEmailRateLimit(normalizedEmail);
+    
     await connectToDatabase()
 
     // Check if the new email is already in use by another user
-    const existingUser = await User.findOne({ normalizedEmail }).lean();
+    const existingUser = await User.findOne({ normalizedEmail })
       if (existingUser && existingUser._id.toString() !== userId) {
         return { success: false, message: 'This email is already in use' };
       }
@@ -265,19 +281,33 @@ export async function updateUserEmail(values: IUserEmail) {
       return { success: false, message: 'New email is the same as current email' };
     }
 
+    const { token, hashedToken } = generateVerificationToken()
+
     const updatedUser = await User.findOneAndUpdate(
       { _id: userId },
       { $set: { 
               email : normalizedEmail,
-              emailVerified: null,  
+              emailVerified: null, 
+              verificationToken: hashedToken,
+              verificationTokenExpires: Date.now() + 1000 * 60 * 60 * 24, // a day
             } }, // The update operation
       { new: true } // Return the updated document
-    ).lean();
-
+    )
     console.log(`Updating user ${currentUser.name} email to ${normalizedEmail}. Replace with your DB call`);
     console.log(updatedUser);
 
+    const verificationProps = {
+      name: currentUser.name,
+      email: normalizedEmail,
+      token,
+    }
+
+    await sendVerificationEmail(verificationProps)
+
+    await setEmailRateLimit(normalizedEmail);
+
     revalidatePath('/account/manage')
+    revalidatePath('/checkout')
 
     return {
       success: true,
@@ -296,8 +326,109 @@ export async function updateUserEmail(values: IUserEmail) {
 }
 
 
+// Verify Email Token
+export async function verifyEmailToken(token: string) {
 
+    const session = await auth()
+    if (!session) {
+      throw new Error('User is not authenticated')
+    }
+   
+    if (session.user.emailVerified) {    
+      return { success: false, message: 'Email is already verified' }      
+    }
+  
+    if (!token) {     
+       return { success: false, message: 'Token is missing' };
+    }
 
+  try {
+    // 1. CHECK AND INCREMENT IP ATTEMPT
+    // This will throw an error if the IP is already locked out.
+    await incrementIPEmailTokenAttempt();
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    await connectToDatabase();
+
+    const user = await User.findOneAndUpdate(
+      {
+        verificationToken: hashedToken,
+        verificationTokenExpires: { $gt: Date.now() },
+      },
+      {       
+        $set: {
+          emailVerified: new Date(),
+          verificationToken: null,
+          verificationTokenExpires: null,
+        },
+      },
+      { new: true } // Return the updated document
+    );
+
+   if (!user) {
+      return { success: false, message: 'Token is invalid or has expired' };
+    }
+
+    await resetIPAttempt();
+
+    return { success: true, message: 'Email verified successfully! You can now log in' };
+  } catch (error) {
+    return { success: false, message: formatError(error) };
+  }
+}
+
+// RESEND RESEND VERIFICATION EMAIL
+export async function sendVerifyEmailAgain() {
+
+  const session = await auth()
+  if (!session) {
+    throw new Error('User is not authenticated')
+  }
+
+  const { id: userId, email: userEmail, name: userName } = session.user;
+  if (!userId || !userEmail) {
+    return { success: false, message:'User Data is Missing' };
+  }
+
+  const verificationTokenExpires = new Date(Date.now() + 1000 * 60 * 60 * 24); // a day
+
+   try {
+    await checkEmailRateLimit(userEmail);
+    const { token, hashedToken } = generateVerificationToken()
+    await connectToDatabase()
+    // (find, update, return)
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {     
+        verificationToken: hashedToken,
+        verificationTokenExpires: verificationTokenExpires,
+      },
+      { new: true } 
+    );
+
+    if (!updatedUser) {
+      return { success: false, message: 'User not found' };
+    }
+
+    console.log(updatedUser);
+
+    const verificationProps = {
+      name: userName || 'User',
+      email: userEmail, 
+      token,
+    }
+
+    await sendVerificationEmail(verificationProps)
+
+    await setEmailRateLimit(userEmail);  
+  
+    return { success: true, message: 'Verification email sent successfully - Please check your inbox' };
+
+  } catch (error) {
+    return { success: false, message: formatError(error) };
+  }
+}
 
 
 /*

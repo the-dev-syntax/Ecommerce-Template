@@ -21,7 +21,9 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Stripe',
-    emailVerified: false,
+    emailVerified: new Date("2025-07-30T00:00:00.000Z"),
+    verificationToken: null,
+    verificationTokenExpires: null,
   },
   {
     name: 'Jane',
@@ -38,7 +40,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Cash On Delivery',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Jack',
@@ -55,7 +57,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'PayPal',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Sarah',
@@ -72,7 +74,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Cash On Delivery',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Michael',
@@ -89,7 +91,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'PayPal',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Emily',
@@ -106,7 +108,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Stripe',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Alice',
@@ -123,7 +125,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Cash On Delivery',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Tom',
@@ -140,7 +142,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Stripe',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Linda',
@@ -157,7 +159,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'PayPal',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'George',
@@ -174,7 +176,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Stripe',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Jessica',
@@ -191,7 +193,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Cash On Delivery',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Chris',
@@ -208,7 +210,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'PayPal',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Samantha',
@@ -225,7 +227,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Stripe',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'David',
@@ -242,7 +244,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'Cash On Delivery',
-    emailVerified: false,
+    emailVerified: null,
   },
   {
     name: 'Anna',
@@ -259,7 +261,7 @@ const users: IUserInput[] = [
       phone: '123-456-7890',
     },
     paymentMethod: 'PayPal',
-    emailVerified: false,
+    emailVerified: null,
   },
 ]
 

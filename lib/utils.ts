@@ -224,14 +224,3 @@ export function generateVerificationToken() {
   return { token, hashedToken }
 }
 
-// COMPARING RECEIVED TOKEN:
-// const hashedReceivedToken = crypto.createHash('sha256').update(receivedToken).digest('hex');
-// const user = await User.findOne({ verificationToken: hashedReceivedToken });
-
-
-// FOR PASSWORD RESET:
-// export function generatePasswordResetToken() {
-//   const token = crypto.randomBytes(32).toString('hex') // raw token to email
-//   const hashedToken = crypto.createHash('sha256').update(token).digest('hex') // store in DB
-//   return { token, hashedToken }
-// }
