@@ -296,8 +296,7 @@
     "Sign Up": "Sign Up",
     "Sign In": "Sign In",
     "Sign Out": "Sign Out",
-    "Items": "Items",
-    
+    "Items": "Items",    
     "Item": "Item",
     "Quantity": "Quantity",
     "Price": "Price",
@@ -312,6 +311,7 @@
     "Mark as paid":"Mark as paid",
     "Mark as delivered":"Mark as delivered", 
     "New email": "New email address",
+    "Email Verified": "Email Verified",
     "Order Total": "Order Total"
   },
   "ProfileManager": {

@@ -37,7 +37,7 @@ type SendVerificationEmailType = {
   update?: boolean
 }
 export const sendVerificationEmail = async ( props: SendVerificationEmailType ) => {
-  const { name, email, token, update } = props
+  const { name, email, token, update = false } = props
   try {
     await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,

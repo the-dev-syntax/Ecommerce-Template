@@ -1,38 +1,19 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 # Getting Started
-
 First, run the development server:
-
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
 # Learn More
-
 To learn more about Next.js, take a look at the following resources:
-
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
 # Deploy on Vercel
-
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
 # Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 ---
@@ -74,10 +55,11 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 6. change category array inside search.tsx to array from database `inside constants.ts` ✅
 
-12. change JWT token `NO, it is good enough` ✅
+12. change JWT token `NO, it's good enough` ✅
 
 16. add editing Password, Email implemented in account page manager. ???
-    - Edit Email :  RESEND.
+    - verify email ✅
+    - Edit Email :  RESEND. 
     - Delete Account in account/manage
     - Edit Password :
 
@@ -181,6 +163,8 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 65. make User Schema better - search here for [User-Schema Should be]
 
 66. all throw new error will stop the application and show only the default error page.
+
+67. change the link in the email `VerificationEmail` from localhost to the real one.
 
 
 
@@ -14381,8 +14365,35 @@ export async function updateUser(user: IUserUpdate) {
 }
 
 ```
+> user.action.ts  updateUser by Admin :
+```ts
+    const existingUser = await User.findOne({ email: normalizedEmail })
+    if (!existingUser) throw new Error('Email already in use')  
 
+    const isDbVerified = dbUser.emailVerified  // date or null
 
+    // if user verified in DB but the Admin changed his status to false ==> null
+    // if user verified in DB but the Admin left it ==> isDbVerified = DateType
+    // if user isn't verified in DB but the Admin changed his status to true ==> new Date()
+    // if user isn't verified in DB but the Admin left it ==> isDbVerified = null
+    const newUserVerification = 
+   (isDbVerified && !user.emailVerified) ? null : (!isDbVerified && user.emailVerified) ? new Date() : isDbVerified
+  
+
+    const updatedUser = await User.findOneAndUpdate(
+            { _id: user._id }, // Find condition
+            { 
+              $set: {
+                name: user.name,
+                email: normalizedEmail,
+                role: user.role,
+                emailVerified: newUserVerification,
+              }
+            },
+              { new: true }
+          );
+
+```
 
 ------------------------------------
 --------------------------------------

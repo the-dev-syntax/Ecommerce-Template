@@ -310,6 +310,7 @@
     "Mark as paid": "علم انه تم الدفع",
     "Mark as delivered":"علم انه تم التسليم",
     "New email": "البريد الإلكتروني الجديد",
+    "Email Verified": "التحقق من البريد الإلكتروني",
     "Order Total": "إجمالي الطلب"   
   },
    "ProfileManager": {

@@ -65,9 +65,7 @@ import {
   export default async function VerificationEmail(props: { email: string, token: string, name?: string , update?: boolean }) {
      const { email, token, name, update } = props
      const { site } = await getSetting()
-     //  const verificationLink = new URL(`/verify-email?token=${token}`, site.url).toString();
-     const productionSite = 'http://localhost:3000' // console.log remove this line
-     const verificationLink = new URL(`/verify-email?token=${token}`, productionSite ).toString(); // console.log remove this line
+      const verificationLink = new URL(`/verify-email?token=${token}`, site.url).toString();
      const logoSrc = new URL(site.logo, site.url).toString();
      const signUpMessage = `Thank you for signing up with ${site.name}. To complete your registration, please verify your email {email} by clicking the button below`
     const updateMessage = `To complete your Email Update, please verify your new email ${email} by clicking the button below`

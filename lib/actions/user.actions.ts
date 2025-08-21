@@ -2,7 +2,7 @@
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
 import { IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate } from '@/types'
-import { UserEmailSchema, UserSignUpSchema } from '../validator'
+import { UserEmailSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
 import { formatError, generateVerificationToken, normalizeEmail } from '../utils'
@@ -73,8 +73,9 @@ export async function registerUser(userSignUp: IUserSignUp) {
     const verificationProps = {
       name: createdUser.name,
       email: normalizedEmail,
-      token,
+      token,      
     }
+
     await sendVerificationEmail(verificationProps)
 
     await setEmailRateLimit(normalizedEmail);
@@ -173,41 +174,61 @@ export async function getAllUsers({
   }
 
 // UPDATE USER - BY ADMIN
-export async function updateUser(user: IUserUpdate) {
-  try {
-    await connectToDatabase()
+export async function updateUser(rawUser: IUserUpdate) {
+  
 
-    const session = await auth()
+  const validatedData = UserUpdateSchema.safeParse(rawUser);
+    if (!validatedData.success) {
+    return {
+      success: false,
+      message: "Invalid input provided.",
+      // Provide detailed errors for the form to display
+      errors: validatedData.error.flatten().fieldErrors,
+    };
+  }
+  const user = validatedData.data
+
+  const session = await auth()
     if(session?.user.role !== "admin")
       throw new Error('Admin permission required')
+    
+    if (user.role !== 'admin' && user._id === session.user.id) {
+    const adminCount = await User.countDocuments({ role: 'admin' });
+    if (adminCount <= 1) {
+      return { success: false, message: "You cannot demote the last admin account." };
+    }
+  }
 
-    const dbUser = await User.findById(user._id)
-    if (!dbUser) throw new Error('User not found')
+  try {
+    await connectToDatabase()      
+    const normalizedEmail = normalizeEmail(user.email)  
 
-    const normalizedEmail = normalizeEmail(user.email)   
-
-    // Mongoose _id is an object, so we convert it to a string for comparison.
-    // Check if this update is a demotion from the 'Admin' role
-    const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role      
-
-    const updatedUser = await User.findOneAndUpdate(
-          { _id: user._id }, // Find condition
-          { 
-            $set: {
-              name: user.name,
-              email: normalizedEmail,
-              role: user.role
+      const updatedUser = await User.findOneAndUpdate(
+      { _id: user._id },
+      [
+        {
+          $set: {
+            name: user.name, 
+            email: normalizedEmail, 
+            role: user.role, 
+            emailVerified: {//1. if Admin form emailVerified= true, update it: (it was Date or null)
+              $cond: { //if null to current date, if Date leave it, otherwise (Date or null) make/leave it null.
+                if: { $eq: [user.emailVerified, true] }, 
+                then: { $ifNull: ['$emailVerified', new Date()] },
+                else: null
+              }
             }
-          },
-          { new: true }
-          // Note: The default for findOneAndUpdate returns the *original* document before the update.
-          // If you needed the *new* document, you would add .
-        );
-
+          }
+        }
+      ],
+      { new: true }
+    );
+ 
     if (!updatedUser) throw new Error('User not found')
     
     revalidatePath('/admin/users')
 
+    const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role
     
     if (isAdminSelfDemoting) {
       // If the updated user is the current session user and their role has changed, sign them out
@@ -224,6 +245,9 @@ export async function updateUser(user: IUserUpdate) {
   } catch (error:any) {
     if (error.message === 'NEXT_REDIRECT') {
       throw error;
+    }
+    if (error.code === 11000 && error.keyPattern?.email) {
+      return { success: false, message: 'This email is already in use by another account.' };
     }
     return { success: false, message: formatError(error) }
   }
@@ -300,6 +324,7 @@ export async function updateUserEmail(values: IUserEmail) {
       name: currentUser.name,
       email: normalizedEmail,
       token,
+      update: true
     }
 
     await sendVerificationEmail(verificationProps)
@@ -417,6 +442,7 @@ export async function sendVerifyEmailAgain() {
       name: userName || 'User',
       email: userEmail, 
       token,
+      update : true,
     }
 
     await sendVerificationEmail(verificationProps)

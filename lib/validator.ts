@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { boolean, z } from 'zod'
 import { formatNumberWithDecimal } from './utils'
 
 
@@ -207,6 +207,7 @@ export const UserUpdateSchema = z.object({
   name: UserName,
   email: Email,
   role: UserRole,
+  emailVerified: z.date().nullable(), 
 })
 
 

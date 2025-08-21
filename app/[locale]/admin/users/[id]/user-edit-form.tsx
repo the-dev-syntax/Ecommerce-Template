@@ -28,10 +28,12 @@ import { USER_ROLES } from '@/lib/constants'
 import { IUser } from '@/lib/db/models/user.model'
 import { UserUpdateSchema } from '@/lib/validator'
 import { useTranslations } from 'next-intl'
+import { Checkbox } from '@/components/ui/checkbox'
 
 
 
-const UserEditForm = ({ user }: { user: IUser }) => {
+export default function UserEditForm({ user }: { user: IUser })  {
+
   const router = useRouter()
   const { toast } = useToast()
   const t = useTranslations('Form')
@@ -137,6 +139,23 @@ const UserEditForm = ({ user }: { user: IUser }) => {
             )}
           />
         </div>
+        <div>
+          <FormField
+            control={form.control}
+            name='emailVerified'
+            render={({ field }) => (
+              <FormItem className='space-x-4 flex items-end'>
+                <FormLabel>{t('Email Verified')}</FormLabel>
+                <FormControl>
+                  <Checkbox
+                    checked={!!field.value}
+                    onCheckedChange={(val) => field.onChange(Boolean(val))}                    
+                  />
+                </FormControl>                
+              </FormItem>
+            )}
+          />
+        </div>
         <div className='flex-between'>
           <Button type='submit' disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? t('Submitting') : `${t('Update User')} `}
@@ -154,4 +173,3 @@ const UserEditForm = ({ user }: { user: IUser }) => {
   )
 }
 
-export default UserEditForm
