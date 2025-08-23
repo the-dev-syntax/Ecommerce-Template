@@ -9,12 +9,12 @@ import Order, { IOrder } from '../db/models/order.model'
 
 import { paypal } from '../paypal'
 import { sendPurchaseReceipt, sendAskReviewOrderItems } from '@/emails'
-import { revalidatePath } from 'next/cache'
 import mongoose from 'mongoose'
 import { DateRange } from 'react-day-picker'
 import Product from '../db/models/product.model'
 import User from '../db/models/user.model'
 import { getSetting } from './setting.actions'
+import { revalidateAllLocales } from '../utils-serverOnly'
 
  
 
@@ -148,8 +148,10 @@ export async function approvePayPalOrder(
         captureData.purchase_units[0]?.payments?.captures[0]?.amount?.value,
     }
     await order.save()
-    await sendPurchaseReceipt({ order })
-    revalidatePath(`/account/orders/${orderId}`)
+    await sendPurchaseReceipt({ order })    
+  
+    await revalidateAllLocales(`/account/orders/${orderId}`);    
+    
     return {
       success: true,
       message: 'Your order has been successfully paid by PayPal',
@@ -501,7 +503,9 @@ export async function deleteOrder(id: string) {
 
     const res = await Order.findByIdAndDelete(id)
     if (!res) throw new Error('Order not found')
-    revalidatePath('/admin/orders')
+   
+   await revalidateAllLocales(`/admin/orders`)
+
     return {
       success: true,
       message: 'Order deleted successfully',
@@ -567,7 +571,8 @@ export async function updateOrderToPaid(orderId: string) {
 
     if (order.user.email) await sendPurchaseReceipt({ order })
 
-    revalidatePath(`/account/orders/${orderId}`)
+    await revalidateAllLocales(`/account/orders/${orderId}`);
+
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
     return { success: false, message: formatError(err) }
@@ -636,8 +641,8 @@ export async function deliverOrder(orderId: string) {
     await order.save()
 
     if (order.user.email) await sendAskReviewOrderItems({ order })
-
-    revalidatePath(`/account/orders/${orderId}`)
+  
+    await revalidateAllLocales(`/account/orders/${orderId}`)
 
     return { success: true, message: 'Order delivered successfully' }
     

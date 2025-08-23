@@ -1,16 +1,12 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {  useSearchParams } from 'next/navigation';
 import { sendVerifyEmailAgain, verifyEmailToken } from '@/lib/actions/user.actions';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast'
-
-
-
-
 
 
 export default function VerifyClientToken() {
@@ -24,15 +20,21 @@ export default function VerifyClientToken() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isValidationEnded, setIsValidationEnded] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const processedTokenRef = useRef<string | null>(null);
 
   
-
+ 
   useEffect(() => {
+    
 
     if (!token) {
       setMessage('No verification token found - Please, check your email for the verification link');
       return;
-    }
+    }   
+
+    if (processedTokenRef.current === token) return;
+
+    processedTokenRef.current = token;
 
     startTransition(async () => {
       const result = await verifyEmailToken(token);
@@ -62,22 +64,25 @@ export default function VerifyClientToken() {
   };
 
   return (
-    <div className="p-8 border rounded-lg shadow-md">
+    <div className="p-8 border rounded-lg shadow-md flex-col gap-4">
       <h1 className="text-2xl font-bold mb-4">Email Verification</h1>
       <p className={isSuccess ? 'text-green-600' : 'text-red-600'}>
         {isPending ? 'Verifying...' : message}
       </p>
+      
+      {isValidationEnded && !isSuccess && (
+        <Button 
+        onClick={handleVerifyEmailAgain} 
+        disabled={isPending}
+        className="mt-4 inline-block text-blue-500 hover:underline">
+          Send Verification Email Again
+        </Button>
+      )}
       {isSuccess && (
         <Link href={`/${locale}/`} className="mt-4 inline-block text-blue-500 hover:underline">
           Home Page
         </Link>
       )}
-      {isValidationEnded && !isSuccess && (
-        <Button onClick={handleVerifyEmailAgain} className="mt-4 inline-block text-blue-500 hover:underline">
-          Send Verification Email Again
-        </Button>
-      )}
-      
     </div>
   );
 }

@@ -1,10 +1,7 @@
 'use server'
 
 import mongoose from 'mongoose'
-import { revalidatePath } from 'next/cache'
-
 import { auth } from '@/auth'
-
 import { connectToDatabase } from '../db'
 import Product from '../db/models/product.model'
 import Review, { IReview } from '../db/models/review.model'
@@ -12,6 +9,7 @@ import { formatError } from '../utils'
 import { ReviewInputSchema } from '../validator'
 import { IReviewDetails, IReviewInput } from '@/types'
 import { getSetting } from './setting.actions'
+import { revalidateAllLocales } from '../utils-serverOnly'
 
 
 // CREATE OR UPDATE REVIEW - PRIVATE
@@ -46,7 +44,7 @@ export async function createUpdateReview({
       existReview.title = review.title
       await existReview.save()
       await updateProductReview(review.product)
-      revalidatePath(path)
+      await revalidateAllLocales(path)
       return {
         success: true,
         message: 'Review updated successfully',
@@ -55,7 +53,7 @@ export async function createUpdateReview({
     } else {
       await Review.create(review)
       await updateProductReview(review.product)
-      revalidatePath(path)
+      await revalidateAllLocales(path)
       return {
         success: true,
         message: 'Review created successfully',

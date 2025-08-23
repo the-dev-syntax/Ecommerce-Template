@@ -3,10 +3,10 @@
 import { connectToDatabase } from '@/lib/db'
 import { auth } from "@/auth"
 import WebPage, { IWebPage } from '../db/models/web-page.model'
-import { revalidatePath } from 'next/cache'
 import { formatError } from '../utils'
 import { IWebPageInput, IWebPageUpdate } from '@/types'
 import { WebPageInputSchema, WebPageUpdateSchema } from '../validator'
+import { revalidateAllLocales } from '../utils-serverOnly'
 
 
 // DELETE WEB PAGE - ADMIN
@@ -20,7 +20,7 @@ export const deleteWebPage = async (id:string) => {
         const res = await WebPage.findByIdAndDelete(id)
         if (!res) throw new Error('Web page not found')
         
-         revalidatePath('/admin/web-pages')
+         await revalidateAllLocales('/admin/web-pages')
         return {
          success: true,
          message: 'Web page deleted successfully',   
@@ -90,7 +90,7 @@ export async function createWebPage(data: IWebPageInput) {
     // avoid doublicating slugs which will prevent fetching the page and cause errors
 
     await WebPage.create(webPage)
-    revalidatePath('/admin/web-pages')
+    await revalidateAllLocales('/admin/web-pages')
 
     return {
       success: true,
@@ -117,7 +117,7 @@ export async function updateWebPage(data: IWebPageUpdate) {
     const updatedPage  = await WebPage.findByIdAndUpdate(webPage._id, webPage)
     if (!updatedPage ) throw new Error('WebPage not found. Could not perform update.')
 
-    revalidatePath('/admin/web-pages')
+    await revalidateAllLocales('/admin/web-pages')
     
     return {
       success: true,

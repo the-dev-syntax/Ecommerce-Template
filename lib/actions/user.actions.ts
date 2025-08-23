@@ -7,11 +7,12 @@ import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
 import { formatError, generateVerificationToken, normalizeEmail } from '../utils'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 import { getSetting } from './setting.actions'
 import { sendVerificationEmail } from '@/emails'
 import { incrementIPEmailTokenAttempt, checkEmailRateLimit, resetIPAttempt, setEmailRateLimit } from '@/lib/rate-limit';
 import crypto from 'crypto';
+import { revalidateAllLocales } from '../utils-serverOnly'
+
 
 
 
@@ -121,7 +122,9 @@ export async function deleteUser(id:string) {
 
     const res = await User.findByIdAndDelete(id)
     if (!res) throw new Error('User not found')
-    revalidatePath('/admin/users')
+
+    await revalidateAllLocales('/admin/users');
+
     return {
       success: true,
       message: 'User deleted successfully',
@@ -225,8 +228,8 @@ export async function updateUser(rawUser: IUserUpdate) {
     );
  
     if (!updatedUser) throw new Error('User not found')
-    
-    revalidatePath('/admin/users')
+  
+    await revalidateAllLocales('/admin/users');
 
     const isAdminSelfDemoting = user._id.toString() === session.user.id && user.role !== session.user.role
     
@@ -330,9 +333,9 @@ export async function updateUserEmail(values: IUserEmail) {
     await sendVerificationEmail(verificationProps)
 
     await setEmailRateLimit(normalizedEmail);
-
-    revalidatePath('/account/manage')
-    revalidatePath('/checkout')
+   
+     await revalidateAllLocales('/account/manage');
+     await revalidateAllLocales('/checkout');
 
     return {
       success: true,
@@ -394,7 +397,9 @@ export async function verifyEmailToken(token: string) {
    if (!user) {
       return { success: false, message: 'Token is invalid or has expired' };
     }
-
+   
+    await revalidateAllLocales('/verify-email');
+ 
     await resetIPAttempt();
 
     return { success: true, message: 'Email verified successfully! You can now log in' };

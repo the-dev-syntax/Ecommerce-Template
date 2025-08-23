@@ -1,21 +1,14 @@
 'use server'
-
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
-// import { PAGE_SIZE } from '../constants'
-
-import { revalidatePath } from 'next/cache'
 import { formatError } from '../utils'
-
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
 import { auth } from '@/auth'
 import { getSetting } from './setting.actions'
+import { revalidateAllLocales } from '../utils-serverOnly'  
 
-
-
-  
 
 //* GET ALL CATEGORIES
 export async function getAllCategories() {
@@ -225,15 +218,7 @@ export async function getAllTags() {
     { $group: { _id: null, uniqueTags: { $addToSet: '$tags' } } },
     { $project: { _id: 0, uniqueTags: 1 } },
   ])
-  // const returnedTags = (tags[0]?.uniqueTags
-  //     .sort((a: string, b: string) => a.localeCompare(b))
-  //     .map((x: string) =>
-  //       x
-  //         .split('-')
-  //         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-  //         .join(' ')
-  //     ) as string[]) || []
-  //     console.log(returnedTags)
+  
   return (
     (tags[0]?.uniqueTags
       .sort((a: string, b: string) => a.localeCompare(b))
@@ -249,16 +234,18 @@ export async function getAllTags() {
 
 // DELETE PRODUCT - ADMIN
 export async function deleteProduct(id: string) {
+  const session = await auth()
+      if(session?.user.role !== "admin")
+        throw new Error('Admin permission required')
   try {
     await connectToDatabase()
-    const session = await auth()
-        if(session?.user.role !== "admin")
-          throw new Error('Admin permission required')
 
     const res = await Product.findByIdAndDelete(id)
     if (!res) throw new Error('Product not found')
       //success ==> refresh the page
-    revalidatePath('/admin/products')
+  
+    await revalidateAllLocales(`/admin/products`)
+
     return {
       success: true,
       message: 'Product deleted successfully',
@@ -335,15 +322,17 @@ export async function getAllProductsForAdmin({
 // ADMIN ACTIONS FOR PRODUCTS:
 // CREATE PRODUCT - ADMIN
 export async function createProduct(data: IProductInput) {
+  const session = await auth()
+  if (session?.user.role !== "admin")
+    throw new Error('Admin permission required')
   try {    
     await connectToDatabase()
-    const session = await auth()
-    if (session?.user.role !== "admin")
-      throw new Error('Admin permission required')
 
     const product = ProductInputSchema.parse(data)
     await Product.create(product)
-    revalidatePath('/admin/products')
+ 
+    await revalidateAllLocales(`/admin/products`)
+
     return {
       success: true,
       message: 'Product created successfully',
@@ -355,15 +344,17 @@ export async function createProduct(data: IProductInput) {
 
 // UPDATE PRODUCT - ADMIN
 export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
+  const session = await auth()
+  if (session?.user.role !== "admin")
+    throw new Error('Admin permission required')
   try {
     await connectToDatabase()
-    const session = await auth()
-    if (session?.user.role !== "admin")
-      throw new Error('Admin permission required')
 
     const product = ProductUpdateSchema.parse(data)
     await Product.findByIdAndUpdate(product._id, product)
-    revalidatePath('/admin/products')
+ 
+    await revalidateAllLocales(`/admin/products`)
+
     return {
       success: true,
       message: 'Product updated successfully',

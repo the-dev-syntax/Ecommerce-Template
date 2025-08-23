@@ -166,6 +166,13 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 67. change the link in the email `VerificationEmail` from localhost to the real one.
 
+68. rate limit password entry
+
+69. User-Schema Should be
+
+70. add the reset password page.
+
+71. where did i extract email and userName from google and other OAUth Providers ???
 
 
 
@@ -13765,17 +13772,7 @@ Which file would you like to start with? (Paste the `User` model when ready — 
    - add in user.actions.ts verifyEmailToken fn.
 17. i want to make contact and order in the dropdown menu (sign in) contains manage and orders disabled if not verified 
     and a verify your email under it.
-
-
-
-
-> Pending :
- 1. where did i extract email and userName from google and other OAUth Providers ???
- 2. make verify-email conditional both for  Verif updated email or new user Verif email.
- 3. rate limit password entry
- 4. can't access checkout without emailVerified=true
- 5. after update email, a countdown should start to prevent access to edit email form & edit button in /manage should be disabled for a period. 
- 6. fix all redirects without [locale] added to new URL()
+ 
  -----
 Q1: it suppose to give an error when signing up with the same email given that email exist already ?
 Q2: in validator.ts with zod , email is unique , how is that enforced ?
@@ -14000,7 +13997,8 @@ export async function GET(request: NextRequest) {
 --------------------------------------
 > auth.config.ts this is the father.
 1. Auth.ts takes from it and override it with a complete Auth structure.
-2. middleware.ts takes from config directly.
+2. middleware.ts takes from config directly,
+3. middleware runs in Edge Runtime while Auth.ts runs on Node and dns for DB queries.
 
 > both auth.config.ts and middleware.ts has to be edge runtime compatible.
 > not Auth.ts that is why it can call DB.
@@ -14027,20 +14025,6 @@ export async function GET(request: NextRequest) {
 ------------------------------------
 --------------------------------------
 
-Excellent questions. This gets to the heart of good database schema design for an e-commerce application.
-
-### Part 1: Should you add a cart array to the User object?
-
-It's a common thought, but the answer is a firm **no, it is not a good idea**. Storing the cart directly inside the User document is an anti-pattern that leads to several problems.
-
-**Why it's a bad idea:**
-
-1.  **Performance:** Every time you fetch a user (which happens often, even just for authentication checks), you would also be fetching their entire cart. This is inefficient and adds unnecessary data load to common operations.
-2.  **Scalability:** A user's cart is transactional and changes frequently. Updating a sub-array inside a large user document is less efficient than updating a dedicated, smaller cart document.
-3.  **Single Responsibility Principle:** The `User` model's job is to manage user identity, authentication, and profile data. The `Cart`'s job is to manage the state of a shopping session. Mixing them violates this core design principle, making your code harder to reason about and maintain.
-4.  **Document Size Limits:** MongoDB has a 16MB document size limit. While a cart is unlikely to hit this, embedding large, growing arrays is a bad practice that can lead to problems down the road.
-
----
 
 ### The Best Practice: A Separate `Cart` Collection
 
@@ -14185,25 +14169,12 @@ const userSchema = new Schema<IUser>(
 This schema is far more robust, scalable, and follows best practices by separating concerns into different collections and linking them with references (`ref`).
 
 
-------------------------------------
---------------------------------------
-# ----------------------[testing email verification and Auth]---------------------------[another]
-------------------------------------
---------------------------------------
-delivered@resend.dev tota1
-* normal new sign up `done`
-* normal new sign up + email verification `done`
-* normal new sign up + email verification + resend verification email `done`
-* normal new sign up + email verification + resend verification email + have access to order and account and no Admin access`done`
-* normal new sign up + email verification + resend verification email + rate limit 
-
-
 
 
 
 ------------------------------------
 --------------------------------------
-# ----------------------[]---------------------------[another]
+# ----------------------[testing rate limit]---------------------------[another]
 ------------------------------------
 --------------------------------------
 

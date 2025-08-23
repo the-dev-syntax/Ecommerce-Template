@@ -68,6 +68,7 @@ export default function SignUpForm() {
       toast({
         title: 'Success',
         description: 'Account created successfully!, A verification Email was sent',
+        duration: 10000,
       })
       await signInWithCredentials({
         email: data.email,

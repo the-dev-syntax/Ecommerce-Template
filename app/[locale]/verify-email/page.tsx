@@ -15,7 +15,7 @@ export async function generateStaticParams() {
 // Use Suspense to handle the case where searchParams might not be immediately available
 export default async function VerifyEmailPage(props: {
    params: Promise<{ locale: string }>   
-  }) {
+}) {
   const params = await props.params
   const locale = params.locale
 
