@@ -69,13 +69,20 @@ export default function CredentialsSignInForm() {
         email: data.email,
         password: data.password,
       })
+      console.log("from credentials-signin-form :", 'Signed in successfully')
+        toast({
+        title: 'clientside',
+        description: 'Signed in successfully',
+        variant: 'default',
+      })
       redirect(callbackUrl)
     } catch (error) {
       if (isRedirectError(error)) {
         throw error
       }
+
       toast({
-        title: 'Error',
+        title: 'Error from credentials-signin-form',
         description: 'Invalid email or password',
         variant: 'destructive',
       })

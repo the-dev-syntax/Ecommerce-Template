@@ -23,6 +23,7 @@ import {
   SiteLanguageSchema,
   UserEmailSchema,
   UserUpdateSchema,
+  AccountInputSchema,
 } from '@/lib/validator'
 import { type DefaultSession } from 'next-auth';
 import 'next-auth/jwt'
@@ -129,3 +130,5 @@ declare module 'next-auth' {
     emailVerified: Date | null;  // for middleware not auth.ts
   }
 }
+
+export type IAccountInput = z.infer<typeof AccountInputSchema>

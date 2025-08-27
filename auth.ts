@@ -1,12 +1,15 @@
 import NextAuth from 'next-auth' // The main NextAuth library and a standard session type from Node_module
 import CredentialsProvider from 'next-auth/providers/credentials' // Tool for email/password login from Node_module/nextAuth file
-import { MongoDBAdapter } from '@auth/mongodb-adapter' // Tool to connect NextAuth to your DB from Node_module/@auth file
 import authConfig from './auth.config'    // Partial auth config (used by middleware)
 import { connectToDatabase } from './lib/db' //  mongoose connecting to DB
-import client from './lib/db/client'  // You create an *instance* of `MongoClient` to establish a connection.
+// import client from './lib/db/client'  // You create an *instance* of `MongoClient` to establish a connection.
 import User from './lib/db/models/user.model' // Your blueprint for what a "User" looks like in the DB
 import bcrypt from 'bcryptjs'
 import Google from 'next-auth/providers/google'
+import { redis } from './lib/redis';
+import { UpstashRedisAdapter } from '@auth/upstash-redis-adapter';
+import Account from './lib/db/models/account.model'; 
+
 
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -17,29 +20,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: '/sign-in',
   },
   session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 1 hour, suppose 30 * 24 * 60 * 60, = 30 days
+    strategy: 'database', // <-- THIS IS THE KEY CHANGE
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  adapter: MongoDBAdapter(client),
+  adapter: UpstashRedisAdapter(redis),
   providers: [
     Google({
       allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
       credentials: {
-        email: {
-          type: 'email',
-        },
+        email: { type: 'email' },
         password: { type: 'password' },
       },
       async authorize(credentials) {
         await connectToDatabase()
-        // console.log('from auth', credentials)
+        console.log('from auth autherize', credentials)
         if (credentials == null) return null
 
         const user = await User.findOne({ email: credentials.email })
 
-        // console.log('Auth in autherize: USER FOUND:', user)
+        console.log('Auth in autherize: USER FOUND:', user)
 
         if (user && user.password) {
           const isMatch = await bcrypt.compare(
@@ -47,9 +48,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             user.password
           )
           if (isMatch) { // authenticated by DB ==> get me this user info
-            // console.log('Auth in autherize: USER MATCHED:', user)
+            console.log('Auth in autherize: USER MATCHED:', user)
             return {
-              id: user._id,
+              id: user._id.toString(),
               name: user.name|| user.email!.split('@')[0],
               email: user.email,
               role: user.role,
@@ -61,57 +62,61 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: { // if authenticated make him a JWT its info from DB the previous step.
-    jwt: async ({ token, user, trigger, session }) => {
-      // This check only runs once at sign-in.
-      if (user) {
-        if (!user.name) {
-          await connectToDatabase()
-          await User.findByIdAndUpdate(user.id, {
-            name: user.name || user.email!.split('@')[0],
-            role: 'user',
-          })
-        }
-        token.sub = user.id; // 'sub' is the standard field for user ID in JWT
-        token.name = user.name || user.email!.split('@')[0]
-        token.role = user.role || 'user'
-        token.email = user.email 
-        token.emailVerified = user.emailVerified 
+  callbacks: {       
+    session: async ({ session, user }) => {      
+      console.log('auth callbacks session and user:', session, user)
+      if (user && session.user) {
+        session.user.id = user.id;
+        session.user.role = user.role; // Assuming 'role' is a field on your User model
+        session.user.emailVerified = user.emailVerified; // Assuming this is on the model
       }
-      //  this is not for login; it's for user update in account/manage session updates.
-      if (trigger === "update" && session?.user) { 
-        token.name = session.user.name ?? token.name
-        token.role = session.user.role ?? token.role
-        token.email = session.user.email ?? token.email
-        token.emailVerified = session.user.emailVerified ?? token.emailVerified
-      }
-      // runs on every subsequent request where the session is checked - Update the token with the fresh data
-      if (token.sub) { 
-        await connectToDatabase();
-        const dbUser = await User.findById(token.sub).lean();
-        
-        if (dbUser) {          
-          token.email = dbUser.email;
-          token.name = dbUser.name;
-          token.role = dbUser.role;
-          token.emailVerified = dbUser.emailVerified // emailVerified must be a DATE obj in JWT.
-         
-        } else {
-          // If user doesn't exist in DB, invalidate the session by returning null
-          return null; // <--- JWT has to return null or a valid JWT
-        }
-      }
-      // console.log('auth: JWT callback:', token)
-      return token
-    },
-    session: async ({ session, token }) => {
-      session.user.id = token.sub as string
-      session.user.role = token.role || 'user'
-      session.user.name = token.name || token.email!.split('@')[0]
-      session.user.email = token.email as string
-      session.user.emailVerified = token.emailVerified // session is a mirror of the token due to above ==> session: { strategy: 'jwt',
-      // console.log('session in auth:', session)
-      return session
-    },
+      console.log('auth callbacks session:', session)
+      return session;
+    }, 
   },
+ events: {
+    // This event is triggered when a user signs up via an OAuth provider for the first time.
+    async createUser(message) {
+      // All we need to do is create the user in our MongoDB database.
+      // The `message.user` object is normalized by NextAuth to have the correct shape.
+     
+      if (!message.user.email) {
+        // This should rarely happen with providers like Google, but it's a crucial safeguard.
+        throw new Error("Cannot create a user without an email address");
+      }
+
+      console.log('message.user', message.user)
+
+      await connectToDatabase();
+      
+      await User.create({
+        // Use the id generated by NextAuth as our own _id for consistency.
+        _id: message.user.id,
+        name: message.user.name,
+        email: message.user.email,
+        image: message.user.image,
+        emailVerified: message.user.emailVerified, // This will be a Date if verified by OAuth provider
+      });
+    },
+
+    // This event is triggered after createUser, or when an existing user links a new OAuth account.
+    async linkAccount(message) {
+      // Here, we create the 'Account' record that links the User to the OAuth provider.
+      await connectToDatabase();
+      
+      await Account.create({
+        userId: message.account.userId,
+        type: message.account.type,
+        provider: message.account.provider,
+        providerAccountId: message.account.providerAccountId,
+        access_token: message.account.access_token ?? "",
+        refresh_token: message.account.refresh_token ?? "",
+        expires_at: message.account.expires_at ?? 0,
+        token_type: message.account.token_type ?? "",
+        scope: message.account.scope ?? "",
+        id_token: message.account.id_token ?? "",
+        session_state: message.account.session_state ?? "",
+      });
+    }
+  },   // add updateUser  
 })

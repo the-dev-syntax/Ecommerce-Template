@@ -17,6 +17,14 @@ import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
 
  
+// --- ADMIN GUARD ---
+async function requireAdmin() {
+  const session = await auth()
+  if (!session?.user || session.user.role !== 'admin') {
+    throw new Error('Admin permission required')
+  }
+  return session
+}
 
 // CREATE ORDER - PRIVATE
 export const createOrder = async (clientSideCart: Cart) => {
@@ -255,11 +263,9 @@ export async function getMyOrders({
 
 // GET ORDERS BY USER - ADMIN
 export async function getOrderSummary(date: DateRange) {
+  await requireAdmin()
 
   await connectToDatabase()
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
   const {
     common: { pageSize },
   } = await getSetting()
@@ -356,9 +362,7 @@ export async function getOrderSummary(date: DateRange) {
 // GET SALES CHART DATA - ADMIN
 async function getSalesChartData(date: DateRange) {
 
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+ await requireAdmin()
 
 
   const result = await Order.aggregate([
@@ -404,9 +408,7 @@ async function getSalesChartData(date: DateRange) {
 // GET TOP SALES PRODUCTS - ADMIN
 async function getTopSalesProducts(date: DateRange) {
  
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+  await requireAdmin()
 
   const result = await Order.aggregate([
     {
@@ -461,9 +463,7 @@ async function getTopSalesProducts(date: DateRange) {
 // GET TOP SALES CATEGORIES - ADMIN
 async function getTopSalesCategories(date: DateRange, limit = 5) {
 
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+   await requireAdmin()
 
 
   const result = await Order.aggregate([
@@ -495,11 +495,10 @@ async function getTopSalesCategories(date: DateRange, limit = 5) {
 
 // DELETE ORDER - ADMIN
 export async function deleteOrder(id: string) {
+  await requireAdmin()
+  
   try {
     await connectToDatabase()
-    const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
 
     const res = await Order.findByIdAndDelete(id)
     if (!res) throw new Error('Order not found')
@@ -523,24 +522,27 @@ export async function getAllOrders({
   limit?: number
   page: number
 }) {
+  await requireAdmin()
   
   const {
     common: { pageSize },
   } = await getSetting()
+  
 
   limit = limit || pageSize
   await connectToDatabase()
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
 
-  const skipAmount = (Number(page) - 1) * limit
-  const orders = await Order.find()
-    .populate('user', 'name')
-    .sort({ createdAt: 'desc' })
-    .skip(skipAmount)
-    .limit(limit)
-  const ordersCount = await Order.countDocuments()
+  const skip = (Number(page) - 1) * pageSize
+
+  const [orders, ordersCount] = await Promise.all([
+    Order.find()
+      .populate('user', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageSize),
+    Order.countDocuments(),
+  ])
+
   return {
     data: JSON.parse(JSON.stringify(orders)) as IOrderList[],
     totalPages: Math.ceil(ordersCount / limit),
@@ -549,19 +551,19 @@ export async function getAllOrders({
 
 // UPDATE ORDER TO PAID - ADMIN
 export async function updateOrderToPaid(orderId: string) {
+  await requireAdmin()
+
   try {
     await connectToDatabase()
-    const session = await auth()
-      if (!session) throw new Error('User not authenticated')
-        if (session.user.role !== "admin")
-          throw new Error('Admin permission required')
 
     const order = await Order.findById(orderId).populate<{
       user: { email: string; name: string }
     }>('user', 'name email')
     
     if (!order) throw new Error('Order not found')
+
     if (order.isPaid) throw new Error('Order is already paid')
+
     order.isPaid = true
     order.paidAt = new Date()
     await order.save()
@@ -569,7 +571,9 @@ export async function updateOrderToPaid(orderId: string) {
     if (!process.env.MONGODB_URI?.startsWith('mongodb://localhost'))
       await updateProductStock(order._id)
 
-    if (order.user.email) await sendPurchaseReceipt({ order })
+    if (order.user.email) {
+      await sendPurchaseReceipt({ order })
+    }
 
     await revalidateAllLocales(`/account/orders/${orderId}`);
 
@@ -578,19 +582,22 @@ export async function updateOrderToPaid(orderId: string) {
     return { success: false, message: formatError(err) }
   }
 }
-
-// UPDATE STOCK - ADMIN 
-//! replaced Mongoose session ==> sessionM to avoid conflict with Auth session.
+/*
+ UPDATE STOCK - ADMIN 
+ sessionM.startTransaction() all or nothing transaction 
+ querySession is a transactional session not the Auth session
+ opts = options 
+ you have to pass the querySession to every query that you want to be part of the transaction 
+ either as 3rd arg opts in (findOneAndUpdate) or like that findById.session(querySession) 
+*/
 const updateProductStock = async (orderId: string) => {
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+  await requireAdmin()
 
-  const sessionM = await mongoose.connection.startSession()
+  const querySession = await mongoose.connection.startSession()
 
   try {
-    sessionM.startTransaction()
-    const opts = { sessionM }
+    querySession.startTransaction()
+    const opts = { session: querySession }
 
     const order = await Order.findOneAndUpdate(
       { _id: orderId },
@@ -600,34 +607,41 @@ const updateProductStock = async (orderId: string) => {
     if (!order) throw new Error('Order not found')
 
     for (const item of order.items) {
-      const product = await Product.findById(item.product).session(sessionM)
+      const product = await Product.findById(item.product).session(querySession)
       if (!product) throw new Error('Product not found')
 
       product.countInStock -= item.quantity
+
+      if (product.countInStock < 0) {
+        throw new Error(`Insufficient stock for ${product.name}`)
+      }
       await Product.updateOne(
         { _id: product._id },
         { countInStock: product.countInStock },
-        opts
+        opts 
       )
     }
-    await sessionM.commitTransaction()
-    sessionM.endSession()
+
+    await querySession.commitTransaction()
+
+    querySession.endSession()
+
     return true
+
   } catch (error) {
-    await sessionM.abortTransaction()
-    sessionM.endSession()
+    await querySession.abortTransaction()
+    querySession.endSession()
     throw error
   }
 }
 
 // MARK AS DELIVERED - ADMIN
 export async function deliverOrder(orderId: string) {
-  try {
+   await requireAdmin()
+
+  try {    
     await connectToDatabase()
-       const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
-    
+
     const order = await Order.findById(orderId).populate<{
       user: { email: string; name: string }
     }>('user', 'name email')

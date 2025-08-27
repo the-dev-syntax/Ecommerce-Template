@@ -11,7 +11,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@auth/mongodb-adapter": "^3.9.1",
+    "@auth/upstash-redis-adapter": "^2.10.0",
     "@hookform/resolvers": "^5.0.1",
     "@paypal/react-paypal-js": "^8.8.3",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -44,7 +44,7 @@
     "mongoose": "^8.9.5",
     "nanoid": "^5.1.5",
     "next": "^15.3.2",
-    "next-auth": "^5.0.0-beta.28",
+    "next-auth": "^5.0.0-beta.29",
     "next-intl": "^4.3.4",
     "next-themes": "^0.4.6",
     "nodemailer": "^6.10.1",

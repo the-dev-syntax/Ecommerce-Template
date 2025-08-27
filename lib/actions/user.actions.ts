@@ -12,6 +12,7 @@ import { sendVerificationEmail } from '@/emails'
 import { incrementIPEmailTokenAttempt, checkEmailRateLimit, resetIPAttempt, setEmailRateLimit } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { revalidateAllLocales } from '../utils-serverOnly'
+import { invalidateUserSessions } from './session.actions'
 
 
 
@@ -323,6 +324,8 @@ export async function updateUserEmail(values: IUserEmail) {
     console.log(`Updating user ${currentUser.name} email to ${normalizedEmail}. Replace with your DB call`);
     console.log(updatedUser);
 
+    await invalidateUserSessions(userId);
+
     const verificationProps = {
       name: currentUser.name,
       email: normalizedEmail,
@@ -462,9 +465,3 @@ export async function sendVerifyEmailAgain() {
 }
 
 
-/*
-? zod validated the data client side , now validated again with zod server side
-?  before sending it to be authenticated by DB
-
-
-*/

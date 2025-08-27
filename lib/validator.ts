@@ -413,3 +413,16 @@ export const SettingInputSchemaNoDefaults = z.object({
 export const UserEmailSchema = z.object({
   email: Email
 })
+
+export const AccountInputSchema = z.object({   
+    type: z.string(),
+    provider: z.string(),
+    providerAccountId: z.string(),
+    access_token: z.string().optional(),
+    refresh_token: z.string().optional(),
+    expires_at: z.coerce.number().optional(),
+    token_type: z.string().optional(),
+    scope: z.string().optional(),
+    id_token: z.string().optional(),
+    session_state: z.string().optional(),
+})
