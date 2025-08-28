@@ -1,3 +1,4 @@
+
 import NextAuth from 'next-auth' // The main NextAuth library and a standard session type from Node_module
 import CredentialsProvider from 'next-auth/providers/credentials' // Tool for email/password login from Node_module/nextAuth file
 import { MongoDBAdapter } from '@auth/mongodb-adapter' // Tool to connect NextAuth to your DB from Node_module/@auth file
@@ -8,6 +9,7 @@ import User from './lib/db/models/user.model' // Your blueprint for what a "User
 import bcrypt from 'bcryptjs'
 import Google from 'next-auth/providers/google'
 
+const maxAge =  60 * 60; // 1 hour, suppose 30 * 24 * 60 * 60, = 30 days
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -18,7 +20,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 1 hour, suppose 30 * 24 * 60 * 60, = 30 days
+    maxAge
   },
   adapter: MongoDBAdapter(client),
   providers: [
