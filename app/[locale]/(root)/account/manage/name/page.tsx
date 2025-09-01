@@ -1,5 +1,5 @@
-import { SessionProvider } from 'next-auth/react'
-import { auth } from '@/auth'
+// import { SessionProvider } from 'next-auth/react'
+// import { auth } from '@/auth'
 import { ProfileForm } from './profile-form'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,13 +16,13 @@ export async function generateMetadata() {
 }
 
 export default async function ChangeNamePage() {
-  const session = await auth()   // then passed here as a prop <SessionProvider session={session}>
+  // const session = await auth()    then passed here as a prop <SessionProvider session={session}>
   const { site } = await getSetting()
  const t = await getTranslations('ProfileManager')
 
   return (
     <div className='mb-24'>
-      <SessionProvider session={session}>
+      {/* <SessionProvider session={session}> */}
         <div className='flex gap-2 '>
           <Link href='/account'>{t('YourAccount')}</Link>
           <span>›</span>
@@ -42,7 +42,7 @@ export default async function ChangeNamePage() {
             <ProfileForm />
           </CardContent>
         </Card>
-      </SessionProvider>
+      {/* </SessionProvider> */}
     </div>
   )
 }

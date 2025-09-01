@@ -18,6 +18,7 @@ import { revalidateAllLocales } from '../utils-serverOnly'
 
 // SIGN IN
 export async function signInWithCredentials(user: IUserSignIn) {    
+  console.log('signInWithCredentials', user)
   return await signIn('credentials', { ...user, redirect: false })
 }
 
@@ -114,11 +115,12 @@ export async function updateUserName(user: IUserName) {
 
 // DELETE USER - ADMIN
 export async function deleteUser(id:string) {
+  const session = await auth()
+  if(session?.user.role !== "admin")
+    throw new Error('Admin permission required')
+
   try {
     await connectToDatabase()
-    const session = await auth()
-    if(session?.user.role !== "admin")
-      throw new Error('Admin permission required')
 
     const res = await User.findByIdAndDelete(id)
     if (!res) throw new Error('User not found')
@@ -179,7 +181,7 @@ export async function getAllUsers({
 // UPDATE USER - BY ADMIN
 export async function updateUser(rawUser: IUserUpdate) {
   
-
+  console.log('updateUser:', rawUser)
   const validatedData = UserUpdateSchema.safeParse(rawUser);
     if (!validatedData.success) {
     return {
@@ -190,7 +192,7 @@ export async function updateUser(rawUser: IUserUpdate) {
     };
   }
   const user = validatedData.data
-
+  console.log('updateUser:user:', user)
   const session = await auth()
     if(session?.user.role !== "admin")
       throw new Error('Admin permission required')
@@ -201,11 +203,11 @@ export async function updateUser(rawUser: IUserUpdate) {
       return { success: false, message: "You cannot demote the last admin account." };
     }
   }
-
+  console.log('updateUser:user:pass checked then try')
   try {
     await connectToDatabase()      
     const normalizedEmail = normalizeEmail(user.email)  
-
+    console.log('before DB update')
       const updatedUser = await User.findOneAndUpdate(
       { _id: user._id },
       [
@@ -226,7 +228,7 @@ export async function updateUser(rawUser: IUserUpdate) {
       ],
       { new: true }
     );
- 
+       console.log('after DB update', updatedUser)
     if (!updatedUser) throw new Error('User not found')
   
     await revalidateAllLocales('/admin/users');

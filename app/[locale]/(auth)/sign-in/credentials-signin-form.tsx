@@ -69,6 +69,11 @@ export default function CredentialsSignInForm() {
         email: data.email,
         password: data.password,
       })
+      toast({
+        title: 'success',
+        description: 'successfully signed in',
+        variant: 'default',
+      })
       redirect(callbackUrl)
     } catch (error) {
       if (isRedirectError(error)) {

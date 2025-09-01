@@ -7,7 +7,7 @@ import { headers } from 'next/headers';
 // 3. Reset the invalid attempt counter when a verification is successful.
 
 const EMAIL_COOLDOWN_SECONDS = 5 * 60; // 5 minute - period between two verification emails is 5 minute at sign-in. 
-const MAX_INVALID_ATTEMPTS = 5; // Token invalidation attempts.
+const MAX_INVALID_ATTEMPTS = 100; // Token invalidation attempts.
 const IP_LOCKOUT_PERIOD_SECONDS = 20 * 60; // 20 minutes, locked out for invalid token attempts.
 
 
@@ -17,7 +17,7 @@ const IP_LOCKOUT_PERIOD_SECONDS = 20 * 60; // 20 minutes, locked out for invalid
  * @ throws An error if the email is on cooldown.
  */
 export async function checkEmailRateLimit(email: string) {
-  const key = `resend-limit:${email}`;
+  const key = `Custom-resend-limit:${email}`;
   
   const inCooldown = await redis.get(key);
     // Time Till Limit
@@ -30,7 +30,7 @@ export async function checkEmailRateLimit(email: string) {
 
 //  Sets the cooldown between two verification emails.
 export async function setEmailRateLimit(email: string) {
-  const key = `resend-limit:${email}`;
+  const key = `Custom-resend-limit:${email}`;
   // The .set() method with expiry (`ex`) is also identical.
   await redis.set(key, 'sent', { ex: EMAIL_COOLDOWN_SECONDS });
 }
@@ -52,7 +52,7 @@ async function getIP() {
 //  throws An error if the IP is locked out.
 export async function incrementIPEmailTokenAttempt() {
   const ip = await getIP();
-  const key = `invalid-token-attempt:${ip}`;
+  const key = `Custom-invalid-token-attempt:${ip}`;
   
   // .get() returns null if the key doesn't exist, so `?? 0` handles that.
   // ttl = Time Till Limit
@@ -76,7 +76,7 @@ export async function incrementIPEmailTokenAttempt() {
  */
 export async function resetIPAttempt() {
   const ip = await getIP();
-  const key = `invalid-token-attempt:${ip}`;
+  const key = `Custom-invalid-token-attempt:${ip}`;
   // .del() is the standard command for deleting a key.
   await redis.del(key);
 }

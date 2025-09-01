@@ -1,4 +1,4 @@
-import { SessionProvider } from 'next-auth/react'
+// import { SessionProvider } from 'next-auth/react'
 import { auth } from '@/auth'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -19,7 +19,7 @@ export default async function ChangeEmailPage() {
 
   return (
     <div className='mb-24'>
-      <SessionProvider session={session}>
+      {/* <SessionProvider session={session}> */}
         <div className='flex gap-2 '>
           <Link href='/account'>{t('YourAccount')}</Link>
           <span>›</span>
@@ -39,7 +39,7 @@ export default async function ChangeEmailPage() {
             <EmailForm />
           </CardContent>
         </Card>
-      </SessionProvider>
+      {/* </SessionProvider> */}
     </div>
   )
 }

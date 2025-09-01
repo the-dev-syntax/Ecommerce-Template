@@ -22,6 +22,8 @@ const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const session = req.auth;
+  // console.log('middleware: req:',req)
+  // console.log('middleware: sesssion:', session)
   const { pathname } = req.nextUrl
   // Determine the locale from the route
   const locale = routing.locales.find(loc => pathname.startsWith(`/${loc}`)) || routing.defaultLocale || 'en-US';
@@ -35,12 +37,12 @@ export default auth((req) => {
   )
   // true if public
   const isPublicPage = publicPathnameRegex.test(pathname)
-
+  console.log("middleware:isPublicPage",isPublicPage)
   if (isPublicPage) {
     // return NextResponse.next()
     return intlMiddleware(req)
   } else {
-   
+   console.log("middleware:not public page 1.else:session:", session)
     // no auth then redirect and conserve the tried access page in the callback.
     if (!session || !session.user) {
       const newUrl = new URL(
@@ -55,6 +57,7 @@ export default auth((req) => {
       console.log('middleware:', session.user)
       console.log('middleware: id',session.user.id)
       console.log('middleware: role',session.user.role)
+      
        const isEmailVerified = !!session.user.emailVerified;
       console.log('middleware:User email verification status:', isEmailVerified);
        const verificationRequiredRoutes = ['/checkout', '/account'];

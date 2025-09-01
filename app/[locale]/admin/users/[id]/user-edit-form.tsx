@@ -42,8 +42,10 @@ export default function UserEditForm({ user }: { user: IUser })  {
     resolver: zodResolver(UserUpdateSchema),
     defaultValues: user,
   })
+  console.log('user edit form', user)
 
   async function onSubmit(values: z.infer<typeof UserUpdateSchema>) {
+    console.log('onSubmit Update User Button values', values)
     try {
       const res = await updateUser({
         ...values,
@@ -148,8 +150,8 @@ export default function UserEditForm({ user }: { user: IUser })  {
                 <FormLabel>{t('Email Verified')}</FormLabel>
                 <FormControl>
                   <Checkbox
-                    checked={!!field.value}
-                    onCheckedChange={(val) => field.onChange(Boolean(val))}                    
+                    checked={!!field.value} // either Date || null
+                    onCheckedChange={(val) => (val) ? field.onChange(new Date()): field.onChange(null)}                    
                   />
                 </FormControl>                
               </FormItem>
@@ -157,8 +159,8 @@ export default function UserEditForm({ user }: { user: IUser })  {
           />
         </div>
         <div className='flex-between'>
-          <Button type='submit' disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? t('Submitting') : `${t('Update User')} `}
+          <Button type='submit' disabled={form.formState.isSubmitting}>            
+            {form.formState.isSubmitting ? t('Submitting') : t('Update User')}
           </Button>
           <Button
             variant='outline'

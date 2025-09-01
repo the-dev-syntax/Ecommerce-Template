@@ -103,29 +103,4 @@ export type SiteCurrency = z.infer<typeof SiteCurrencySchema>
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>
 export type DeliveryDate = z.infer<typeof DeliveryDateSchema>
 
-type UserRole = 'user' | 'admin';
-
-// This augments the JWT type
-declare module 'next-auth/jwt' {
-  interface JWT{   
-    role: UserRole;
-    emailVerified: Date | null;
-    
-  }
-}
-
-// This augments the Session and the initial User object for client-side.
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      role: UserRole;
-      emailVerified: Date | null;
-     } & DefaultSession['user'];
-  }
-  // This tells NextAuth what your User object from the DB looks like
-  interface User {   
-    role: UserRole;
-    emailVerified: Date | null;  // for middleware not auth.ts
-  }
-}
+export type UserRole = 'user' | 'admin';
