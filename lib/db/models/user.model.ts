@@ -1,7 +1,8 @@
 
 import { Schema, Model, model, models } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { IUserInput, UserRole } from '@/types'; 
+import { IUserInput } from '@/types'; 
+import { AuthenticatedUser } from '@/types/next-auth';
 
 
 export interface IUser extends Document, IUserInput {
@@ -9,15 +10,6 @@ export interface IUser extends Document, IUserInput {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// this is mongodb return to be saved in Upstash, then Upstash return it to auth.config then spread inside config session to be read in middleware.
-export type AuthenticatedUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  emailVerified: Date | null;
-};
 
 // 2. Interface for statics
 export interface IUserModel extends Model<IUser> {

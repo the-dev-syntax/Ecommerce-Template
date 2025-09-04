@@ -20,7 +20,7 @@ export async function checkEmailRateLimit(email: string) {
   const key = `Custom-resend-limit:${email}`;
   
   const inCooldown = await redis.get(key);
-    // Time Till Limit
+    // Time to live
   if (inCooldown) {
     const ttl = await redis.ttl(key);
     throw new Error(`Please wait ${ttl} more seconds before requesting another email`);

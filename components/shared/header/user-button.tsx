@@ -20,6 +20,7 @@ export default async function UserButton() {
   const session = await auth()
   const t = await getTranslations()
   const verified = session?.user.emailVerified
+  console.log('from component UserButton',session)
 
   // on header signin or user name, if session true dropdown menu of info , if not dropdown menu signin & sign Up.
   return (

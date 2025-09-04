@@ -16,6 +16,7 @@ import { revalidateAllLocales } from '../utils-serverOnly'
 
 
 
+
 // SIGN IN
 export async function signInWithCredentials(user: IUserSignIn) {    
   console.log('signInWithCredentials', user)
@@ -102,6 +103,8 @@ export async function updateUserName(user: IUserName) {
 
     currentUser.name = user.name
     const updatedUser = await currentUser.save()
+
+    //! should add useSession.update here
 
     return {
       success: true,
@@ -464,9 +467,25 @@ export async function sendVerifyEmailAgain() {
 }
 
 
+
+// export async function getrRedisUser(key: string , isUpdate: boolean): Promise<AuthenticatedUser | null> {
+//   const upstashUser : AuthenticatedUser | null = await redis.get(key);  
+//   return upstashUser;
+// }
+
+
+
 /*
+! ask what is that
+But: remember this caching is per server process. 
+If you run multiple Next.js instances (Vercel, Docker, scaling), each one will cache separately. 
+Redis remains the source of truth across all nodes.
+
+👉 Do you want me to show you a variant where the cache auto-busts 
+when user is updated (using a Redis pub/sub listener instead of just a TTL)? 
+That way updates propagate instantly across instances.
+
+
 ? zod validated the data client side , now validated again with zod server side
 ?  before sending it to be authenticated by DB
-
-
 */

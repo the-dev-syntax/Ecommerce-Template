@@ -21,7 +21,7 @@ const intlMiddleware = createMiddleware(routing)
 const { auth } = NextAuth(authConfig)  
 
 export default auth((req) => {
-  const session = req.auth;
+ 
   // console.log('middleware: req:',req)
   // console.log('middleware: sesssion:', session)
   const { pathname } = req.nextUrl
@@ -42,7 +42,9 @@ export default auth((req) => {
     // return NextResponse.next()
     return intlMiddleware(req)
   } else {
-   console.log("middleware:not public page 1.else:session:", session)
+    const session = req.auth;
+    console.log("pathname:,", pathname)
+    console.log("middleware:not public page 1.else:session:", session)
     // no auth then redirect and conserve the tried access page in the callback.
     if (!session || !session.user) {
       const newUrl = new URL(
