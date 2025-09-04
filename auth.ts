@@ -1,19 +1,16 @@
 import NextAuth from 'next-auth' // The main NextAuth library and a standard session type from Node_module
 import CredentialsProvider from 'next-auth/providers/credentials' // Tool for email/password login from Node_module/nextAuth file
-// import { MongoDBAdapter } from '@auth/mongodb-adapter' // Tool to connect NextAuth to your DB from Node_module/@auth file
+import { MongoDBAdapter } from '@auth/mongodb-adapter' // Tool to connect NextAuth to your DB from Node_module/@auth file
 import authConfig from './auth.config'    // Partial auth config (used by middleware)
 import { connectToDatabase } from './lib/db' //  mongoose connecting to DB
-// import client from './lib/db/client'  // You create an *instance* of `MongoClient` to establish a connection.
+import client from './lib/db/client'  // You create an *instance* of `MongoClient` to establish a connection.
 import User from './lib/db/models/user.model' 
 // import bcrypt from 'bcryptjs'
 import Google from 'next-auth/providers/google'
-import { redis } from './lib/redis'
 import { UserSignInSchema } from './lib/validator'
-import { KV_USER_PREFIX } from './lib/constants'
-import { UpstashRedisAdapter } from "@auth/upstash-redis-adapter"
-import { AuthenticatedUser } from './types/next-auth';
-import { cachedGetUserByKey, getCachedUserByKey } from './lib/actions/auth.actions';
-// import { UserRole } from './types'
+import { UserRole } from './types'
+import { AuthenticatedUser } from './types/next-auth'
+
 
  
 
@@ -27,7 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
   },
-  adapter: UpstashRedisAdapter(redis),
+  adapter: MongoDBAdapter(client),
   providers: [
     Google({
       allowDangerousEmailAccountLinking: true,
@@ -40,19 +37,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { type: 'password' },
       },
       async authorize(credentials) {  
-        // 1. after sign in
+       
         console.log('inside autherize credentials ??????????????????????????????????', credentials) //! returns password in the callbackurl 
-        // 1. Validate the input with the correct schema
+        
         const validatedFields = UserSignInSchema.safeParse(credentials);
-        // console.log('validatedFields', validatedFields)
-        // 2. If validation fails, return null immediately
+        console.log('validatedFields', validatedFields)
+        
         if (!validatedFields.success) {
           console.error("Zod Validation Failed:", validatedFields.error.flatten().fieldErrors);
           return null;
         }
   
         await connectToDatabase()
-        // console.log('from auth credentials:', validatedFields.data)
+        console.log('from auth credentials:', validatedFields.data)
 
         if (validatedFields.data == null) return null
           
@@ -72,71 +69,61 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: { 
      async jwt({ token, user, account, profile, trigger, session }) {
       //2. after sign in - it is encrypted will not be accessed 
-      // Runs on first sign-in; `user` is the value returned by authorize() also account will have value only the first time
+      // Runs on first sign-in; `user` is the value returned by authorize() also account will have value , both only the first time from autherize
       // token is {name, email, picture, sub}      
-      console.log('in auth jwt callback user 1111111111111111111111111111111***', user)  
-      console.log('in auth jwt callback token 222222222222222222222222222222', token)
-      console.log('in auth jwt callback account ++++++++++++++++++++++++++', account) // only the first 
-      console.log('in auth jwt callback profile $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$', profile)
-      console.log('in auth jwt callback session !!!!!!!!!!!!!!!!!!!!!!!!!!!!!', session)
-      console.log('in auth jwt callback trigger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@', trigger)
+      console.log('in auth jwt callback user 1111111111111111111111111111111***', user)  // user from autherize first pass only
+      console.log('in auth jwt callback token 222222222222222222222222222222', token)  // always have its own craeted value
+      console.log('in auth jwt callback account ++++++++++++++++++++++++++', account) // only the first have value
+      console.log('in auth jwt callback profile $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$', profile) // only with OAUTH
+      console.log('in auth jwt callback session !!!!!!!!!!!!!!!!!!!!!!!!!!!!!', session) // if useSession().update the will have a value
+      console.log('in auth jwt callback trigger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@', trigger) // "signIn" | "signUp" | "update" | undefined
 
-     if (user?.id && account) {
-
-      const key = `${KV_USER_PREFIX}:${user.id}`;
-      token = { ...token, kvKey: key }
-
-      try {
-
-        await redis.set(key, JSON.stringify(user), { ex: 60 * 60 * 24 } );
-
-      } catch (err) {
-        console.error("Failed to write user snapshot to Redis:", err);
-        // Don't throw; allow sign-in to continue.
+      if (user?.id){
+         token = { 
+          ...token, 
+          ...user,
+          sub: user.id 
+        }
+      }  
+    
+      if (trigger === "update" && session?.user?.id) {
+        const freshUser : AuthenticatedUser | null = await User.findById(session.user.id);
+        console.log('jwt callback freshUser *********************************', freshUser)
+        if (freshUser)  {
+           token = { 
+            ...token, 
+            ...user,          
+          }
+        }
+        console.log('jwt callback token >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', token)
       }
-    }
 
       console.log('in auth jwt callback user 333333333333333333333333333333333', user)  
       console.log('in auth jwt callback token 4444444444444444444444444444444', token)  
+
       return token;
     },
       async session({ session, token, user }) {
       console.log('in SESSION callback auth user: 555555555555555555555555', user)
       console.log('in SESSION callback auth token: 6666666666666666666666666666', token)
       console.log('SESSION callback in auth: 777777777777777777777777777777', session)
-      if (token.kvKey) {
-        console.log("SESSION callback in auth start redis GET -----------------------------------------------")
-          try {
-           const upstashUser : AuthenticatedUser | null  = await redis.get(token.kvKey);
-
-           session.user = { ...session.user, ...upstashUser }
-
-          }catch (error) {
-            console.error("Failed to retrieve user session from Redis:", error);
-          }   
-       }  
+        session  = {
+          ...session,         
+          user : {            
+            id: token.sub as string,
+            role: token.role as UserRole,
+            emailVerified: token.emailVerified as Date | null,
+            image: token.picture ?? "",
+            name: token.name ?? "",
+            email: token.email ?? "",
+          }
+        }  
 
       console.log('SESSION callback in auth token: 888888888888888888888888888', token)
       console.log('SESSION callback in auth: 9999999999999999999999999999', session)
 
       return session
     },      
-  },
-    events: {
-    async signOut(message) {   
-      if ("token" in message && message.token) {     
-      const token = message.token;  
-
-      if (token.kvKey) {
-        try {
-          console.log(`Signing out user. Deleting Redis key: ${token.kvKey}`);
-          await redis.del(token.kvKey);
-        } catch (error) {
-          console.error("Failed to delete user session from Redis on signout:", error);
-        }
-      }
-    }
-    }
   },
 })
 

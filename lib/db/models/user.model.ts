@@ -1,4 +1,3 @@
-
 import { Schema, Model, model, models } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { IUserInput } from '@/types'; 

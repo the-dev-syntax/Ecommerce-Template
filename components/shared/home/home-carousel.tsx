@@ -24,6 +24,7 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
     Autoplay({ delay: 3000, stopOnInteraction: true })
   )
 
+
   return (
     <Carousel
       dir='ltr'
