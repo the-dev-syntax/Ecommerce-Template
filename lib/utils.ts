@@ -6,6 +6,8 @@ import { twMerge } from 'tailwind-merge'
 import qs from 'query-string'
 import { nanoid } from 'nanoid'
 import crypto from 'crypto'
+import { OtpResult } from '@/types'
+
 
 
 
@@ -225,3 +227,41 @@ export function generateVerificationToken() {
   return { token, hashedToken }
 }
 
+
+// GENERATE A 6-DIGIT OTP THAT IS NOT SEQUENTIAL OR REPEATED
+export async function generateOtp(): Promise<OtpResult> {
+  // TypeScript helper functions with proper typing
+  function isSequential(current: string, previous: string | null): boolean {
+    if (previous === null) return false;
+    return Math.abs(parseInt(current) - parseInt(previous)) === 1;
+  }
+
+  function isRepeated(current: string, previous: string | null): boolean {
+    if (previous === null) return false;
+    return current === previous;
+  }
+
+  let otp = '';
+  let previousDigit: string | null = null;
+  
+  // Generate 6-digit OTP with constraints
+  for (let i = 0; i < 6; i++) {
+    let digit: string;
+    let attempts = 0;
+    
+    do {
+      digit = Math.floor(Math.random() * 10).toString();
+      attempts++;
+    } while (
+      (isSequential(digit, previousDigit) || isRepeated(digit, previousDigit)) &&
+      attempts < 100
+    );
+    
+    otp += digit; //add digit to string
+    previousDigit = digit;
+  }
+  
+  const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+  return { otp, hashedOtp };
+}

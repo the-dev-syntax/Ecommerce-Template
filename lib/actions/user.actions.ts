@@ -1,17 +1,21 @@
 'use server'
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
-import { IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate } from '@/types'
-import { UserEmailSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
+import { IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate, VerificationPropsType } from '@/types'
+import { UserEmailSchema, UserNameSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
-import { formatError, generateVerificationToken, normalizeEmail } from '../utils'
+import { formatError, generateOtp, generateVerificationToken, normalizeEmail } from '../utils'
 import { redirect } from 'next/navigation'
 import { getSetting } from './setting.actions'
 import { sendVerificationEmail } from '@/emails'
 import { incrementIPEmailTokenAttempt, checkEmailRateLimit, resetIPAttempt, setEmailRateLimit } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { revalidateAllLocales } from '../utils-serverOnly'
+import { EMAIL_EXPIRATION_TIME } from '../constants'
+import { getToken } from 'next-auth/jwt';
+
+
 
 
 
@@ -61,27 +65,28 @@ export async function registerUser(userSignUp: IUserSignUp) {
       return { success: false, message: 'Email is already in use' }
     }
 
-    const { token, hashedToken } = generateVerificationToken()
+    const { otp, hashedOtp } = await generateOtp()
 
     const createdUser = await User.create({
       ...user,
       password: await bcrypt.hash(user.password, 12),
       emailVerified: null,
-      verificationToken: hashedToken,
-      verificationTokenExpires: Date.now() + 1000 * 60 * 60 * 24, // a day
+      verificationToken: hashedOtp,
+      verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME, 
     })
 
     console.log('user created:', createdUser)
 
-    const verificationProps = {
+    const verificationProps: VerificationPropsType = {
       name: createdUser.name,
       email: normalizedEmail,
-      token,      
+      token: otp,
+      update: false,     
     }
 
     await sendVerificationEmail(verificationProps)
 
-    await setEmailRateLimit(normalizedEmail);
+    await setEmailRateLimit(normalizedEmail);   
 
     return { success: true, message: 'User created successfully' }
   } catch (error) {
@@ -91,20 +96,28 @@ export async function registerUser(userSignUp: IUserSignUp) {
 
 // UPDATE USER NAME- PRIVATE -
 export async function updateUserName(user: IUserName) {
+
+  const session = await auth()
+  if (!session) {
+    throw new Error('User is not authenticated')
+  }
+  const userName = UserNameSchema.parse(user)
   try {
     await connectToDatabase()
-    const session = await auth()
-    if (!session) {
-      throw new Error('User is not authenticated')
-    }
 
-    const currentUser = await User.findById(session.user.id)
-    if (!currentUser) throw new Error('User not found')
+    const updatedUser = await User.findByIdAndUpdate(
+      session.user.id,
+      { name: userName.name },
+      { new: true }
+    )    
+   
+    if (!updatedUser) throw new Error('User not found')
 
-    currentUser.name = user.name
-    const updatedUser = await currentUser.save()
-
+    // currentUser.name = userName.name
+    // const updatedUser = await currentUser.save()
     //! should add useSession.update here
+
+    await revalidateAllLocales('/');
 
     return {
       success: true,
@@ -321,7 +334,7 @@ export async function updateUserEmail(values: IUserEmail) {
               email : normalizedEmail,
               emailVerified: null, 
               verificationToken: hashedToken,
-              verificationTokenExpires: Date.now() + 1000 * 60 * 60 * 24, // a day
+              verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME, 
             } }, // The update operation
       { new: true } // Return the updated document
     )
@@ -339,8 +352,8 @@ export async function updateUserEmail(values: IUserEmail) {
 
     await setEmailRateLimit(normalizedEmail);
    
-     await revalidateAllLocales('/account/manage');
-     await revalidateAllLocales('/checkout');
+     await revalidateAllLocales('/');
+ 
 
     return {
       success: true,
@@ -359,8 +372,8 @@ export async function updateUserEmail(values: IUserEmail) {
 }
 
 
-// Verify Email Token
-export async function verifyEmailToken(token: string) {
+// Verify Email OTP
+export async function verifyEmailOtp(otp: string) {
 
     const session = await auth()
     if (!session) {
@@ -371,22 +384,23 @@ export async function verifyEmailToken(token: string) {
       return { success: false, message: 'Email is already verified' }      
     }
   
-    if (!token) {     
-       return { success: false, message: 'Token is missing' };
-    }
+if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+    return { success: false, message: 'Invalid OTP format' };
+  }
 
   try {
     // 1. CHECK AND INCREMENT IP ATTEMPT
     // This will throw an error if the IP is already locked out.
     await incrementIPEmailTokenAttempt();
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
 
     await connectToDatabase();
 
     const user = await User.findOneAndUpdate(
       {
-        verificationToken: hashedToken,
+        _id: session.user.id,
+        verificationToken: hashedOtp,
         verificationTokenExpires: { $gt: Date.now() },
       },
       {       
@@ -402,9 +416,13 @@ export async function verifyEmailToken(token: string) {
    if (!user) {
       return { success: false, message: 'Token is invalid or has expired' };
     }
-   
-    await revalidateAllLocales('/verify-email');
+    
  
+    await revalidateAllLocales('/');    
+    await revalidateAllLocales('/account');
+    await revalidateAllLocales('/checkout');
+    await revalidateAllLocales('/Admin');
+
     await resetIPAttempt();
 
     return { success: true, message: 'Email verified successfully! You can now log in' };
@@ -424,20 +442,25 @@ export async function sendVerifyEmailAgain() {
   const { id: userId, email: userEmail, name: userName } = session.user;
   if (!userId || !userEmail) {
     return { success: false, message:'User Data is Missing' };
-  }
-
-  const verificationTokenExpires = new Date(Date.now() + 1000 * 60 * 60 * 24); // a day
+  } 
 
    try {
     await checkEmailRateLimit(userEmail);
-    const { token, hashedToken } = generateVerificationToken()
+    const { otp, hashedOtp } = await generateOtp()
     await connectToDatabase()
+    
+    const DBUser = await User.findById(userId).select('emailVerified').lean()
+    if (DBUser?.emailVerified) {     
+      console.log('ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg') 
+      revalidateAllLocales('/');
+      return { success: false, message: 'Email is already verified' }
+    }
     // (find, update, return)
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       {     
-        verificationToken: hashedToken,
-        verificationTokenExpires: verificationTokenExpires,
+        verificationToken: hashedOtp,
+        verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME,
       },
       { new: true } 
     );
@@ -446,18 +469,21 @@ export async function sendVerifyEmailAgain() {
       return { success: false, message: 'User not found' };
     }
 
-    console.log(updatedUser);
+    console.log('AGAIN ==> sendVerificationEmail', updatedUser);
 
-    const verificationProps = {
+  
+    const verificationProps: VerificationPropsType = {
       name: userName || 'User',
       email: userEmail, 
-      token,
+      token: otp,
       update : true,
     }
 
     await sendVerificationEmail(verificationProps)
 
     await setEmailRateLimit(userEmail);  
+
+    await revalidateAllLocales('/');
   
     return { success: true, message: 'Verification email sent successfully - Please check your inbox' };
 
@@ -465,27 +491,3 @@ export async function sendVerifyEmailAgain() {
     return { success: false, message: formatError(error) };
   }
 }
-
-
-
-// export async function getrRedisUser(key: string , isUpdate: boolean): Promise<AuthenticatedUser | null> {
-//   const upstashUser : AuthenticatedUser | null = await redis.get(key);  
-//   return upstashUser;
-// }
-
-
-
-/*
-! ask what is that
-But: remember this caching is per server process. 
-If you run multiple Next.js instances (Vercel, Docker, scaling), each one will cache separately. 
-Redis remains the source of truth across all nodes.
-
-👉 Do you want me to show you a variant where the cache auto-busts 
-when user is updated (using a Redis pub/sub listener instead of just a TTL)? 
-That way updates propagate instantly across instances.
-
-
-? zod validated the data client side , now validated again with zod server side
-?  before sending it to be authenticated by DB
-*/

@@ -7,8 +7,8 @@ import { headers } from 'next/headers';
 // 3. Reset the invalid attempt counter when a verification is successful.
 
 const EMAIL_COOLDOWN_SECONDS = 5 * 60; // 5 minute - period between two verification emails is 5 minute at sign-in. 
-const MAX_INVALID_ATTEMPTS = 100; // Token invalidation attempts.
-const IP_LOCKOUT_PERIOD_SECONDS = 20 * 60; // 20 minutes, locked out for invalid token attempts.
+const MAX_INVALID_ATTEMPTS = 3; // Token invalidation attempts.
+const IP_LOCKOUT_PERIOD_SECONDS = 10 * 60; // 10 minutes, locked out for invalid token attempts.
 
 
 // --- Rate Limiting for Resending Emails ---

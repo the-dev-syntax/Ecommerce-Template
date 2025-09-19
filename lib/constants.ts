@@ -20,4 +20,4 @@ export const PRICE_RANGES = [
   { name: '$51 to $1000', value: '51-1000' },
 ]
 
-
+export const EMAIL_EXPIRATION_TIME = 3 * 60 * 1000;

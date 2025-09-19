@@ -24,7 +24,7 @@ import {
   UserEmailSchema,
   UserUpdateSchema,
 } from '@/lib/validator'
-import { type DefaultSession } from 'next-auth';
+
 import 'next-auth/jwt'
 
 
@@ -104,3 +104,15 @@ export type PaymentMethod = z.infer<typeof PaymentMethodSchema>
 export type DeliveryDate = z.infer<typeof DeliveryDateSchema>
 
 export type UserRole = 'user' | 'admin';
+
+export type OtpResult = {
+  otp: string;
+  hashedOtp: string;
+}
+
+export type VerificationPropsType = {
+  name: string;
+  email: string;
+  token: string;
+  update? : boolean;
+};

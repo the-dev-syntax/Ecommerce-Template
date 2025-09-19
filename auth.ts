@@ -9,7 +9,7 @@ import User from './lib/db/models/user.model'
 import Google from 'next-auth/providers/google'
 import { UserSignInSchema } from './lib/validator'
 import { UserRole } from './types'
-import { AuthenticatedUser } from './types/next-auth'
+// import { AuthenticatedUser } from './types/next-auth'
 
 
  
@@ -86,13 +86,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }  
     
-      if (trigger === "update" && session?.user?.id) {
-        const freshUser : AuthenticatedUser | null = await User.findById(session.user.id);
+      if (trigger === "update" && session?.id as string) { // update the token by session update
+        console.log('jwt callback trigger === "update" && token.sub *********************************')
+        const freshUser  = await User.findById(session.id).lean() // get the fresh user from DB;
         console.log('jwt callback freshUser *********************************', freshUser)
         if (freshUser)  {
            token = { 
             ...token, 
-            ...user,          
+            ...freshUser, // convert Mongoose doc to plain object 
+            name : freshUser.name, // keep the old name if not updated
+            email : freshUser.email,
+            role : freshUser.role,
+            picture: freshUser.image,
+            emailVerified: freshUser.emailVerified,
           }
         }
         console.log('jwt callback token >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', token)
@@ -103,10 +109,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return token;
     },
-      async session({ session, token, user }) {
-      console.log('in SESSION callback auth user: 555555555555555555555555', user)
-      console.log('in SESSION callback auth token: 6666666666666666666666666666', token)
-      console.log('SESSION callback in auth: 777777777777777777777777777777', session)
+      async session({ session, token, user, trigger }) {
+      // console.log('in SESSION callback auth user: 555555555555555555555555', user)
+      // console.log('in SESSION callback auth token: 6666666666666666666666666666', token)
+      // console.log('SESSION callback in auth: 777777777777777777777777777777', session)
+      // console.log('TRIGGER callback in trigger: =============================', trigger)
         session  = {
           ...session,         
           user : {            
@@ -119,8 +126,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }  
 
-      console.log('SESSION callback in auth token: 888888888888888888888888888', token)
-      console.log('SESSION callback in auth: 9999999999999999999999999999', session)
+      // console.log('SESSION callback in auth token: 888888888888888888888888888', token)
+      // console.log('SESSION callback in auth: 9999999999999999999999999999', session)
 
       return session
     },      

@@ -75,7 +75,7 @@ export default function SignUpForm() {
         password: data.password,
       })  
       
-      redirect(callbackUrl)
+      redirect('/verify-email')
 
     } catch (error) {
       if (isRedirectError(error)) {

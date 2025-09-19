@@ -4,6 +4,7 @@ import { IOrder } from '@/lib/db/models/order.model'
 import { SENDER_EMAIL, SENDER_NAME } from '@/lib/constants'
 import AskReviewOrderItemsEmail from './ask-review-order-items'
 import VerificationEmail from './verification-email'
+import { VerificationPropsType } from '@/types'
  
 
 
@@ -30,19 +31,13 @@ export const sendAskReviewOrderItems = async ({ order }: { order: IOrder }) => {
   })
 }
 
-type SendVerificationEmailType = {
-  name?: string
-  email: string
-  token: string
-  update?: boolean
-}
-export const sendVerificationEmail = async ( props: SendVerificationEmailType ) => {
-  const { name, email, token, update = false } = props
+export const sendVerificationEmail = async ( props: VerificationPropsType ) => {
+  const { name, email, token, update } = props
   try {
     await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to: email,
-      subject: `Verify your email address`,
+      subject: `${token} -DON'T REPLY- Verify your email address`,
       react: <VerificationEmail email={email} token={token} name={name || 'User'} update={update} />,
     })
     console.log(`Verification email sent to ${email}`);
