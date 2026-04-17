@@ -12,7 +12,7 @@ import { UserSignInSchema } from './lib/validator'
 import { KV_USER_PREFIX } from './lib/constants'
 import { UpstashRedisAdapter } from "@auth/upstash-redis-adapter"
 import { AuthenticatedUser } from './types/next-auth';
-import { cachedGetUserByKey, getCachedUserByKey } from './lib/actions/auth.actions';
+// import { cachedGetUserByKey, getCachedUserByKey } from './lib/actions/auth.actions';
 // import { UserRole } from './types'
 
  
@@ -25,7 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: '/sign-in',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'database',
   },
   adapter: UpstashRedisAdapter(redis),
   providers: [
@@ -33,8 +33,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
-      // id: "domain-login",
-      // name: "Domain Account",
       credentials: {
         email: { type: 'email' },
         password: { type: 'password' },
@@ -51,18 +49,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
   
-        await connectToDatabase()
-        // console.log('from auth credentials:', validatedFields.data)
+        await connectToDatabase()       
 
         if (validatedFields.data == null) return null
-          
+
+        console.log('from auth credentials:::::::::::::::::::::::::::::', validatedFields.data)
+
         const { email, password } = validatedFields.data;
       
-          const user = await User.authenticate(email, password);
+        const user = await User.authenticate(email, password);
 
-          if (!user) return null
+        if (!user) return null
 
-          console.log('IN AUTHERIZE user', user)
+        console.log('IN AUTHERIZE user', user)
 
 
         return user       
@@ -74,27 +73,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       //2. after sign in - it is encrypted will not be accessed 
       // Runs on first sign-in; `user` is the value returned by authorize() also account will have value only the first time
       // token is {name, email, picture, sub}      
-      console.log('in auth jwt callback user 1111111111111111111111111111111***', user)  
-      console.log('in auth jwt callback token 222222222222222222222222222222', token)
+      console.log('in auth jwt callback user 1111111111111111111111111111111', user)  
+      console.log('in auth jwt callback token 222222222222222222222222222222', token) // always have defalut value
       console.log('in auth jwt callback account ++++++++++++++++++++++++++', account) // only the first 
       console.log('in auth jwt callback profile $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$', profile)
       console.log('in auth jwt callback session !!!!!!!!!!!!!!!!!!!!!!!!!!!!!', session)
       console.log('in auth jwt callback trigger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@', trigger)
+      // On subsequent calls, `user` and account is undefined.
+      if (user?.id && account) {
 
-     if (user?.id && account) {
+        const key = `${KV_USER_PREFIX}:${user.id}`;
+        token = { ...token, kvKey: key }
 
-      const key = `${KV_USER_PREFIX}:${user.id}`;
-      token = { ...token, kvKey: key }
+        try {
 
-      try {
+          await redis.set(key, JSON.stringify(user), { ex: 60 * 60 * 24 } );
 
-        await redis.set(key, JSON.stringify(user), { ex: 60 * 60 * 24 } );
-
-      } catch (err) {
-        console.error("Failed to write user snapshot to Redis:", err);
-        // Don't throw; allow sign-in to continue.
+        } catch (err) {
+          console.error("Failed to write user snapshot to Redis:", err);
+          // Don't throw; allow sign-in to continue.
+        }
       }
-    }
 
       console.log('in auth jwt callback user 333333333333333333333333333333333', user)  
       console.log('in auth jwt callback token 4444444444444444444444444444444', token)  
