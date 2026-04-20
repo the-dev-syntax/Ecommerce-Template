@@ -72,7 +72,8 @@ export default function VerifyClientOtp() {
           await update({ id: data?.user?.id });   // string
           console.log('Email is already verified - after updating session again');
           setMessage(result.message);
-          useRouter().push(`/${locale}/`); // Redirect to home page        
+          // useRouter().push(`/${locale}/`); // Redirect to home page    
+          router.push(`/${locale}/`); // Redirect to home page      
         } 
       }); 
   };
