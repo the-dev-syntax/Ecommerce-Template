@@ -116,3 +116,14 @@ export type VerificationPropsType = {
   token: string;
   update? : boolean;
 };
+
+/*
+--------------------------------------test----------------
+export type IUserTestSignUp = {
+email: string,
+ password: string, 
+ name: string, 
+ confirmPassword: string
+}
+-------------------------------------------------------
+*/

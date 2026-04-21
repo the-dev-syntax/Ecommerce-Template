@@ -7,9 +7,9 @@ import { i18n } from '@/i18n-config'
 
 const users: IUserInput[] = [
   {
-    name: 'John',
-    email: 'admin@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    name: 'deca',
+    email: 'the.dev.syntax@gmail.com',
+    password: bcrypt.hashSync('totalena#1And4', 12),
     role: 'admin',
     address: {
       fullName: 'John Doe',
@@ -28,7 +28,7 @@ const users: IUserInput[] = [
   {
     name: 'Jane',
     email: 'jane@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('12345678', 12),
     role: 'user',
     address: {
       fullName: 'Jane Harris',

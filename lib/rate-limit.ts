@@ -6,9 +6,9 @@ import { headers } from 'next/headers';
 // 2. Track and limit invalid verification token attempts (based on the client’s IP address).
 // 3. Reset the invalid attempt counter when a verification is successful.
 
-const EMAIL_COOLDOWN_SECONDS = 5 * 60; // 5 minute - period between two verification emails is 5 minute at sign-in. 
-const MAX_INVALID_ATTEMPTS = 3; // Token invalidation attempts.
-const IP_LOCKOUT_PERIOD_SECONDS = 10 * 60; // 10 minutes, locked out for invalid token attempts.
+const EMAIL_COOLDOWN_SECONDS = 0.5 * 60; // 5 minute - period between two verification emails is 5 minute at sign-in. 
+const MAX_INVALID_ATTEMPTS = 100; // Token invalidation attempts.
+const IP_LOCKOUT_PERIOD_SECONDS = 0.5 * 60; // 10 minutes, locked out for invalid token attempts.
 
 
 // --- Rate Limiting for Resending Emails ---
@@ -17,9 +17,12 @@ const IP_LOCKOUT_PERIOD_SECONDS = 10 * 60; // 10 minutes, locked out for invalid
  * @ throws An error if the email is on cooldown.
  */
 export async function checkEmailRateLimit(email: string) {
+  console.log('in checkEmailRateLimit with email:', email)
   const key = `Custom-resend-limit:${email}`;
+  console.log('@@@@@@@@@@@@@@@@@@@@ after key was made')
   
   const inCooldown = await redis.get(key);
+  console.log('after await redis.get key')
     // Time to live
   if (inCooldown) {
     const ttl = await redis.ttl(key);

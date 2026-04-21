@@ -38,8 +38,11 @@ export const SignInWithGoogle = async () => {
   await signIn('google')
 }
 
-// CREATE USER - PUBLIC
+// CREATE USER - PUBLIC    
 export async function registerUser(userSignUp: IUserSignUp) {
+
+  console.log('============>>>>>>>>  from registerUser user.actions')
+  console.log('from registerUser user.actions userSignUp:', userSignUp)
 
   const normalizedEmail = normalizeEmail(userSignUp.email) 
 
@@ -55,17 +58,25 @@ export async function registerUser(userSignUp: IUserSignUp) {
   }
 
   try {
-
+    console.log('in user.action in register user before checkEmailRateLimit in registerUser')
     await checkEmailRateLimit(normalizedEmail);
+    console.log('11111111111111111111 after checkEmailRateLimit in try')
 
     await connectToDatabase()
+    console.log('222222222222222222222 after connectToDatabase ')
+
     // Check if the email is already in use
     const existingUser = await User.findOne({ email: normalizedEmail })
+    console.log('33333333333333333333 after check existing user')
+
     if (existingUser) {
       return { success: false, message: 'Email is already in use' }
+
     }
+    console.log('44444444444444444444 after check existing user')
 
     const { otp, hashedOtp } = await generateOtp()
+    console.log('55555555555555555555 after generate OTP')
 
     const createdUser = await User.create({
       ...user,
@@ -75,7 +86,7 @@ export async function registerUser(userSignUp: IUserSignUp) {
       verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME, 
     })
 
-    console.log('user created:', createdUser)
+    console.log('666666666666666666666 user created:', createdUser)
 
     const verificationProps: VerificationPropsType = {
       name: createdUser.name,
@@ -83,7 +94,7 @@ export async function registerUser(userSignUp: IUserSignUp) {
       token: otp,
       update: false,     
     }
-
+    console.log('77777777777777777777 user created:')
     await sendVerificationEmail(verificationProps)
 
     await setEmailRateLimit(normalizedEmail);   

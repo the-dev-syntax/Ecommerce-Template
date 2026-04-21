@@ -27,10 +27,10 @@ import { useTranslations } from 'next-intl'
 const signUpDefaultValues =
   process.env.NODE_ENV === 'development'
     ? {
-        name: 'john doe',
-        email: 'john@me.com',
-        password: '123456',
-        confirmPassword: '123456',
+        name: 'lena',
+        email: 'lena@lena.com',
+        password: 'Aa@123456',
+        confirmPassword: 'Aa@123456',
       }
     : {
         name: '',
@@ -38,6 +38,7 @@ const signUpDefaultValues =
         password: '',
         confirmPassword: '',
       }
+      
 
 export default function SignUpForm() {
   const { setting: { site } } = useSettingStore()  
@@ -46,7 +47,7 @@ export default function SignUpForm() {
   
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
-
+  
   const form = useForm<IUserSignUp>({
     resolver: zodResolver(UserSignUpSchema),
     defaultValues: signUpDefaultValues,
@@ -55,12 +56,17 @@ export default function SignUpForm() {
   const { control, handleSubmit } = form
 
   const onSubmit = async (data: IUserSignUp) => {
+    console.log('from sign up form (onSubmit)')
     try {
+      console.log('about to call registerUser')
+      console.log('about to call registerUser:', data)
       const res = await registerUser(data)
+      console.log('after calling registerUser')
       if (!res.success) {
+         console.log('from sign up form (onSubmit failed 1111)')
         toast({
           title: 'Error',
-          description: res.error,
+          description: res.error, // fetch failed message
           variant: 'destructive',
         })
         return

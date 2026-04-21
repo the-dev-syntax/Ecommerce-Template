@@ -210,6 +210,8 @@ export const UserNameSchema = z.object({
   name: UserName,
 })
 
+
+
 export const UserUpdateSchema = z.object({
   _id: MongoId,
   name: UserName,

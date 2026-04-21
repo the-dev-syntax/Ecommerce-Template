@@ -34,6 +34,7 @@ export const sendAskReviewOrderItems = async ({ order }: { order: IOrder }) => {
 export const sendVerificationEmail = async ( props: VerificationPropsType ) => {
   const { name, email, token, update } = props
   try {
+    console.log('HHHHHHHHHHHHHHHHHHH Sending verification email to:', email)
     await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to: email,
