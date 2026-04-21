@@ -580,7 +580,6 @@ export async function updateOrderToPaid(orderId: string) {
 }
 
 // UPDATE STOCK - ADMIN 
-//! replaced Mongoose session ==> sessionM to avoid conflict with Auth session.
 const updateProductStock = async (orderId: string) => {
   const session = await auth()
       if (session?.user.role !== "admin")
@@ -590,7 +589,7 @@ const updateProductStock = async (orderId: string) => {
 
   try {
     sessionM.startTransaction()
-    const opts = { sessionM }
+    const opts = { session: sessionM }
 
     const order = await Order.findOneAndUpdate(
       { _id: orderId },

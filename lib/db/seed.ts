@@ -16,6 +16,7 @@ loadEnvConfig(cwd())
 
 const main = async () => {
   try {
+    // console.log("Seeding DB:", process.env.MONGODB_URI);
     const { products , users , reviews, webPages, settings } = data
 
     await connectToDatabase(process.env.MONGODB_URI)

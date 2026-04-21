@@ -2,7 +2,7 @@ import { Document, Model, model, models, Schema } from 'mongoose'
 import { IProductInput } from '@/types'
 
 // createdAt: Date and updatedAt: Date, will be added by Mongoose anyway, but defining it here so  TypeScript would complain if you tried to access those properties on a product document.
-export interface IProduct extends Document, IProductInput {
+export interface IProduct extends Omit<Document, '_id'>, IProductInput {
   _id: string
   createdAt: Date
   updatedAt: Date

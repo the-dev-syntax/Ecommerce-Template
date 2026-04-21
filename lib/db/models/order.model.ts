@@ -1,7 +1,7 @@
 import { IOrderInput } from '@/types'
 import { Document, Model, model, models, Schema } from 'mongoose'
 
-export interface IOrder extends Document, IOrderInput {
+export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   _id: string
   createdAt: Date
   updatedAt: Date

@@ -4,7 +4,7 @@ import { IUserInput } from '@/types';
 import { AuthenticatedUser } from '@/types/next-auth';
 
 
-export interface IUser extends Document, IUserInput {
+export interface IUser extends Omit<Document, '_id'>, IUserInput {
   _id: string;
   createdAt: Date;
   updatedAt: Date;

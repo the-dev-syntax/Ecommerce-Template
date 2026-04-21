@@ -7,7 +7,7 @@ import {
   Schema,
 } from 'mongoose'
 
-export interface IWebPage extends Document, IWebPageInput {
+export interface IWebPage extends Omit<Document, '_id'>, IWebPageInput {
   _id: string
   createdAt: Date
   updatedAt: Date
