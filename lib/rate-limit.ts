@@ -1,23 +1,46 @@
 import { redis } from './redis'; 
 import { Ratelimit } from '@upstash/ratelimit';
 import { headers } from 'next/headers';
+import { formatSeconds } from './utils';
 
 
 
-// Email limiter (use sliding window)
+// IP-based Auth Action Limiter (5 requests per 1 minute)
+const authActionLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "1 m"),
+  prefix: "v1:ratelimit:auth-action",
+});
+
+/**
+ * Rapid-fire protection: Prevents an IP from hammering Auth actions 
+ * (Register, Update Email, Resend Email) before any DB work is done.
+ */
+export async function limitAuthActionsByIP() {
+  const ip = await getIP();
+  const { success, reset } = await authActionLimiter.limit(ip);
+
+  if (!success) {
+    const retrySeconds = Math.ceil((reset - Date.now()) / 1000);
+    throw new Error(`Too many requests. Please wait ${formatSeconds(retrySeconds)}`);
+  }
+}
+
+// Email limiter (use sliding window) ==> 3 attempts per 5 minutes per email address
 const emailResendLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(1, "5 m"),
+  limiter: Ratelimit.slidingWindow(3, "5 m"),
   prefix: "v1:ratelimit:email-resend",
 });
 
-// IP limiter
+// IP limiter (use sliding window) ==> 10 attempts per 10 minutes per IP address
 const ipTokenAttemptLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(100, "10 m"),
+  limiter: Ratelimit.slidingWindow(8, "20 m"),
   prefix: "v1:ratelimit:token-attempts",
 });
 
+// ua = user-agent (browser id) as a fallback when IP is not found.
 async function getIP() {
   const h = await headers();
 
@@ -34,12 +57,13 @@ async function getIP() {
 }
 
 export async function checkAndSetEmailRateLimit(email: string) {
+  
   const normalized = email.toLowerCase().trim();
   const { success, reset } = await emailResendLimit.limit(normalized);
 
   if (!success) {
     const retry = Math.ceil((reset - Date.now()) / 1000);
-    throw new Error(`Please wait ${retry} seconds before requesting another email`);
+    throw new Error(`Please wait ${formatSeconds(retry)} before requesting another email`);
   }
 }
 
@@ -48,8 +72,8 @@ export async function incrementIPEmailTokenAttempt() {
   const { success, reset } = await ipTokenAttemptLimit.limit(ip);
 
   if (!success) {
-    const retry = Math.ceil((reset - Date.now()) / 1000 / 60);
-    throw new Error(`Too many invalid attempts - try again in ${retry} minutes`);
+    const retry = Math.ceil((reset - Date.now()) / 1000);
+    throw new Error(`Too many invalid attempts - try again in ${formatSeconds(retry)}`);
   }
 }
 
@@ -63,8 +87,8 @@ export async function resetIPAttempt() {
 
 
 
-
 /*
+
 import { redis } from './redis'; 
 import { headers } from 'next/headers';
 

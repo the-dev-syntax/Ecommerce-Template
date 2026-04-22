@@ -9,7 +9,7 @@ import { formatError, generateOtp, generateVerificationToken, normalizeEmail } f
 import { redirect } from 'next/navigation'
 import { getSetting } from './setting.actions'
 import { sendVerificationEmail } from '@/emails'
-import { incrementIPEmailTokenAttempt, checkEmailRateLimit, resetIPAttempt, setEmailRateLimit } from '@/lib/rate-limit';
+import { incrementIPEmailTokenAttempt, resetIPAttempt, checkAndSetEmailRateLimit, limitAuthActionsByIP } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { revalidateAllLocales } from '../utils-serverOnly'
 import { EMAIL_EXPIRATION_TIME } from '../constants'
@@ -59,7 +59,8 @@ export async function registerUser(userSignUp: IUserSignUp) {
 
   try {
     console.log('in user.action in register user before checkEmailRateLimit in registerUser')
-    await checkEmailRateLimit(normalizedEmail);
+    // 1. FIRST DEFENSE: Stop bots/spam by IP (No DB connection yet)
+    await limitAuthActionsByIP();
     console.log('11111111111111111111 after checkEmailRateLimit in try')
 
     await connectToDatabase()
@@ -97,7 +98,7 @@ export async function registerUser(userSignUp: IUserSignUp) {
     console.log('77777777777777777777 user created:')
     await sendVerificationEmail(verificationProps)
 
-    await setEmailRateLimit(normalizedEmail);   
+    await checkAndSetEmailRateLimit(normalizedEmail);   
 
     return { success: true, message: 'User created successfully' }
   } catch (error) {
@@ -320,7 +321,8 @@ export async function updateUserEmail(values: IUserEmail) {
   const normalizedEmail = normalizeEmail(email)
 
   try {   
-    await checkEmailRateLimit(normalizedEmail);
+    // 1. FIRST DEFENSE: Stop bots/spam by IP (No DB connection yet)
+    await limitAuthActionsByIP();
     
     await connectToDatabase()
 
@@ -361,7 +363,7 @@ export async function updateUserEmail(values: IUserEmail) {
 
     await sendVerificationEmail(verificationProps)
 
-    await setEmailRateLimit(normalizedEmail);
+    await checkAndSetEmailRateLimit(normalizedEmail);
    
      await revalidateAllLocales('/');
  
@@ -456,7 +458,9 @@ export async function sendVerifyEmailAgain() {
   } 
 
    try {
-    await checkEmailRateLimit(userEmail);
+    // 1. FIRST DEFENSE: Stop bots/spam by IP (No DB connection yet)
+    await limitAuthActionsByIP();
+    
     const { otp, hashedOtp } = await generateOtp()
     await connectToDatabase()
     
@@ -492,7 +496,7 @@ export async function sendVerifyEmailAgain() {
 
     await sendVerificationEmail(verificationProps)
 
-    await setEmailRateLimit(userEmail);  
+    await checkAndSetEmailRateLimit(userEmail);  
 
     await revalidateAllLocales('/');
   
