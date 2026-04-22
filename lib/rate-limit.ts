@@ -1,4 +1,71 @@
 import { redis } from './redis'; 
+import { Ratelimit } from '@upstash/ratelimit';
+import { headers } from 'next/headers';
+
+
+
+// Email limiter (use sliding window)
+const emailResendLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(1, "5 m"),
+  prefix: "v1:ratelimit:email-resend",
+});
+
+// IP limiter
+const ipTokenAttemptLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(100, "10 m"),
+  prefix: "v1:ratelimit:token-attempts",
+});
+
+async function getIP() {
+  const h = await headers();
+
+  const ip =
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    h.get('x-real-ip');
+
+  if (!ip) {
+    const ua = h.get('user-agent') ?? 'unknown';
+    return `fallback:${ua}`;
+  }
+
+  return ip;
+}
+
+export async function checkAndSetEmailRateLimit(email: string) {
+  const normalized = email.toLowerCase().trim();
+  const { success, reset } = await emailResendLimit.limit(normalized);
+
+  if (!success) {
+    const retry = Math.ceil((reset - Date.now()) / 1000);
+    throw new Error(`Please wait ${retry} seconds before requesting another email`);
+  }
+}
+
+export async function incrementIPEmailTokenAttempt() {
+  const ip = await getIP();
+  const { success, reset } = await ipTokenAttemptLimit.limit(ip);
+
+  if (!success) {
+    const retry = Math.ceil((reset - Date.now()) / 1000 / 60);
+    throw new Error(`Too many invalid attempts - try again in ${retry} minutes`);
+  }
+}
+
+// optional: usually not needed
+export async function resetIPAttempt() {
+  const ip = await getIP();
+  const keys = await redis.keys(`v1:ratelimit:token-attempts:${ip}*`);
+  if (keys.length) await redis.del(...keys);
+}
+
+
+
+
+
+/*
+import { redis } from './redis'; 
 import { headers } from 'next/headers';
 
 // --- Configuration ---
@@ -12,13 +79,13 @@ const IP_LOCKOUT_PERIOD_SECONDS = 0.5 * 60; // 10 minutes, locked out for invali
 
 
 // --- Rate Limiting for Resending Emails ---
-/**
+
  * Checks if an email is currently in a cooldown period for resending verification. 
  * @ throws An error if the email is on cooldown.
- */
+
 export async function checkEmailRateLimit(email: string) {
   console.log('in checkEmailRateLimit with email:', email)
-  const key = `Custom-resend-limit:${email}`;
+  const key = `Email-resend-limit:${email}`;
   console.log('@@@@@@@@@@@@@@@@@@@@ after key was made')
   
   const inCooldown = await redis.get(key);
@@ -33,7 +100,7 @@ export async function checkEmailRateLimit(email: string) {
 
 //  Sets the cooldown between two verification emails.
 export async function setEmailRateLimit(email: string) {
-  const key = `Custom-resend-limit:${email}`;
+  const key = `Email-resend-limit:${email}`;
   // The .set() method with expiry (`ex`) is also identical.
   await redis.set(key, 'sent', { ex: EMAIL_COOLDOWN_SECONDS });
 }
@@ -55,7 +122,7 @@ async function getIP() {
 //  throws An error if the IP is locked out.
 export async function incrementIPEmailTokenAttempt() {
   const ip = await getIP();
-  const key = `Custom-invalid-token-attempt:${ip}`;
+  const key = `Email-attempts:${ip}`;
   
   // .get() returns null if the key doesn't exist, so `?? 0` handles that.
   // ttl = Time Till Limit
@@ -74,12 +141,13 @@ export async function incrementIPEmailTokenAttempt() {
   }
 }
 
-/**
+
  * Resets the invalid attempt counter for an IP upon successful verification.
- */
+
 export async function resetIPAttempt() {
   const ip = await getIP();
-  const key = `Custom-invalid-token-attempt:${ip}`;
+  const key = `Email-attempts:${ip}`;
   // .del() is the standard command for deleting a key.
   await redis.del(key);
 }
+*/

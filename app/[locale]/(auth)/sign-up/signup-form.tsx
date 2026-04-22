@@ -28,7 +28,7 @@ const signUpDefaultValues =
   process.env.NODE_ENV === 'development'
     ? {
         name: 'lena',
-        email: 'lena@lena.com',
+        email: 'the.dev.syntax@gmail.com',
         password: 'Aa@123456',
         confirmPassword: 'Aa@123456',
       }
