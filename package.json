@@ -32,6 +32,7 @@
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.3.1",
     "@uploadthing/react": "^7.3.2",
+    "@upstash/qstash": "^2.10.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.35.3",
     "bcryptjs": "^3.0.2",

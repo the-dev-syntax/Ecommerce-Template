@@ -1,11 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { sendPurchaseReceipt } from '@/emails'
-import '@/lib/db/models/user.model'
-import Order from '@/lib/db/models/order.model'
-import { connectToDatabase } from '@/lib/db'
+import { Client } from '@upstash/qstash'
+// import '@/lib/db/models/user.model'
 
 
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+
+const client = new Client({ token: process.env.QSTASH_TOKEN as string})
+
+export async function POST(req: NextRequest) {
+  const body = await req.text()
+
+  let event: Stripe.Event
+  try {
+      event = stripe.webhooks.constructEvent(
+      body,
+      req.headers.get('stripe-signature')!,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    )
+  } catch {
+    return new NextResponse('Invalid signature', { status: 400 })
+  }
+
+  // push job to queue
+  await client.publishJSON({
+    url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/stripe-worker`,
+    body: { event },
+  })
+
+    // respond immediately to avoid timeouts, the actual processing will be done in the worker
+  return NextResponse.json({ received: true })
+}
+
+/*
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
 export async function POST(req: NextRequest) {
@@ -51,17 +79,5 @@ export async function POST(req: NextRequest) {
 
   return new NextResponse()
 }
-
-/*
-     await order.save()
-    const response = NextResponse.json({
-      message: 'Webhook received. Order updated.',
-    })
-  
-    sendPurchaseReceipt({ order }).catch(err => {     
-      console.log('Failed to send purchase receipt after responding:', err)
-    })
-
-    return response
 
 */
