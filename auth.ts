@@ -38,10 +38,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {  
        
-        console.log('inside autherize credentials ??????????????????????????????????', credentials) //! returns password in the callbackurl 
+        // console.log('inside autherize credentials ??????????????????????????????????', credentials) //! returns password in the callbackurl 
         
         const validatedFields = UserSignInSchema.safeParse(credentials);
-        console.log('validatedFields', validatedFields)
+        // console.log('validatedFields', validatedFields)
         
         if (!validatedFields.success) {
           console.error("Zod Validation Failed:", validatedFields.error.flatten().fieldErrors);
@@ -49,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
   
         await connectToDatabase()
-        console.log('from auth credentials:', validatedFields.data)
+        // console.log('from auth credentials:', validatedFields.data)
 
         if (validatedFields.data == null) return null
           
@@ -59,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!user) return null
 
-          console.log('IN AUTHERIZE user', user)
+          // console.log('IN AUTHERIZE user', user)
 
 
         return user       
@@ -71,12 +71,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       //2. after sign in - it is encrypted will not be accessed 
       // Runs on first sign-in; `user` is the value returned by authorize() also account will have value , both only the first time from autherize
       // token is {name, email, picture, sub}      
-      console.log('in auth jwt callback user 1111111111111111111111111111111***', user)  // user from autherize first pass only
-      console.log('in auth jwt callback token 222222222222222222222222222222', token)  // always have its own craeted value
-      console.log('in auth jwt callback account ++++++++++++++++++++++++++', account) // only the first have value
-      console.log('in auth jwt callback profile $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$', profile) // only with OAUTH
-      console.log('in auth jwt callback session !!!!!!!!!!!!!!!!!!!!!!!!!!!!!', session) // if useSession().update the will have a value
-      console.log('in auth jwt callback trigger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@', trigger) // "signIn" | "signUp" | "update" | undefined
+      // console.log('in auth jwt callback user 1111111111111111111111111111111***', user)  // user from autherize first pass only
+      // console.log('in auth jwt callback token 222222222222222222222222222222', token)  // always have its own craeted value
+      // console.log('in auth jwt callback account ++++++++++++++++++++++++++', account) // only the first have value
+      // console.log('in auth jwt callback profile $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$', profile) // only with OAUTH
+      // console.log('in auth jwt callback session !!!!!!!!!!!!!!!!!!!!!!!!!!!!!', session) // if useSession().update the will have a value
+      // console.log('in auth jwt callback trigger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@', trigger) // "signIn" | "signUp" | "update" | undefined
 
       if (user?.id){
          token = { 
@@ -87,9 +87,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }  
     
       if (trigger === "update" && session?.id as string) { // update the token by session update
-        console.log('jwt callback trigger === "update" && token.sub *********************************')
+        // console.log('jwt callback trigger === "update" && token.sub *********************************')
         const freshUser  = await User.findById(session.id).lean() // get the fresh user from DB;
-        console.log('jwt callback freshUser *********************************', freshUser)
+        // console.log('jwt callback freshUser *********************************', freshUser)
         if (freshUser)  {
            token = { 
             ...token, 
@@ -101,11 +101,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             emailVerified: freshUser.emailVerified,
           }
         }
-        console.log('jwt callback token >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', token)
+        // console.log('jwt callback token >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', token)
       }
 
-      console.log('in auth jwt callback user 333333333333333333333333333333333', user)  
-      console.log('in auth jwt callback token 4444444444444444444444444444444', token)  
+      // console.log('in auth jwt callback user 333333333333333333333333333333333', user)  
+      // console.log('in auth jwt callback token 4444444444444444444444444444444', token)  
 
       return token;
     },

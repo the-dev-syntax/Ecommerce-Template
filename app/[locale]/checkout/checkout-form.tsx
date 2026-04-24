@@ -38,9 +38,9 @@ import useCartStore from '@/hooks/use-cart-store'
 import ProductPrice from '@/components/shared/product/product-price'
 import { createOrder } from '@/lib/actions/order.actions'
 import { toast } from '@/hooks/use-toast'
-
 import useSettingStore from '@/hooks/use-setting-store'
 import { useTranslations } from 'next-intl'
+
 
 const shippingAddressDefaultValues =
   process.env.NODE_ENV === 'development'
@@ -62,7 +62,6 @@ const shippingAddressDefaultValues =
         postalCode: '',
         country: '',
       }
-
 const CheckoutForm = () => {
   const router = useRouter()
   const t = useTranslations('Form')
@@ -93,6 +92,14 @@ const CheckoutForm = () => {
     setPaymentMethod,
     setDeliveryDateIndex,
   } = useCartStore()
+
+  const selectedDelivery =
+  availableDeliveryDates && 
+  deliveryDateIndex !== undefined &&
+  deliveryDateIndex >= 0 &&
+  deliveryDateIndex < availableDeliveryDates.length
+    ? availableDeliveryDates[deliveryDateIndex]
+    : availableDeliveryDates?.[0] || null // Fallback to first item or null
 
   const isMounted = useIsMounted()
 
@@ -126,19 +133,26 @@ const CheckoutForm = () => {
 
   const handlePlaceOrder = async () => {
     // TODO: place order
+     if (!selectedDelivery) {
+    toast({
+      description: 'Please select a delivery date',
+      variant: 'destructive',
+    })
+    return
+  }
+    console.log('placing order with following details:')
     const res = await createOrder({
       items,
       shippingAddress,
-      expectedDeliveryDate: calculateFutureDate(
-        availableDeliveryDates[deliveryDateIndex!].daysToDeliver
-      ),
-      deliveryDateIndex,
+      expectedDeliveryDate: calculateFutureDate(selectedDelivery.daysToDeliver),
+      deliveryDateIndex: deliveryDateIndex ?? 0,
       paymentMethod,
       itemsPrice,
       shippingPrice,
       taxPrice,
       totalPrice,
     })
+    console.log('order creation response:', res)
     if (!res.success) {
       toast({
         description: res.message,
@@ -160,6 +174,7 @@ const CheckoutForm = () => {
   const handleSelectShippingAddress = () => {
     shippingAddressForm.handleSubmit(onSubmitShippingAddress)()
   }
+  
 
   const CheckoutSummary = () => (
     
@@ -521,14 +536,13 @@ const CheckoutForm = () => {
                 <div className='col-span-5'>
                   <p>
                     {t('Delivery date')}:{' '}
-                    {
-                      formatDateTime(
-                        calculateFutureDate(
-                          availableDeliveryDates[deliveryDateIndex]
-                            .daysToDeliver
-                        )
-                      ).dateOnly
-                    }
+                    {isMounted && selectedDelivery ? (
+                        formatDateTime(
+                          calculateFutureDate(selectedDelivery.daysToDeliver)
+                        ).dateOnly
+                      ) : (
+                        <span className="animate-pulse">...</span> // Loading state
+                      )}
                   </p>
                   <ul>
                     {items.map((item, _index) => (
@@ -560,15 +574,14 @@ const CheckoutForm = () => {
                   <CardContent className='p-4'>
                     <p className='mb-2'>
                       <span className='text-lg font-bold text-green-700'>
-                        {t('Arriving')}{' '}
-                        {
-                          formatDateTime(
-                            calculateFutureDate(
-                              availableDeliveryDates[deliveryDateIndex!]
-                                .daysToDeliver
-                            )
-                          ).dateOnly
-                        }
+                        {t('Arriving')}{' '} 
+                        {isMounted && selectedDelivery ? (
+                            formatDateTime(
+                              calculateFutureDate(selectedDelivery.daysToDeliver)
+                            ).dateOnly
+                          ) : (
+                            <span className="animate-pulse">...</span> // Loading state
+                          )}
                       </span>{' '}
                       {t('If you order in the next')} {timeUntilMidnight().hours} {t('hours')}
                       and {timeUntilMidnight().minutes} {t('minutes')}.
@@ -632,17 +645,11 @@ const CheckoutForm = () => {
 
                           <ul>
                             <RadioGroup
-                              value={
-                                availableDeliveryDates[deliveryDateIndex!]
-                                  .name
-                              }
-                              onValueChange={(value) =>
-                                setDeliveryDateIndex(
-                                  availableDeliveryDates.findIndex(
-                                    (address) => address.name === value
-                                  )!
-                                )
-                              }
+                              value={selectedDelivery?.name} // Use the derived state name
+                              onValueChange={(value) => {
+                                const index = availableDeliveryDates.findIndex((d) => d.name === value)
+                                if (index !== -1) setDeliveryDateIndex(index)
+                              }}
                             >
                               {availableDeliveryDates.map((dd) => (
                                 <div key={dd.name} className='flex'>

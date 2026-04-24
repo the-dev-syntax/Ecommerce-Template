@@ -27,8 +27,8 @@ import { useTranslations } from 'next-intl'
 const signUpDefaultValues =
   process.env.NODE_ENV === 'development'
     ? {
-        name: 'lena',
-        email: 'the.dev.syntax@gmail.com',
+        name: 'arrow',
+        email: 'the.arrow.of.time7@gmail.com',
         password: 'Aa@123456',
         confirmPassword: 'Aa@123456',
       }

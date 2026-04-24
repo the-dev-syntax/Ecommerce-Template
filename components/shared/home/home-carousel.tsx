@@ -32,6 +32,7 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
       className='w-full mx-auto '
       onMouseEnter={plugin.current.stop}
       onMouseLeave={plugin.current.reset}
+      opts={{ loop: false }}
     >
       <CarouselContent>
         {items.map((item) => (

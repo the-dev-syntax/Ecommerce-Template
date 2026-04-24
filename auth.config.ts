@@ -18,14 +18,14 @@ export default {
         return true
     },
     async jwt({ token , user}) {
-        console.log('CONFIG: first : from async jwt config token: aaaaaaaaaaaaaaaaaaaaaaaaaaaa', token);           
-        console.log('CONFIG: first : from async jwt config user: bbbbbbbbbbbbbbbbbbbbbbbbbbbb', user); // undefined 
-        console.log("CONFIG: after redis: from async jwt : token cccccccccccccccccccccccccc", token)
+        // console.log('CONFIG: first : from async jwt config token: aaaaaaaaaaaaaaaaaaaaaaaaaaaa', token);           
+        // console.log('CONFIG: first : from async jwt config user: bbbbbbbbbbbbbbbbbbbbbbbbbbbb', user); // undefined 
+        // console.log("CONFIG: after redis: from async jwt : token cccccccccccccccccccccccccc", token)
         return token
     },
     async session({ session, token, trigger }) { // user  only strategy DB  
-        console.log('CONFIG: 1.from async session config: session =>', session);
-        console.log('CONFIG: 2.from async session config: token =>', token);
+        // console.log('CONFIG: 1.from async session config: session =>', session);
+        // console.log('CONFIG: 2.from async session config: token =>', token);
         console.log('CONFIG: 3.from async session config: trigger =>', trigger);
         
         session  = {

@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-
 import { sendPurchaseReceipt } from '@/emails'
-
 import '@/lib/db/models/user.model'
 import Order from '@/lib/db/models/order.model'
 import { connectToDatabase } from '@/lib/db'
 
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
 export async function POST(req: NextRequest) {
+
   await connectToDatabase()
-  const event = await stripe.webhooks.constructEvent(
+  // removed await before stripe.webhooks.constructEvent
+  const event = stripe.webhooks.constructEvent(
     await req.text(),
     req.headers.get('stripe-signature') as string,
     process.env.STRIPE_WEBHOOK_SECRET as string
@@ -36,15 +37,16 @@ export async function POST(req: NextRequest) {
       email_address: email!,
       pricePaid: (pricePaidInCents / 100).toFixed(2),
     }
+
     await order.save()
 
-      try {
+    try {
         await sendPurchaseReceipt({ order })
-    
-      } catch (err) {
+  
+    } catch (err) {
         console.log('email error', err)
-      }
-      return NextResponse.json({ message: 'updateOrderToPaid was successful'})
+    }
+    return NextResponse.json({ message: 'updateOrderToPaid was successful'})
   }
 
   return new NextResponse()
