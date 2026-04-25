@@ -19,20 +19,86 @@ export async function POST(req: NextRequest) {
       req.headers.get('stripe-signature')!,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
-  } catch {
+  } catch (error:any) {
+    console.error(`Webhook signature verification failed: ${error.message}`)
     return new NextResponse('Invalid signature', { status: 400 })
   }
+
+  console.log("Received Webhook Event Type:", event.type)
+
+  if (event.type === 'payment_intent.succeeded' || event.type === 'charge.succeeded') {
+   
+    const dataObject = event.data.object as any; // Temporary 'any' to find where metadata is
+    
+    console.log("Full Data Object Metadata:", dataObject.metadata)
+    
+    const orderId = dataObject.metadata?.orderId
+
+    if (!orderId) {
+      console.error("No orderId found in this event object's metadata")
+      // If you are using Checkout, you might need to look at checkout.session.completed instead
+      return NextResponse.json({ received: true })
+    }
+
+    console.log("Pushing to QStash for Order:", orderId)
+
+    await client.publishJSON({
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/stripe-worker`,
+      body: { 
+        orderId: orderId,
+        type: event.type 
+      },
+    })
+  }
+    /*
+    // 2. Cast the object to Stripe.Charge so TS knows metadata exists
+    const charge = event.data.object as Stripe.Charge
+    
+    const orderId = charge.metadata?.orderId
+
+    console.log("charge:",charge)
+    console.log("charge.metadata:",charge.metadata)
+    console.log("charge.metadata.orderId:",charge.metadata?.orderId)
+
+    if (!orderId) {
+       console.error("No orderId found in metadata")
+       return NextResponse.json({ received: true })
+    }
+
+    // 3. Send only the data the worker needs (Cleaner & safer)
+    await client.publishJSON({
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/stripe-worker`,
+      body: { 
+        orderId: orderId,
+        type: event.type 
+      },
+    })
+  }
+  */
+    // respond immediately to avoid timeouts, the actual processing will be done in the worker
+  return NextResponse.json({ received: true })
+}
+
+
+/*
+  client.publishJSON({
+  url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/stripe-worker`,
+  body: {
+    type: event.type,
+    data: {
+      object: {
+        metadata: event.data.object.metadata,
+      },
+    },
+  },
+})
 
   // push job to queue
   await client.publishJSON({
     url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/stripe-worker`,
     body: { event },
   })
-
-    // respond immediately to avoid timeouts, the actual processing will be done in the worker
-  return NextResponse.json({ received: true })
-}
-
+*/
 /*
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 

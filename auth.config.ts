@@ -26,7 +26,7 @@ export default {
     async session({ session, token, trigger }) { // user  only strategy DB  
         // console.log('CONFIG: 1.from async session config: session =>', session);
         // console.log('CONFIG: 2.from async session config: token =>', token);
-        console.log('CONFIG: 3.from async session config: trigger =>', trigger);
+        // console.log('CONFIG: 3.from async session config: trigger =>', trigger);
         
         session  = {
             ...session,         
