@@ -63,11 +63,12 @@ export default function OrderPaymentForm({
   }
   const handleCreatePayPalOrder = async () => {
     const res = await createPayPalOrder(order._id)
-    if (!res.success)
+    if (!res.success){
       return toast({
         description: res.message,
         variant: 'destructive',
       })
+    }
     return res.data
   }
   const handleApprovePayPalOrder = async (data: { orderID: string }) => {

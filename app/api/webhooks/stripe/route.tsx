@@ -1,31 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 // import { Client } from '@upstash/qstash'
-import { sendPurchaseReceipt } from '@/emails'
+// import { sendPurchaseReceipt } from '@/emails'
 import { connectToDatabase } from '@/lib/db'
 import Order from '@/lib/db/models/order.model'
 
 
-
+console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA from Stripe Webhook Route")
 
 export async function POST(req: NextRequest) {
 
   await connectToDatabase()
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-  
+
   // removed await before stripe.webhooks.constructEvent
   const event = stripe.webhooks.constructEvent(
     await req.text(),
     req.headers.get('stripe-signature') as string,
     process.env.STRIPE_WEBHOOK_SECRET as string
   )
-
+  console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBB from Stripe Webhook Route, event:", event)
+  
   if (event.type === 'charge.succeeded') {
     const charge = event.data.object
     const orderId = charge.metadata.orderId
     const email = charge.billing_details.email
     const pricePaidInCents = charge.amount
+    console.log("CCCCCCCCCCCCCCCCCCCCCCCCCCC from Stripe Webhook Route, order:", orderId)
     const order = await Order.findById(orderId).populate('user', 'email')
 
     if (order == null) {
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
     await order.save()
 
     try {
-        await sendPurchaseReceipt({ order })
+        // await sendPurchaseReceipt({ order })
   
     } catch (err) {
         console.log('email error', err)
