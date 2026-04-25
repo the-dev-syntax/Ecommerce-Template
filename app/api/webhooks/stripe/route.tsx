@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     console.log("Pushing to QStash for Order:", orderId)
 
-    await client.publishJSON({
+    client.publishJSON({
       url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/stripe-worker`,
       body: { 
         orderId: orderId,
