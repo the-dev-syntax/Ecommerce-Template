@@ -1,3 +1,4 @@
+/*
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { Client } from '@upstash/qstash'
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest) {
       },
     })
   }
+    return NextResponse.json({ received: true })
+}
+*/
     /*
     // 2. Cast the object to Stripe.Charge so TS knows metadata exists
     const charge = event.data.object as Stripe.Charge
@@ -77,8 +81,7 @@ export async function POST(req: NextRequest) {
   }
   */
     // respond immediately to avoid timeouts, the actual processing will be done in the worker
-  return NextResponse.json({ received: true })
-}
+
 
 
 /*
