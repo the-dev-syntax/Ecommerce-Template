@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { Client } from '@upstash/qstash'
+
 // import '@/lib/db/models/user.model'
 
 
@@ -19,8 +20,8 @@ export async function POST(req: NextRequest) {
       req.headers.get('stripe-signature')!,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
-  } catch (error:any) {
-    console.error(`Webhook signature verification failed: ${error.message}`)
+  } catch (error) {
+    console.log('stripe.webhooks.constructEvent failed:',error)
     return new NextResponse('Invalid signature', { status: 400 })
   }
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'payment_intent.succeeded' || event.type === 'charge.succeeded') {
    
-    const dataObject = event.data.object as any; // Temporary 'any' to find where metadata is
+    const dataObject = event.data.object; // Temporary 'any' to find where metadata is
     
     console.log("Full Data Object Metadata:", dataObject.metadata)
     
