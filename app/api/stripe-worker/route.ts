@@ -1,3 +1,4 @@
+/*
 import { sendPurchaseReceipt } from '@/emails'
 import Order from '@/lib/db/models/order.model'
 import { connectToDatabase } from '@/lib/db'
@@ -28,3 +29,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+  */
