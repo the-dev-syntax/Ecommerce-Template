@@ -163,7 +163,8 @@ const CheckoutForm = () => {
         description: res.message,
         variant: 'default',
       })
-      clearCart()
+      // Don't clear cart here - it should only be cleared after successful payment
+      // The cart will be cleared in the payment success page/webhook
       router.push(`/checkout/${res.data?.orderId}`)
     }
   }

@@ -1,57 +1,81 @@
+'use client'
+
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import Stripe from 'stripe'
-
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { getOrderById } from '@/lib/actions/order.actions'
-import { getTranslations } from 'next-intl/server'
+import useCartStore from '@/hooks/use-cart-store'
+import { CheckCircle, Loader2 } from 'lucide-react'
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
-
-// props:{ params, searchParams } both types are results of a promise 
-export default async function SuccessPage(props: {
-  params: Promise<{ id: string }> 
-  searchParams: Promise<{ payment_intent: string }>
+export default function StripePaymentSuccessPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
 }) {
-  const params = await props.params
-  const { id } = params
-  const searchParams = await props.searchParams
-  
-  // Parallelize the async calls to reduce timeout risk
-  const [t, order] = await Promise.all([
-    getTranslations('Form'),
-    getOrderById(id),
-  ])
-  
-  if (!order) notFound()
+  const searchParams = useSearchParams()
+  const paymentIntent = searchParams.get('payment_intent')
+  const [orderId, setOrderId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const { clearCart } = useCartStore()
 
-  // Initialize Stripe inside the function to avoid module-level initialization issues
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-  
-  const paymentIntent = await stripe.paymentIntents.retrieve(
-    searchParams.payment_intent
-  )
-  
-  if (
-    paymentIntent.metadata.orderId == null ||
-    paymentIntent.metadata.orderId !== order._id.toString()
-  )
-    return notFound()
+  useEffect(() => {
+    // Get the order ID from params
+    params.then((p) => {
+      setOrderId(p.id)
+      setIsLoading(false)
+    })
+  }, [params])
 
-  const isSuccess = paymentIntent.status === 'succeeded'
-  if (!isSuccess) return redirect(`/checkout/${id}`)
+  useEffect(() => {
+    // Clear the cart after successful payment
+    if (paymentIntent) {
+      clearCart()
+    }
+  }, [paymentIntent, clearCart])
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl w-full mx-auto space-y-8">
+        <div className="flex flex-col gap-6 items-center py-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p>Processing your payment...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!paymentIntent) {
+    return (
+      <div className="max-w-4xl w-full mx-auto space-y-8">
+        <div className="flex flex-col gap-6 items-center py-12">
+          <h1 className="font-bold text-2xl lg:text-3xl">Invalid Payment</h1>
+          <p>No payment information found.</p>
+          <Button asChild>
+            <Link href="/">Return to Home</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className='max-w-4xl w-full mx-auto space-y-8'>
-      <div className='flex flex-col gap-6 items-center '>
-        <h1 className='font-bold text-2xl lg:text-3xl'>
-          {t('Thanks for your purchase')}
+    <div className="max-w-4xl w-full mx-auto space-y-8">
+      <div className="flex flex-col gap-6 items-center py-12">
+        <CheckCircle className="h-16 w-16 text-green-500" />
+        <h1 className="font-bold text-2xl lg:text-3xl">
+          Thanks for your purchase!
         </h1>
-        <div>{t('We are now processing your order')}</div>
-        <Button asChild>
-          <Link href={`/account/orders/${id}`}>{t('View order')}</Link>
-        </Button>
+        <p className="text-muted-foreground text-center">
+          We are now processing your order. You will receive a confirmation email shortly.
+        </p>
+        <div className="flex gap-4">
+          <Button asChild>
+            <Link href={`/account/orders/${orderId}`}>View Order</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/">Continue Shopping</Link>
+          </Button>
+        </div>
       </div>
     </div>
   )
