@@ -40,7 +40,7 @@ export default async function SuccessPage(props: {
         <h1 className='font-bold text-2xl lg:text-3xl'>
           {t('Thanks for your purchase')}
         </h1>
-        <div>{t('We are now processing your order.')}</div>
+        <div>{t('We are now processing your order')}</div>
         <Button asChild>
           <Link href={`/account/orders/${id}`}>{t('View order')}</Link>
         </Button>

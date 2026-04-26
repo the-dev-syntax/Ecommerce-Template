@@ -24,10 +24,11 @@ export default function StripeForm({
     const [errorMessage, setErrorMessage] = useState<string>()
     const [email, setEmail] = useState<string>()
 
-    const { setting: { site } } = useSettingStore()
+    // const { setting: { site } } = useSettingStore()
     const t = useTranslations('Form')
    
-  
+    const site = { url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' }
+
     async function handleSubmit(e: FormEvent) {
       e.preventDefault()
   
