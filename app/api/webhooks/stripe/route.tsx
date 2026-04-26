@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 // import { Client } from '@upstash/qstash'
 // import { sendPurchaseReceipt } from '@/emails'
-import { connectToDatabase } from '@/lib/db'
+// import { connectToDatabase } from '@/lib/db'
 import Order from '@/lib/db/models/order.model'
 
 
@@ -10,7 +10,7 @@ console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA from Stripe Webhook Route")
 
 export async function POST(req: NextRequest) {
 
-  await connectToDatabase()
+  // await connectToDatabase()
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
@@ -43,11 +43,14 @@ export async function POST(req: NextRequest) {
       pricePaid: (pricePaidInCents / 100).toFixed(2),
     }
 
-    await order.save()
+    console.log("DDDDDDDDDDDDDDDDDDDDDDDDD from Stripe Webhook Route, order:", order)
+
+    // await order.save()
 
     try {
         // await sendPurchaseReceipt({ order })
-  
+        console.log("EEEEEEEEEEEEEEEEEEEEEEEEEEE from Stripe Webhook Route, sendPurchaseReceipt commented out for testing")
+      
     } catch (err) {
         console.log('email error', err)
     }
