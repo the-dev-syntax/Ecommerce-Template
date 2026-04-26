@@ -83,5 +83,13 @@ export default auth((req) => {
 })
 
 export const config = {
- matcher: ['/((?!api|_next|.*\\..*).*)'],
+  matcher: [
+    // Match all pathnames except:
+    // - /api (API routes)
+    // - /_next (Next.js internals)
+    // - /_vercel (Vercel internals)  
+    // - /favicon.ico, /sitemap.xml, /robots.txt (static files)
+    // - Files with extensions (images, fonts, etc.)
+    '/((?!api|_next|_vercel|favicon.ico|sitemap.xml|robots.txt|.*\\..*).*)',
+  ],
 }
