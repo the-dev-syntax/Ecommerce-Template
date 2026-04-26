@@ -24,28 +24,30 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Page() {
 
-  const t = await getTranslations('Home')
+  // Parallelize all data fetching to avoid sequential database calls
+  // This prevents timeout issues on Vercel serverless functions
+  const [
+    t,
+    settings,
+    todaysDeals,
+    bestSellingProducts,
+    allCategories,
+    newArrivals,
+    featureds,
+    bestSellers,
+  ] = await Promise.all([
+    getTranslations('Home'),
+    getSetting(),
+    getProductsByTag({ tag: 'todays-deal' }),
+    getProductsByTag({ tag: 'best-seller' }),
+    getAllCategories(),
+    getProductsForCard({ tag: 'new-arrival', limit: 4 }),
+    getProductsForCard({ tag: 'featured', limit: 4 }),
+    getProductsForCard({ tag: 'best-seller', limit: 4 }),
+  ])
 
-  const { carousels } = await getSetting()
-
-  const todaysDeals = await getProductsByTag({ tag: 'todays-deal' })
-
-  const bestSellingProducts = await getProductsByTag({ tag: 'best-seller' })
-
-  const categories = (await getAllCategories()).slice(0, 4)
-
-  const newArrivals = await getProductsForCard({
-    tag: 'new-arrival',
-    limit: 4,
-  })
-  const featureds = await getProductsForCard({
-    tag: 'featured',
-    limit: 4,
-  })
-  const bestSellers = await getProductsForCard({
-    tag: 'best-seller',
-    limit: 4,
-  })
+  const { carousels } = settings
+  const categories = allCategories.slice(0, 4)
 
   const cards = [
     {
