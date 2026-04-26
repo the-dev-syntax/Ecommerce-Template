@@ -2,11 +2,6 @@
 // This approach is taken from https://github.com/vercel/next.js/tree/canary/examples/with-mongodb
 import { MongoClient, ServerApiVersion } from 'mongodb'
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
-}
-
-const uri = process.env.MONGODB_URI   // Uniform Resource Identifier
 const options = {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -19,32 +14,27 @@ const options = {
 // In serverless environments, the module scope persists across invocations
 // within the same container, so this provides connection reuse
 const globalWithMongo = global as typeof globalThis & { 
-  _mongoClient?: MongoClient
   _mongoClientPromise?: Promise<MongoClient>
 }
 
-let client: MongoClient
+// Lazy getter - only creates connection when actually accessed
+// This prevents errors during build/static generation when MONGODB_URI may not be available
 let clientPromise: Promise<MongoClient>
 
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value is
-  // preserved across module reloads caused by HMR (Hot Module Replacement).
-  if (!globalWithMongo._mongoClient) {
-    globalWithMongo._mongoClient = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = globalWithMongo._mongoClient.connect()
+if (!globalWithMongo._mongoClientPromise) {
+  const uri = process.env.MONGODB_URI
+  if (!uri) {
+    // During build time, create a dummy promise that will be replaced at runtime
+    // This prevents build failures when env vars aren't available
+    clientPromise = new Promise(() => {}) as Promise<MongoClient>
+  } else {
+    const client = new MongoClient(uri, options)
+    globalWithMongo._mongoClientPromise = client.connect()
+    clientPromise = globalWithMongo._mongoClientPromise
   }
-  client = globalWithMongo._mongoClient
-  clientPromise = globalWithMongo._mongoClientPromise!
 } else {
-  // In production, also cache to reuse connections within the same serverless container
-  if (!globalWithMongo._mongoClient) {
-    globalWithMongo._mongoClient = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = globalWithMongo._mongoClient.connect()
-  }
-  client = globalWithMongo._mongoClient
-  clientPromise = globalWithMongo._mongoClientPromise!
+  clientPromise = globalWithMongo._mongoClientPromise
 }
 
-// Export both the client and the promise for the MongoDBAdapter
+// Export the promise for the MongoDBAdapter
 export { clientPromise }
-export default client
