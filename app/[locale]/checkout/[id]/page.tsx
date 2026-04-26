@@ -6,6 +6,8 @@ import { getOrderById } from '@/lib/actions/order.actions'
 import PaymentForm from './payment-form'
 import Stripe from 'stripe'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Payment',
@@ -13,13 +15,15 @@ export const metadata = {
 
 const CheckoutPaymentPage = async (props: { params: Promise<{ id: string }> }) => {
   const params = await props.params
-
   const { id } = params
 
-  const order = await getOrderById(id)
+  // Parallelize order fetch and auth check
+  const [order, session] = await Promise.all([
+    getOrderById(id),
+    auth(),
+  ])
+  
   if (!order) notFound()
-
-  const session = await auth()
 
   let client_secret = null
   if (order.paymentMethod === 'Stripe' && !order.isPaid) {

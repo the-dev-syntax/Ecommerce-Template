@@ -41,9 +41,14 @@ export default function VerifyClientOtp() {
         setMessage('Email verified successfully. You can now proceed.');
         setIsSuccess(true);
         setIsValidationEnded(true);
-        console.log('iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii', data);
-        await update({ id: data?.user?.id }); // Update session to reflect verified status
-        router.push(`/${locale}/`);
+        // Update session to reflect verified status, then refresh to update server components
+        await update({ id: data?.user?.id });
+        // Use router.refresh() to re-fetch server components with updated session
+        router.refresh();
+        // Small delay to ensure session is updated before navigation
+        setTimeout(() => {
+          router.push(`/${locale}/`);
+        }, 100);
       } else {
         setIsValidationEnded(true);
         toast({

@@ -16,6 +16,9 @@ import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import ProductPrice from '@/components/shared/product/product-price'
 import { getTranslations } from 'next-intl/server'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 //{ params: { locale } }: { params: { locale: string }}
 export async function generateMetadata() {
   const t = await getTranslations('ProfileManager');

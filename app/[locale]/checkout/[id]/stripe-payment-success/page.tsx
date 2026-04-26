@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { getOrderById } from '@/lib/actions/order.actions'
 import { getTranslations } from 'next-intl/server'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 // props:{ params, searchParams } both types are results of a promise 
 export default async function SuccessPage(props: {
@@ -14,13 +15,20 @@ export default async function SuccessPage(props: {
   searchParams: Promise<{ payment_intent: string }>
 }) {
   const params = await props.params
-  const t = await getTranslations('Form')
   const { id } = params
-
   const searchParams = await props.searchParams
-  const order = await getOrderById(id)
+  
+  // Parallelize the async calls to reduce timeout risk
+  const [t, order] = await Promise.all([
+    getTranslations('Form'),
+    getOrderById(id),
+  ])
+  
   if (!order) notFound()
 
+  // Initialize Stripe inside the function to avoid module-level initialization issues
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+  
   const paymentIntent = await stripe.paymentIntents.retrieve(
     searchParams.payment_intent
   )
