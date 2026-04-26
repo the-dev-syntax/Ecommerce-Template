@@ -7,7 +7,7 @@ import {
 import { FormEvent, useState } from 'react'  
 import { Button } from '@/components/ui/button'
 import ProductPrice from '@/components/shared/product/product-price'
-import useSettingStore from '@/hooks/use-setting-store'
+// import useSettingStore from '@/hooks/use-setting-store'
 import { useTranslations } from 'next-intl'
 
   
