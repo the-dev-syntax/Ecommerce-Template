@@ -15,23 +15,36 @@ const options = {
   },
 }
 
+// Cache the MongoClient promise in both dev and production
+// In serverless environments, the module scope persists across invocations
+// within the same container, so this provides connection reuse
+const globalWithMongo = global as typeof globalThis & { 
+  _mongoClient?: MongoClient
+  _mongoClientPromise?: Promise<MongoClient>
+}
+
 let client: MongoClient
+let clientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value is
   // preserved across module reloads caused by HMR (Hot Module Replacement).
-  const globalWithMongo = global as typeof globalThis & { _mongoClient?: MongoClient }
-
   if (!globalWithMongo._mongoClient) {
     globalWithMongo._mongoClient = new MongoClient(uri, options)
+    globalWithMongo._mongoClientPromise = globalWithMongo._mongoClient.connect()
   }
-  // client = globally cached `MongoClient` instance.
   client = globalWithMongo._mongoClient
+  clientPromise = globalWithMongo._mongoClientPromise!
 } else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options)
+  // In production, also cache to reuse connections within the same serverless container
+  if (!globalWithMongo._mongoClient) {
+    globalWithMongo._mongoClient = new MongoClient(uri, options)
+    globalWithMongo._mongoClientPromise = globalWithMongo._mongoClient.connect()
+  }
+  client = globalWithMongo._mongoClient
+  clientPromise = globalWithMongo._mongoClientPromise!
 }
 
-// Export a module-scoped MongoClient. By doing this in a
-// separate module, the client can be shared across functions.
+// Export both the client and the promise for the MongoDBAdapter
+export { clientPromise }
 export default client
