@@ -9,7 +9,7 @@ const users: IUserInput[] = [
   {
     name: 'deca',
     email: 'the.dev.syntax@gmail.com',
-    password: bcrypt.hashSync('totalena#1And4', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'admin',
     address: {
       fullName: 'John Doe',
@@ -28,7 +28,7 @@ const users: IUserInput[] = [
   {
     name: 'Jane',
     email: 'jane@example.com',
-    password: bcrypt.hashSync('12345678', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Jane Harris',
@@ -45,7 +45,7 @@ const users: IUserInput[] = [
   {
     name: 'Jack',
     email: 'jack@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Jack Ryan',
@@ -62,7 +62,7 @@ const users: IUserInput[] = [
   {
     name: 'Sarah',
     email: 'sarah@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Sarah Smith',
@@ -79,7 +79,7 @@ const users: IUserInput[] = [
   {
     name: 'Michael',
     email: 'michael@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'John Alexander',
@@ -96,7 +96,7 @@ const users: IUserInput[] = [
   {
     name: 'Emily',
     email: 'emily@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Emily Johnson',
@@ -113,7 +113,7 @@ const users: IUserInput[] = [
   {
     name: 'Alice',
     email: 'alice@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Alice Cooper',
@@ -130,7 +130,7 @@ const users: IUserInput[] = [
   {
     name: 'Tom',
     email: 'tom@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Tom Hanks',
@@ -147,7 +147,7 @@ const users: IUserInput[] = [
   {
     name: 'Linda',
     email: 'linda@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Linda Holmes',
@@ -164,7 +164,7 @@ const users: IUserInput[] = [
   {
     name: 'George',
     email: 'george@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'George Smith',
@@ -181,7 +181,7 @@ const users: IUserInput[] = [
   {
     name: 'Jessica',
     email: 'jessica@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Jessica Brown',
@@ -198,7 +198,7 @@ const users: IUserInput[] = [
   {
     name: 'Chris',
     email: 'chris@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Chris Evans',
@@ -215,7 +215,7 @@ const users: IUserInput[] = [
   {
     name: 'Samantha',
     email: 'samantha@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Samantha Wilson',
@@ -232,7 +232,7 @@ const users: IUserInput[] = [
   {
     name: 'David',
     email: 'david@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'David Lee',
@@ -249,7 +249,7 @@ const users: IUserInput[] = [
   {
     name: 'Anna',
     email: 'anna@example.com',
-    password: bcrypt.hashSync('123456', 12),
+    password: bcrypt.hashSync('1234', 12),
     role: 'user',
     address: {
       fullName: 'Anna Smith',
