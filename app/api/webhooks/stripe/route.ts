@@ -1,9 +1,5 @@
- export async function GET() {
-  console.log('Stripe Worker received a request')
-  return Response.json({ ok: true })
-}
 
-/*
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 // import { Client } from '@upstash/qstash'
@@ -67,7 +63,7 @@ export async function POST(req: NextRequest) {
 }
 
 
-*/
+
 
 
 
