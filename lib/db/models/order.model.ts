@@ -55,6 +55,8 @@ const orderSchema = new Schema<IOrder>(
     paidAt: { type: Date },
     isDelivered: { type: Boolean, required: true, default: false },
     deliveredAt: { type: Date },
+    // Stripe Step 1 intent ID — stored on creation, verified on success
+    stripePaymentIntentId: { type: String },
     createdAt: { type: Date, default: Date.now },
   },
   {

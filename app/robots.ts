@@ -1,10 +1,10 @@
 import type { MetadataRoute } from 'next'
-import { i18n } from '@/i18n-config' 
- 
+import { i18n } from '@/i18n-config'
+
 export default function robots(): MetadataRoute.Robots {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const siteUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
     const locales = i18n.locales.map((locale) => locale.code);
-     const disallowedPaths = [
+    const disallowedPaths = [
         '/auth',
         '/admin',
         '/api/',
@@ -16,8 +16,8 @@ export default function robots(): MetadataRoute.Robots {
         '/register',
         '/login',
         '/orders',
-     ];
-      // Paths to disallow for the Google Ads bot (it needs to see products, but not the checkout funnel)
+    ];
+    // Paths to disallow for the Google Ads bot (it needs to see products, but not the checkout funnel)
     const adsBotDisallowedPaths = [
         '/cart',
         '/checkout',
@@ -37,43 +37,43 @@ export default function robots(): MetadataRoute.Robots {
 
     return {
         rules: [
-        {
-            userAgent: '*',
-            disallow: [
-                ...getLocalizedPaths(disallowedPaths),
-                '/api/',
-                '/*?*sort=*',                    
-                '/*?*tag=*',                  
-                '/*?*price=*',                  
-                '/*?*rating=*',                  
-                '/*?*&*',
-                '/*?*oseid=*',
-                '/*preview_theme_id*',
-                '/*preview_script_id*',
-            ]
-        },
-        {
-            userAgent: 'adsbot-google',
-            disallow: getLocalizedPaths(adsBotDisallowedPaths),
-        },
-        {
-            userAgent: 'Nutch',
-            disallow: '/',
-        },
-        {
-            userAgent: [
-                'AhrefsBot',
-                'AhrefsSiteAudit',
-                'MJ12bot',
-                'SemrushBot',
-            ],
-            crawlDelay: 10,
-        },
-        {
-            userAgent: 'Pinterest',
-            crawlDelay: 1,
-        },
-    ],
+            {
+                userAgent: '*',
+                disallow: [
+                    ...getLocalizedPaths(disallowedPaths),
+                    '/api/',
+                    '/*?*sort=*',
+                    '/*?*tag=*',
+                    '/*?*price=*',
+                    '/*?*rating=*',
+                    '/*?*&*',
+                    '/*?*oseid=*',
+                    '/*preview_theme_id*',
+                    '/*preview_script_id*',
+                ]
+            },
+            {
+                userAgent: 'adsbot-google',
+                disallow: getLocalizedPaths(adsBotDisallowedPaths),
+            },
+            {
+                userAgent: 'Nutch',
+                disallow: '/',
+            },
+            {
+                userAgent: [
+                    'AhrefsBot',
+                    'AhrefsSiteAudit',
+                    'MJ12bot',
+                    'SemrushBot',
+                ],
+                crawlDelay: 10,
+            },
+            {
+                userAgent: 'Pinterest',
+                crawlDelay: 1,
+            },
+        ],
         sitemap: `${siteUrl}/sitemap.xml`
     }
 }

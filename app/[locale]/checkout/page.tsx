@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   const t = await getTranslations('Cart')

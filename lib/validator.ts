@@ -138,6 +138,8 @@ export const OrderInputSchema = z.object({
   deliveredAt: z.date().optional(),
   isPaid: z.boolean().default(false),
   paidAt: z.date().optional(),
+  // Stripe Step 1 intent ID — stored so Step 2 can verify & reuse it
+  stripePaymentIntentId: z.string().optional(),
 })
 
 // the whole cart Schema
@@ -320,6 +322,11 @@ export const SettingInputSchema = z.object({
       .number()
       .min(0, 'Free shipping min price must be at least 0')
       .default(0),
+    taxRate: z.coerce
+      .number()
+      .min(0, 'Tax rate must be at least 0')
+      .max(1, 'Tax rate must be at most 1 (e.g. 0.15 = 15%)')
+      .default(0.15),
     defaultTheme: z
       .string()
       .min(1, 'Default theme is required')
@@ -376,6 +383,10 @@ export const SettingInputSchemaNoDefaults = z.object({
       .number()
       .min(0, 'Free shipping min price must be at least 0')
       ,
+    taxRate: z.coerce
+      .number()
+      .min(0, 'Tax rate must be at least 0')
+      .max(1, 'Tax rate must be at most 1 (e.g. 0.15 = 15%)'),
     defaultTheme: z
       .string()
       .min(1, 'Default theme is required')

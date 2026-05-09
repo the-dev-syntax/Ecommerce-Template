@@ -5,6 +5,8 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import React from 'react'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   const t = await getTranslations('ProfileManager');

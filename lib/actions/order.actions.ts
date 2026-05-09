@@ -161,6 +161,61 @@ export async function approvePayPalOrder(
   }
 }
 
+// VERIFY & MARK ORDER PAID BY STRIPE - PRIVATE (success page fallback)
+export async function updateOrderToPaidByStripe(
+  orderId: string,
+  paymentIntentId: string
+) {
+  try {
+    await connectToDatabase()
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
+
+    const order = await Order.findById(orderId).populate<{
+      user: { email: string; name: string }
+    }>('user', 'name email')
+    if (!order) throw new Error('Order not found')
+    if (order.isPaid) return { success: true, message: 'Order already paid' }
+
+    // Capture email BEFORE save — Mongoose replaces populated user with
+    // the raw ObjectId on save(), making order.user.email null afterwards.
+    const userEmail = order.user?.email ?? ''
+
+    // Verify payment status directly with Stripe
+    const Stripe = (await import('stripe')).default
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+
+    if (paymentIntent.status !== 'succeeded') {
+      return { success: false, message: 'Payment not completed' }
+    }
+
+    order.isPaid = true
+    order.paidAt = new Date()
+    order.paymentResult = {
+      id: paymentIntent.id,
+      status: paymentIntent.status,
+      email_address: userEmail,
+      pricePaid: String(paymentIntent.amount / 100),
+    }
+    await order.save()
+
+    // Send receipt in a separate try-catch — a failed email must never
+    // surface as a payment failure since the order is already saved as paid.
+    try {
+      if (userEmail) await sendPurchaseReceipt({ order })
+    } catch (emailErr) {
+      console.error('Purchase receipt email failed (order still paid):', emailErr)
+    }
+
+    await revalidateAllLocales(`/account/orders/${orderId}`)
+
+    return { success: true, message: 'Order paid successfully' }
+  } catch (err) {
+    return { success: false, message: formatError(err) }
+  }
+}
+
 // UPDATE ORDER SHIPPING ADDRESS - PRIVATE
 export const calcDeliveryDateAndPrice = async ({
   items,
@@ -175,7 +230,7 @@ export const calcDeliveryDateAndPrice = async ({
   const session = await auth()
     if (!session) throw new Error('User not authenticated')
   
-  const { availableDeliveryDates } = await getSetting()
+  const { availableDeliveryDates, common: { taxRate } } = await getSetting()
 
   const itemsPrice = round2(
     items.reduce((acc, item) => acc + item.price * item.quantity, 0)
@@ -196,7 +251,7 @@ const shippingPrice =
     ? 0
     : deliveryDate.shippingPrice
 
-const taxPrice = !shippingAddress ? undefined : round2(itemsPrice * 0.15)
+const taxPrice = !shippingAddress ? undefined : round2(itemsPrice * taxRate)
 
 const totalPrice = round2(
   itemsPrice +

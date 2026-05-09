@@ -10,6 +10,9 @@ import { getSetting } from '@/lib/actions/setting.actions'
 import { cookies } from 'next/headers'
 import { Metadata } from 'next/types'
 
+// Force dynamic rendering - required because layout uses database calls and cookies
+export const dynamic = 'force-dynamic'
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -19,10 +22,6 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 })
-
-export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }))
-}
 
 export async function generateMetadata(props: {
   params:  Promise<{ locale: string }>

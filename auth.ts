@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials' // Tool for em
 import { MongoDBAdapter } from '@auth/mongodb-adapter' // Tool to connect NextAuth to your DB from Node_module/@auth file
 import authConfig from './auth.config'    // Partial auth config (used by middleware)
 import { connectToDatabase } from './lib/db' //  mongoose connecting to DB
-import client from './lib/db/client'  // You create an *instance* of `MongoClient` to establish a connection.
+import { clientPromise } from './lib/db/client'  // Cached MongoClient promise for connection reuse
 import User from './lib/db/models/user.model' 
 // import bcrypt from 'bcryptjs'
 import Google from 'next-auth/providers/google'
@@ -24,7 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
   },
-  adapter: MongoDBAdapter(client),
+  adapter: MongoDBAdapter(clientPromise),
   providers: [
     Google({
       allowDangerousEmailAccountLinking: true,

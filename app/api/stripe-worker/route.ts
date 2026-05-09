@@ -1,9 +1,6 @@
- export async function GET() {
-  console.log('Stripe Worker received a request')
-  return Response.json({ ok: true })
-}
- 
- /*
+
+
+
 import { sendPurchaseReceipt } from '@/emails'
 import Order from '@/lib/db/models/order.model'
 import { connectToDatabase } from '@/lib/db'
@@ -13,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 
 export async function POST(req: NextRequest) {
- 
+
   const { event } = await req.json()
 
   if (event.type !== 'charge.succeeded') return NextResponse.json({ ok: true })
@@ -35,4 +32,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
-*/

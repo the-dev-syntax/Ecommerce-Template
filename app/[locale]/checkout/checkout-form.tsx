@@ -45,33 +45,33 @@ import { useTranslations } from 'next-intl'
 const shippingAddressDefaultValues =
   process.env.NODE_ENV === 'development'
     ? {
-        fullName: 'Deca',
-        street: '1911, 65 Prince bander Est',
-        city: 'Riyadh',
-        province: 'Riyadh',
-        phone: '4181234567',
-        postalCode: 'A8C 1H4',
-        country: 'Saudi Arabia',
-      }
+      fullName: 'Deca',
+      street: '1911, 65 Prince bander Est',
+      city: 'Riyadh',
+      province: 'Riyadh',
+      phone: '4181234567',
+      postalCode: 'A8C 1H4',
+      country: 'Saudi Arabia',
+    }
     : {
-        fullName: '',
-        street: '',
-        city: '',
-        province: '',
-        phone: '',
-        postalCode: '',
-        country: '',
-      }
+      fullName: '',
+      street: '',
+      city: '',
+      province: '',
+      phone: '',
+      postalCode: '',
+      country: '',
+    }
 const CheckoutForm = () => {
   const router = useRouter()
   const t = useTranslations('Form')
 
-  const { setting: { 
-      site, 
-      availableDeliveryDates , 
-      availablePaymentMethods , 
-      defaultPaymentMethod 
-    } 
+  const { setting: {
+    site,
+    availableDeliveryDates,
+    availablePaymentMethods,
+    defaultPaymentMethod
+  }
   } = useSettingStore()
 
   const {
@@ -87,19 +87,19 @@ const CheckoutForm = () => {
     },
     updateItem,
     removeItem,
-    clearCart,
+    // clearCart,
     setShippingAddress,
     setPaymentMethod,
     setDeliveryDateIndex,
   } = useCartStore()
 
   const selectedDelivery =
-  availableDeliveryDates && 
-  deliveryDateIndex !== undefined &&
-  deliveryDateIndex >= 0 &&
-  deliveryDateIndex < availableDeliveryDates.length
-    ? availableDeliveryDates[deliveryDateIndex]
-    : availableDeliveryDates?.[0] || null // Fallback to first item or null
+    availableDeliveryDates &&
+      deliveryDateIndex !== undefined &&
+      deliveryDateIndex >= 0 &&
+      deliveryDateIndex < availableDeliveryDates.length
+      ? availableDeliveryDates[deliveryDateIndex]
+      : availableDeliveryDates?.[0] || null // Fallback to first item or null
 
   const isMounted = useIsMounted()
 
@@ -112,8 +112,8 @@ const CheckoutForm = () => {
     setShippingAddress(values) // update cart state
     setIsAddressSelected(true) // update UI
   }
-// for it to render all inside, isMounted and shippingAddress has to be true.
-// items and router is unnecessary. 
+  // for it to render all inside, isMounted and shippingAddress has to be true.
+  // items and router is unnecessary. 
   useEffect(() => {
     if (!isMounted || !shippingAddress) return
     shippingAddressForm.setValue('fullName', shippingAddress.fullName)
@@ -133,13 +133,13 @@ const CheckoutForm = () => {
 
   const handlePlaceOrder = async () => {
     // TODO: place order
-     if (!selectedDelivery) {
-    toast({
-      description: 'Please select a delivery date',
-      variant: 'destructive',
-    })
-    return
-  }
+    if (!selectedDelivery) {
+      toast({
+        description: 'Please select a delivery date',
+        variant: 'destructive',
+      })
+      return
+    }
     console.log('placing order with following details:')
     const res = await createOrder({
       items,
@@ -163,7 +163,8 @@ const CheckoutForm = () => {
         description: res.message,
         variant: 'default',
       })
-      clearCart()
+      // Don't clear cart here - it should only be cleared after successful payment
+      // The cart will be cleared in the payment success page/webhook
       router.push(`/checkout/${res.data?.orderId}`)
     }
   }
@@ -174,10 +175,10 @@ const CheckoutForm = () => {
   const handleSelectShippingAddress = () => {
     shippingAddressForm.handleSubmit(onSubmitShippingAddress)()
   }
-  
+
 
   const CheckoutSummary = () => (
-    
+
     <Card>
       <CardContent className='p-4'>
         {!isAddressSelected && (
@@ -212,20 +213,20 @@ const CheckoutForm = () => {
             <Button onClick={handlePlaceOrder} className='rounded-full w-full'>
               {t('Place Your Order')}
             </Button>
-            <p className='text-xs text-center py-2'>               
+            <p className='text-xs text-center py-2'>
               {t.rich('agreementNotice', {
-                    siteName: site.name,
-                    privacyLink: (chunks) => (
-                      <Link href="/page/privacy-policy" className="link">
-                        {chunks}
-                      </Link>
-                    ),          
-                    conditionsLink: (chunks) => (
-                      <Link href="/page/conditions-of-use" className="link">
-                        {chunks}
-                      </Link>
-                    ),
-              })}      
+                siteName: site.name,
+                privacyLink: (chunks) => (
+                  <Link href="/page/privacy-policy" className="link">
+                    {chunks}
+                  </Link>
+                ),
+                conditionsLink: (chunks) => (
+                  <Link href="/page/conditions-of-use" className="link">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           </div>
         )}
@@ -537,12 +538,12 @@ const CheckoutForm = () => {
                   <p>
                     {t('Delivery date')}:{' '}
                     {isMounted && selectedDelivery ? (
-                        formatDateTime(
-                          calculateFutureDate(selectedDelivery.daysToDeliver)
-                        ).dateOnly
-                      ) : (
-                        <span className="animate-pulse">...</span> // Loading state
-                      )}
+                      formatDateTime(
+                        calculateFutureDate(selectedDelivery.daysToDeliver)
+                      ).dateOnly
+                    ) : (
+                      <span className="animate-pulse">...</span> // Loading state
+                    )}
                   </p>
                   <ul>
                     {items.map((item, _index) => (
@@ -574,14 +575,14 @@ const CheckoutForm = () => {
                   <CardContent className='p-4'>
                     <p className='mb-2'>
                       <span className='text-lg font-bold text-green-700'>
-                        {t('Arriving')}{' '} 
+                        {t('Arriving')}{' '}
                         {isMounted && selectedDelivery ? (
-                            formatDateTime(
-                              calculateFutureDate(selectedDelivery.daysToDeliver)
-                            ).dateOnly
-                          ) : (
-                            <span className="animate-pulse">...</span> // Loading state
-                          )}
+                          formatDateTime(
+                            calculateFutureDate(selectedDelivery.daysToDeliver)
+                          ).dateOnly
+                        ) : (
+                          <span className="animate-pulse">...</span> // Loading state
+                        )}
                       </span>{' '}
                       {t('If you order in the next')} {timeUntilMidnight().hours} {t('hours')}
                       and {timeUntilMidnight().minutes} {t('minutes')}.
@@ -670,7 +671,7 @@ const CheckoutForm = () => {
                                     </div>
                                     <div>
                                       {(dd.freeShippingMinPrice > 0 &&
-                                      itemsPrice >= dd.freeShippingMinPrice
+                                        itemsPrice >= dd.freeShippingMinPrice
                                         ? 0
                                         : dd.shippingPrice) === 0 ? (
                                         t('FREE Shipping')
@@ -717,17 +718,17 @@ const CheckoutForm = () => {
                     <p className='text-xs'>
                       {' '}
                       {t.rich('agreementNotice', {
-                          siteName: site.name,
-                          privacyLink: (chunks) => (
-                            <Link href="/page/privacy-policy" className="link">
-                              {chunks}
-                            </Link>
-                          ),          
-                          conditionsLink: (chunks) => (
-                            <Link href="/page/conditions-of-use" className="link">
-                              {chunks}
-                            </Link>
-                          ),
+                        siteName: site.name,
+                        privacyLink: (chunks) => (
+                          <Link href="/page/privacy-policy" className="link">
+                            {chunks}
+                          </Link>
+                        ),
+                        conditionsLink: (chunks) => (
+                          <Link href="/page/conditions-of-use" className="link">
+                            {chunks}
+                          </Link>
+                        ),
                       })}
                     </p>
                   </div>

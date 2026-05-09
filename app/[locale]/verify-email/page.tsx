@@ -2,16 +2,9 @@ import { Suspense } from 'react';
 import VerifyClientToken from './VerifyClientToken';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { i18n } from '@/i18n-config';
 
-
-export async function generateStaticParams() {
-  const locales = i18n.locales; 
-
-  return locales.map((locale) => ({
-    locale: locale.code,
-  }));
-}
+// Force dynamic rendering - this page uses auth session
+export const dynamic = 'force-dynamic'
 // Use Suspense to handle the case where searchParams might not be immediately available
 export default async function VerifyEmailPage(props: {
    params: Promise<{ locale: string }>   

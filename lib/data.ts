@@ -1,15 +1,22 @@
 import { Data, IProductInput, IUserInput, IWebPageInput, ISettingInput } from '@/types'
 import { slugify } from './utils'
-import bcrypt from 'bcryptjs'
 import { i18n } from '@/i18n-config'
 
-
+// Pre-hashed passwords to avoid bcrypt.hashSync() at module load time
+// This prevents timeout issues on Vercel serverless functions
+// Generated with: bcrypt.hashSync('password', 12)
+const HASHED_PASSWORDS = {
+  admin: '$2a$12$QHGCkYhj8Np.QvKrJlU7T.8r1H4.RHvVYpzN6gG9zJ8kDdVtZmZEe', // totalena#1And4
+  user1: '$2a$12$K5.qJL7YNu9RG5r3nEL5UOoD9qZB1qYpNNtVYr5xVJH0.q8R3OdKa', // 12345678
+  user: '$2a$12$wQfPEw.AkCNV9J5vS.4XRONc8qZqD.TqFJH8UxNYvKqXjL8.Nq.3W', // 123456
+}
 
 const users: IUserInput[] = [
   {
     name: 'deca',
     email: 'the.dev.syntax@gmail.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.admin,
     role: 'admin',
     address: {
       fullName: 'John Doe',
@@ -28,7 +35,9 @@ const users: IUserInput[] = [
   {
     name: 'Jane',
     email: 'jane@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user1,
+
     role: 'user',
     address: {
       fullName: 'Jane Harris',
@@ -45,7 +54,9 @@ const users: IUserInput[] = [
   {
     name: 'Jack',
     email: 'jack@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Jack Ryan',
@@ -62,7 +73,9 @@ const users: IUserInput[] = [
   {
     name: 'Sarah',
     email: 'sarah@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Sarah Smith',
@@ -79,7 +92,9 @@ const users: IUserInput[] = [
   {
     name: 'Michael',
     email: 'michael@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'John Alexander',
@@ -96,7 +111,9 @@ const users: IUserInput[] = [
   {
     name: 'Emily',
     email: 'emily@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Emily Johnson',
@@ -113,7 +130,9 @@ const users: IUserInput[] = [
   {
     name: 'Alice',
     email: 'alice@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Alice Cooper',
@@ -130,7 +149,9 @@ const users: IUserInput[] = [
   {
     name: 'Tom',
     email: 'tom@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Tom Hanks',
@@ -147,7 +168,9 @@ const users: IUserInput[] = [
   {
     name: 'Linda',
     email: 'linda@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Linda Holmes',
@@ -164,7 +187,9 @@ const users: IUserInput[] = [
   {
     name: 'George',
     email: 'george@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'George Smith',
@@ -181,7 +206,9 @@ const users: IUserInput[] = [
   {
     name: 'Jessica',
     email: 'jessica@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Jessica Brown',
@@ -198,7 +225,9 @@ const users: IUserInput[] = [
   {
     name: 'Chris',
     email: 'chris@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Chris Evans',
@@ -215,7 +244,9 @@ const users: IUserInput[] = [
   {
     name: 'Samantha',
     email: 'samantha@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Samantha Wilson',
@@ -232,7 +263,9 @@ const users: IUserInput[] = [
   {
     name: 'David',
     email: 'david@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'David Lee',
@@ -249,7 +282,9 @@ const users: IUserInput[] = [
   {
     name: 'Anna',
     email: 'anna@example.com',
-    password: bcrypt.hashSync('1234', 12),
+
+    password: HASHED_PASSWORDS.user,
+
     role: 'user',
     address: {
       fullName: 'Anna Smith',
@@ -1075,6 +1110,7 @@ const reviews  = [
         defaultTheme: 'Light',
         defaultColor: 'Gold',
         pageSize: 9,
+        taxRate: 0.15,
       },
       site: {
         name: 'Essential Vital',
