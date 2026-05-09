@@ -27,7 +27,9 @@ export default function StripeForm({
     // const { setting: { site } } = useSettingStore()
     const t = useTranslations('Form')
    
-    const site = { url: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000' }
+    // Use the current browser origin so Stripe redirects back to the same host.
+    // This works correctly on both localhost and Vercel without relying on env vars.
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
     async function handleSubmit(e: FormEvent) {
       e.preventDefault()
@@ -39,7 +41,7 @@ export default function StripeForm({
         .confirmPayment({
           elements,
           confirmParams: {
-            return_url: `${site.url}/checkout/${orderId}/stripe-payment-success`,
+            return_url: `${baseUrl}/checkout/${orderId}/stripe-payment-success`,
           },
         })
         .then(({ error }) => {

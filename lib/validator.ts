@@ -138,6 +138,8 @@ export const OrderInputSchema = z.object({
   deliveredAt: z.date().optional(),
   isPaid: z.boolean().default(false),
   paidAt: z.date().optional(),
+  // Stripe Step 1 intent ID — stored so Step 2 can verify & reuse it
+  stripePaymentIntentId: z.string().optional(),
 })
 
 // the whole cart Schema
