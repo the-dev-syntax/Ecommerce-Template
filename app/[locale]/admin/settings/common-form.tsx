@@ -70,6 +70,29 @@ export default function CommonForm({
               </FormItem>
             )}
           />
+          <FormField
+            control={control}
+            name='common.taxRate'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Tax Rate')}</FormLabel>
+                <FormControl>
+                  <Input
+                    type='number'
+                    step='0.01'
+                    min='0'
+                    max='1'
+                    placeholder='e.g. 0.15 for 15%'
+                    {...field}
+                  />
+                </FormControl>
+                <p className='text-xs text-muted-foreground mt-1'>
+                  Enter as a decimal — e.g. <strong>0.15</strong> = 15% VAT
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField

@@ -180,7 +180,7 @@ export const calcDeliveryDateAndPriceForSeed = ({
   shippingAddress?: ShippingAddress
 }) => {
 
-  const { availableDeliveryDates  } = data.settings[0]
+  const { availableDeliveryDates, common: { taxRate } } = data.settings[0]
 
   const itemsPrice = round2(
     items.reduce((acc, item) => acc + item.price * item.quantity, 0)
@@ -195,7 +195,7 @@ export const calcDeliveryDateAndPriceForSeed = ({
 
   const shippingPrice = deliveryDate.shippingPrice
 
-  const taxPrice = round2(itemsPrice * 0.15)
+  const taxPrice = round2(itemsPrice * taxRate)
   const totalPrice = round2(
     itemsPrice +
       (shippingPrice ? round2(shippingPrice) : 0) +

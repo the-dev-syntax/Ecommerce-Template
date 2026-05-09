@@ -1081,6 +1081,7 @@ const reviews  = [
         defaultTheme: 'Light',
         defaultColor: 'Gold',
         pageSize: 9,
+        taxRate: 0.15,
       },
       site: {
         name: 'Essential Vital',

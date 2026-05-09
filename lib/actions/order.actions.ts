@@ -230,7 +230,7 @@ export const calcDeliveryDateAndPrice = async ({
   const session = await auth()
     if (!session) throw new Error('User not authenticated')
   
-  const { availableDeliveryDates } = await getSetting()
+  const { availableDeliveryDates, common: { taxRate } } = await getSetting()
 
   const itemsPrice = round2(
     items.reduce((acc, item) => acc + item.price * item.quantity, 0)
@@ -251,7 +251,7 @@ const shippingPrice =
     ? 0
     : deliveryDate.shippingPrice
 
-const taxPrice = !shippingAddress ? undefined : round2(itemsPrice * 0.15)
+const taxPrice = !shippingAddress ? undefined : round2(itemsPrice * taxRate)
 
 const totalPrice = round2(
   itemsPrice +
