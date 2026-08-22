@@ -232,12 +232,3 @@ const WebPageForm = ({
 
 export default WebPageForm
 
-/*
-<ReactMarkdown                  
-                    value={field.value}
-                    style={{ height: '500px' }}
-                    onChange={(val) => field.onChange(val || '')}
-                    {...mdEditorConfig}
-                  />
-                   {<Textarea placeholder='Enter content' {...field} />  }               
-*/

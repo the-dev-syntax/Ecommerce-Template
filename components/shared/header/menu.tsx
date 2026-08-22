@@ -26,6 +26,7 @@ const Menu = ({ forAdmin = false }: { forAdmin?: boolean }) => {
       <UserButton />
       {forAdmin ? null : <CartButton />}
       </nav>
+
       <nav className='md:hidden'>
         <Sheet>
           <SheetTrigger className='align-middle header-button'>
@@ -45,6 +46,7 @@ const Menu = ({ forAdmin = false }: { forAdmin?: boolean }) => {
           </SheetContent>
         </Sheet>
       </nav>
+      
     </div>
   )
 }

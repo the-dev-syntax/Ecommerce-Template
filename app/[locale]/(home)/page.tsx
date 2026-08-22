@@ -92,7 +92,9 @@ export default async function Page() {
     <>
       <HomeCarousel items={carousels} />
       <div className='md:p-4 md:space-y-4 bg-border'>
+
         <HomeCard cards={cards} />
+
         <Card className='w-full rounded-none'>
           <CardContent className='p-4 items-center gap-3'>
             <ProductSlider title={t('todaysDeals')} products={todaysDeals} />
@@ -105,9 +107,10 @@ export default async function Page() {
               title={t('Best Selling Products')}
               products={bestSellingProducts}
               hideDetails
-            />
+            />            
           </CardContent>
         </Card>
+        
       </div>
       <div className='p-4 bg-background'>
         <BrowsingHistoryList />

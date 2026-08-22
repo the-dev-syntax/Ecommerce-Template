@@ -1239,20 +1239,302 @@ Managing your account is easy. Log in to update your personal information, payme
     {
       title: 'Privacy Policy',
       slug: 'privacy-policy',
-      content: `We value your privacy and are committed to protecting your personal information. This Privacy Notice explains how we collect, use, and share your data when you interact with our services. By using our platform, you consent to the practices described herein.
+      content: `**Effective Date:** January 1, 2025  
+**Last Updated:** May 9, 2026
 
-We collect data such as your name, email address, and payment details to provide you with tailored services and improve your experience. This information may also be used for marketing purposes, but only with your consent. Additionally, we may share your data with trusted third-party providers to facilitate transactions or deliver products.
+## 1. Who We Are
 
-Your data is safeguarded through robust security measures to prevent unauthorized access. However, you have the right to access, correct, or delete your personal information at any time. For inquiries or concerns regarding your privacy, please contact our support team.`,
+{{appName}} ("we", "us", or "our") operates the website and e-commerce platform located at our primary domain. We are the data controller responsible for your personal information.
+
+**Contact:**  
+Email: contact@essentialvital.com  
+Address: Riyadh, Saudi Arabia
+
+---
+
+## 2. Information We Collect
+
+We collect the following categories of personal information:
+
+| Category | Examples | Purpose |
+|---|---|---|
+| **Identity** | Full name | Account creation, order processing |
+| **Contact** | Email address, phone number | Order confirmations, support |
+| **Financial** | Payment card details (processed by Stripe/PayPal — we never store raw card numbers) | Processing payments |
+| **Transaction** | Order history, items purchased, amounts paid | Fulfilling orders, customer support |
+| **Technical** | IP address, browser type, device type, cookie identifiers | Site security, fraud prevention, analytics |
+| **Usage** | Pages visited, search queries, browsing history within the site | Improving our service |
+| **Marketing** | Communication preferences | Sending promotional emails (with consent) |
+
+---
+
+## 3. How We Use Your Information
+
+We use your personal data for the following purposes and on the following legal bases:
+
+- **Performance of a contract** — to process orders, payments, and deliver products you purchase.
+- **Legal obligation** — to comply with applicable tax, accounting, and consumer protection laws.
+- **Legitimate interests** — to detect fraud, improve our website, and provide customer support.
+- **Consent** — to send marketing emails and use non-essential cookies (you may withdraw consent at any time).
+
+---
+
+## 4. Cookies & Tracking Technologies
+
+We use the following types of cookies:
+
+- **Strictly Necessary** — Essential for the site to function (session management, security). Cannot be disabled.
+- **Analytics & Performance** — Help us understand how visitors use our site (e.g., page views, traffic sources). We use anonymised or pseudonymised data where possible.
+- **Marketing & Advertising** — Used to deliver relevant advertisements. Only set with your explicit consent.
+- **Preferences & Functionality** — Remember your settings (language, currency, theme).
+
+You can manage your cookie preferences at any time using the cookie consent banner on our site or through your browser settings.
+
+---
+
+## 5. Sharing Your Information
+
+We share your data only in these circumstances:
+
+- **Payment Processors** — Stripe and/or PayPal to process transactions securely.
+- **Delivery Partners** — Shipping carriers receive your name and address to fulfil orders.
+- **Email Service Providers** — Resend to send transactional and marketing emails.
+- **Cloud Infrastructure** — Vercel (hosting), MongoDB Atlas (database), Uploadthing (file storage).
+- **Legal Authorities** — When required by law, court order, or to protect our legal rights.
+
+We do **not** sell your personal information to third parties.
+
+---
+
+## 6. International Data Transfers
+
+Your data may be transferred to and processed in countries outside your country of residence, including the United States and EU member states. Where we transfer data outside the EEA, we ensure appropriate safeguards are in place (e.g., Standard Contractual Clauses).
+
+---
+
+## 7. Data Retention
+
+We retain personal data for as long as necessary to fulfil the purposes described in this policy:
+
+- **Account data:** While your account is active, plus 3 years after closure.
+- **Order records:** 7 years (to comply with tax and accounting obligations).
+- **Marketing consents:** Until you withdraw consent.
+
+---
+
+## 8. Your Rights (GDPR — EU/UK Residents)
+
+If you are located in the EU or UK, you have the following rights:
+
+- **Access** — Request a copy of your personal data.
+- **Rectification** — Correct inaccurate or incomplete data.
+- **Erasure** — Request deletion of your data ("right to be forgotten").
+- **Restriction** — Ask us to limit how we use your data.
+- **Portability** — Receive your data in a machine-readable format.
+- **Object** — Object to processing based on legitimate interests or for direct marketing.
+- **Withdraw consent** — Where processing is based on consent, you may withdraw it at any time.
+
+To exercise any of these rights, contact us at **contact@essentialvital.com**. We will respond within **30 days**.
+
+You also have the right to lodge a complaint with your national data protection authority.
+
+---
+
+## 9. Your Rights (CCPA — California Residents) {#ccpa}
+
+If you are a California resident, the California Consumer Privacy Act (CCPA) grants you the following rights:
+
+- **Know** — The categories and specific pieces of personal information we have collected about you.
+- **Delete** — Request deletion of your personal information, subject to certain exceptions.
+- **Opt-Out** — We do not sell personal information. You do not need to opt out.
+- **Non-Discrimination** — We will not discriminate against you for exercising your CCPA rights.
+
+To submit a CCPA request, email us at **contact@essentialvital.com** with the subject line "CCPA Request".
+
+---
+
+## 10. Children's Privacy
+
+Our services are not directed to children under the age of 16. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact us immediately.
+
+---
+
+## 11. Security
+
+We implement industry-standard technical and organisational security measures including:
+- HTTPS encryption for all data in transit.
+- Tokenised payment processing (we never store raw card numbers).
+- Password hashing using bcrypt.
+- Regular security reviews of our infrastructure.
+
+No system is completely secure. In the event of a data breach, we will notify affected users and relevant authorities as required by law.
+
+---
+
+## 12. Changes to This Policy
+
+We may update this Privacy Policy from time to time. The "Last Updated" date at the top of this page indicates when changes were made. For material changes, we will notify you by email or a prominent notice on our website before the change becomes effective.
+
+---
+
+## 13. Contact Us
+
+For any privacy-related questions or to exercise your rights:
+
+**{{appName}}**  
+Email: contact@essentialvital.com  
+Address: Riyadh, Saudi Arabia`,
       isPublished: true,
     },
     {
       title: 'Conditions of Use',
       slug: 'conditions-of-use',
-      content: `Welcome to [Ecommerce Website Name]. By accessing or using our website, you agree to comply with and be bound by the following terms and conditions. These terms govern your use of our platform, including browsing, purchasing products, and interacting with any content or services provided. You must be at least 18 years old or have the consent of a parent or guardian to use this website. Any breach of these terms may result in the termination of your access to our platform.
+      content: `**Effective Date:** January 1, 2025  
+**Last Updated:** May 9, 2026
 
-We strive to ensure all product descriptions, pricing, and availability information on our website are accurate. However, errors may occur, and we reserve the right to correct them without prior notice. All purchases are subject to our return and refund policy. By using our site, you acknowledge that your personal information will be processed according to our privacy policy, ensuring your data is handled securely and responsibly. Please review these terms carefully before proceeding with any transactions.
-`,
+## 1. Acceptance of Terms
+
+By accessing or using the {{appName}} website and services (collectively, the "Service"), you agree to be bound by these Conditions of Use ("Terms"). If you do not agree to these Terms, please do not use the Service.
+
+These Terms constitute a legally binding agreement between you and **{{appName}}**. We reserve the right to modify these Terms at any time. Continued use of the Service after changes constitutes acceptance of the revised Terms.
+
+---
+
+## 2. Eligibility
+
+You must be at least **18 years old** (or the age of legal majority in your jurisdiction) to use this Service and make purchases. By using the Service, you represent and warrant that you meet this requirement. If you are under 18, you may only use the Service with the involvement of a parent or legal guardian.
+
+---
+
+## 3. Account Registration
+
+- You are responsible for maintaining the confidentiality of your account credentials.
+- You agree to provide accurate, current, and complete information during registration.
+- You are responsible for all activity that occurs under your account.
+- Notify us immediately at **contact@essentialvital.com** if you suspect unauthorised access to your account.
+- We reserve the right to terminate accounts that violate these Terms.
+
+---
+
+## 4. Products and Orders
+
+**4.1 Product Descriptions**  
+We strive to ensure product descriptions, images, and pricing are accurate. However, errors may occur. We reserve the right to correct errors and cancel orders placed at incorrect prices before shipment.
+
+**4.2 Order Acceptance**  
+Your order constitutes an offer to purchase. We accept your order when we send a shipment confirmation email. We reserve the right to refuse or cancel any order at our discretion, including if:
+- The product is out of stock.
+- There is an error in the product description or price.
+- We suspect fraudulent activity.
+
+**4.3 Pricing**  
+All prices are displayed in the selected currency and are inclusive of applicable taxes unless otherwise stated. Shipping fees are additional and displayed at checkout.
+
+**4.4 Payment**  
+We accept payment via Stripe (credit/debit card) and PayPal. All payment processing is handled by our third-party providers and is subject to their terms of service. We do not store your full payment card details.
+
+---
+
+## 5. Shipping and Delivery
+
+Delivery timelines are estimates and not guarantees. We are not liable for delays caused by third-party carriers, customs, or circumstances beyond our control. Risk of loss and title for products pass to you upon delivery to the carrier.
+
+For full details, see our **Shipping Policy** page.
+
+---
+
+## 6. Returns and Refunds
+
+We offer a **30-day return policy** for new, unopened merchandise in its original condition. Some products may be excluded. To initiate a return, contact us at **contact@essentialvital.com**.
+
+Refunds are processed to the original payment method within **5–10 business days** of receiving the returned item. Shipping costs for returns are the responsibility of the customer unless the item was defective or incorrectly sent.
+
+For full details, see our **Returns Policy** page.
+
+---
+
+## 7. Intellectual Property
+
+All content on this Service — including text, graphics, logos, images, product descriptions, and software — is the property of {{appName}} or its content suppliers and is protected by applicable intellectual property laws. You may not reproduce, distribute, or create derivative works without our prior written consent.
+
+---
+
+## 8. Prohibited Conduct
+
+You agree not to:
+
+- Use the Service for any unlawful purpose or in violation of any applicable laws.
+- Submit false, fraudulent, or misleading information.
+- Interfere with or disrupt the security, integrity, or performance of the Service.
+- Attempt to gain unauthorised access to any part of the Service.
+- Use automated tools (bots, scrapers) to access or collect data from the Service.
+- Post or transmit any content that is defamatory, obscene, or harmful.
+
+Violations may result in immediate termination of your account and possible legal action.
+
+---
+
+## 9. User-Generated Content
+
+By submitting reviews, ratings, or other content, you grant {{appName}} a non-exclusive, royalty-free, perpetual, worldwide licence to use, reproduce, publish, and display that content in connection with our Service. You represent that you own or have the right to submit the content and that it does not violate any third-party rights.
+
+---
+
+## 10. Disclaimer of Warranties
+
+THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES.
+
+---
+
+## 11. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {{appName}} SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, USE, OR GOODWILL, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF THE SERVICE.
+
+OUR TOTAL LIABILITY TO YOU FOR ANY CLAIM ARISING FROM THESE TERMS OR YOUR USE OF THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID TO US IN THE **12 MONTHS** PRECEDING THE CLAIM.
+
+---
+
+## 12. Indemnification
+
+You agree to indemnify, defend, and hold harmless {{appName}}, its officers, directors, employees, and agents from any claims, damages, losses, and expenses (including reasonable legal fees) arising out of your use of the Service, your violation of these Terms, or your infringement of any third-party rights.
+
+---
+
+## 13. Governing Law and Dispute Resolution
+
+These Terms are governed by the laws of **Saudi Arabia**, without regard to conflict of law principles. For EU/UK users, applicable EU/UK consumer protection laws also apply and are not excluded by these Terms.
+
+**For EU consumers:** You may use the European Commission's online dispute resolution platform at [https://ec.europa.eu/consumers/odr](https://ec.europa.eu/consumers/odr).
+
+For all other disputes, you agree to submit to the exclusive jurisdiction of the courts of Riyadh, Saudi Arabia.
+
+---
+
+## 14. Privacy
+
+Your use of the Service is also governed by our **Privacy Policy**, which is incorporated into these Terms by reference. Please review it carefully.
+
+---
+
+## 15. Termination
+
+We may suspend or terminate your account and access to the Service at any time, for any reason, including violation of these Terms, with or without notice. Provisions that by their nature should survive termination will do so, including intellectual property rights, disclaimers, and limitations of liability.
+
+---
+
+## 16. Severability
+
+If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
+
+---
+
+## 17. Contact Us
+
+For questions about these Terms:
+
+**{{appName}}**  
+Email: contact@essentialvital.com  
+Address: Riyadh, Saudi Arabia`,
       isPublished: true,
     },
     {
@@ -1271,7 +1553,67 @@ We also provide helpful resources such as order tracking, product guides, and FA
     {
       title: 'Returns Policy',
       slug: 'returns-policy',
-      content: 'Returns Policy Content',
+      content: `**Effective Date:** January 1, 2025
+
+## Our 30-Day Return Guarantee
+
+At {{appName}}, your satisfaction is our priority. If you are not completely satisfied with your purchase, you may return eligible items within **30 days** of the delivery date.
+
+---
+
+## Eligibility
+
+To be eligible for a return, your item must be:
+
+- Unused and in the same condition as received.
+- In the original packaging with all tags and accessories included.
+- Returned within 30 days of the delivery date.
+
+**Non-returnable items:**
+- Opened nutritional supplements or consumables (for health and safety reasons).
+- Gift cards.
+- Items marked "Final Sale" at the time of purchase.
+
+---
+
+## How to Initiate a Return
+
+1. Email us at **contact@essentialvital.com** with your order number and reason for return.
+2. We will send you a Return Merchandise Authorisation (RMA) number and return instructions within **2 business days**.
+3. Ship the item back using a trackable shipping method. Retain your shipping receipt.
+
+---
+
+## Refunds
+
+- Once your return is received and inspected, we will notify you by email.
+- Approved refunds are processed to your **original payment method** within **5–10 business days**.
+- Original shipping fees are non-refundable unless the return is due to our error (defective or wrong item).
+
+---
+
+## Exchanges
+
+We do not offer direct exchanges. If you need a different item, please return your original purchase for a refund and place a new order.
+
+---
+
+## Damaged or Defective Items
+
+If you receive a damaged or defective product, please contact us within **7 days** of receipt with photos of the damage. We will arrange a replacement or full refund at no cost to you.
+
+---
+
+## EU/UK Statutory Rights
+
+If you are based in the EU or UK, you have the statutory right to cancel your order within **14 days** of receiving it (the "cooling-off period") without giving any reason. To exercise this right, notify us at **contact@essentialvital.com** before the 14-day period expires. The cost of return shipping is your responsibility unless the goods are defective.
+
+---
+
+## Contact
+
+For all returns enquiries:  
+Email: **contact@essentialvital.com**`,
       isPublished: true,
     },
     {

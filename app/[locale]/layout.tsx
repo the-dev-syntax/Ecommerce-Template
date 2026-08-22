@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { cookies } from 'next/headers'
 import { Metadata } from 'next/types'
+import CookieConsentBanner from '@/components/shared/cookie-consent-banner'
 
 // Force dynamic rendering - required because layout uses database calls and cookies
 export const dynamic = 'force-dynamic'
@@ -124,6 +125,7 @@ export default async function AppLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ClientProviders setting={{ ...setting, currency }}>
             {children}
+            <CookieConsentBanner />
           </ClientProviders>
         </NextIntlClientProvider>
       </body>

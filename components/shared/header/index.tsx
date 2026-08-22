@@ -2,14 +2,13 @@ import { getAllCategories } from '@/lib/actions/product.actions'
 import Image from 'next/image'
 import Link from 'next/link'
 import Menu from './menu'
-// import { Button } from '@/components/ui/button'
-// import { MenuIcon } from 'lucide-react'
 import Sidebar from './sidebar'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { getTranslations } from 'next-intl/server'
 import data from '@/lib/data'
 import Search from './search'
 import { auth } from '@/auth'
+
 
 export default async function Header() {
   const session = await auth()
@@ -51,6 +50,7 @@ export default async function Header() {
           <Search />
         </div>
       </div>
+      
       <div className='flex items-center px-3 mb-[1px]  bg-gray-800'>
       <Sidebar categories={categories} />
         <div className='flex items-center flex-wrap gap-3 overflow-hidden   max-h-[42px]'>
@@ -68,12 +68,3 @@ export default async function Header() {
     </header>
   )
 }
-/*
-<Button
-          variant='ghost'
-          className='dark hover:bg-transparent  header-button flex items-center gap-1 text-base [&_svg]:size-6'
-        >
-          <MenuIcon />
-          All
-        </Button>
-*/
