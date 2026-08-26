@@ -30,7 +30,7 @@ import { revalidateAllLocales } from '../utils-serverOnly'
 
 // Helper fn are you the order/account owner or admin
 
-export const isAdminOrOwner = (
+const isAdminOrOwner = (
   userId: string,
   userRole: string | undefined,
   order: IOrder
