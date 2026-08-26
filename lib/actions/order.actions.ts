@@ -16,14 +16,43 @@ import User from '../db/models/user.model'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
 
- 
+ /*
+ ? edit1: 
+ The cleanest solution is to introduce a reusable helper function that 
+ checks whether the current user owns the order or is an admin,
+  then call it from each of these four functions. 
+  This avoids duplication and maintains consistency.
+  ? also:
+  ensure the error handling remains sane (returning a result vs throwing)
+  - for getById better to through error/empty, avoiding leak of whether the order exists 
+  - For the payment actions, we throw an exception inside the try block so that it returns a failed result message
+ */
+
+// Helper fn are you the order/account owner or admin
+
+export const isAdminOrOwner = (
+  userId: string,
+  userRole: string | undefined,
+  order: IOrder
+): boolean => {
+  if (!order || !order.user) return false
+
+  const ownerId =
+    typeof order.user === 'object' && '_id' in order.user
+      ? String((order.user as { _id: unknown })._id)
+      : String(order.user)
+
+  return userId === ownerId || userRole === 'admin'
+}
 
 // CREATE ORDER - PRIVATE
 export const createOrder = async (clientSideCart: Cart) => {
   try {
-    await connectToDatabase()
     const session = await auth()
     if (!session) throw new Error('User not authenticated')
+
+    await connectToDatabase()
+
     // recalculate price and delivery date on the server
     const createdOrder = await createOrderFromCart(
       clientSideCart,
@@ -50,11 +79,11 @@ export const createOrderFromCart = async (
 
     const cart = {
       ...clientSideCart,
-      ...calcDeliveryDateAndPrice({
+      ...(await calcDeliveryDateAndPrice({
         items: clientSideCart.items,
         shippingAddress: clientSideCart.shippingAddress,
         deliveryDateIndex: clientSideCart.deliveryDateIndex,
-      }),
+      })),
     }
     // parse do validate, conform to a type and  error handling.
     // here validate with zod then Order.create(order) create a new instant of order model in DB with this data. 
@@ -74,28 +103,39 @@ export const createOrderFromCart = async (
 }
 
 // for Paypal :
-// GET ORDER - PRIVATE
-export async function getOrderById(orderId: string): Promise<IOrder> {
-  await connectToDatabase()
+// GET ORDER - PRIVATE ==> edit1 verify that the authenticated user owns the order (or is an admin) , check for undefined too
+export async function getOrderById(orderId: string): Promise<IOrder | null> {
   const session = await auth()
-    if (!session) throw new Error('User not authenticated')
+  if (!session) throw new Error('User not authenticated')
+    
+  await connectToDatabase()
 
   const order = await Order.findById(orderId)
+   if (!order) return null
+
+  if (!isAdminOrOwner(session.user.id, session.user.role, order)) return null
+
   return JSON.parse(JSON.stringify(order))
 }
 
-// CREATE PAYPAL ORDER - PRIVATE
+// CREATE PAYPAL ORDER - PRIVATE ==> edit1 verify that the authenticated user owns the order (or is an admin)
 export async function createPayPalOrder(orderId: string) {
-  await connectToDatabase()
-  const session = await auth()
-    if (!session) throw new Error('User not authenticated')
   try {
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
+    
+    await connectToDatabase()
+    
     // get order from db, 
     // if exist ==> send to paypal to createOrder(totalPrice) 
     // update order obj in DB to have a new key paymentResult={...}
     // save to DB
     // return success , paypalOrder.id
     const order = await Order.findById(orderId)
+    if (!order) throw new Error('Order not found')
+
+  if (!isAdminOrOwner(session.user.id, session.user.role, order)) throw new Error('Error accessing order')
+
     if (order) {
       const paypalOrder = await paypal.createOrder(order.totalPrice)
       order.paymentResult = {
@@ -118,18 +158,22 @@ export async function createPayPalOrder(orderId: string) {
     }
 }
 
-// APPROVE PAYPAL ORDER - PRIVATE
+// APPROVE PAYPAL ORDER - PRIVATE ==> edit1
 export async function approvePayPalOrder(
   orderId: string,
   data: { orderID: string }
 ) {
-  await connectToDatabase()
-  const session = await auth()
-    if (!session) throw new Error('User not authenticated')
-  
   try {
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
+      
+    await connectToDatabase()
+
     const order = await Order.findById(orderId).populate('user', 'email')
     if (!order) throw new Error('Order not found')
+
+    if (!isAdminOrOwner(session.user.id, session.user.role, order)) throw new Error('Error accessing order')
+
       // orderID is the one returned from createPayPalOrder  {...,  data: paypalOrder.id}
     const captureData = await paypal.capturePayment(data.orderID)
     if (
@@ -161,20 +205,24 @@ export async function approvePayPalOrder(
   }
 }
 
-// VERIFY & MARK ORDER PAID BY STRIPE - PRIVATE (success page fallback)
+// VERIFY & MARK ORDER PAID BY STRIPE - PRIVATE (success page fallback) ==> edit1
 export async function updateOrderToPaidByStripe(
   orderId: string,
   paymentIntentId: string
 ) {
   try {
-    await connectToDatabase()
     const session = await auth()
     if (!session) throw new Error('User not authenticated')
+      
+    await connectToDatabase()
 
     const order = await Order.findById(orderId).populate<{
       user: { email: string; name: string }
     }>('user', 'name email')
     if (!order) throw new Error('Order not found')
+
+    if (!isAdminOrOwner(session.user.id, session.user.role, order)) throw new Error('Error accessing order')
+    
     if (order.isPaid) return { success: true, message: 'Order already paid' }
 
     // Capture email BEFORE save — Mongoose replaces populated user with
@@ -184,19 +232,31 @@ export async function updateOrderToPaidByStripe(
     // Verify payment status directly with Stripe
     const Stripe = (await import('stripe')).default
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const paymentIntentFromStripe = await stripe.paymentIntents.retrieve(paymentIntentId)
 
-    if (paymentIntent.status !== 'succeeded') {
+    if (paymentIntentFromStripe.status !== 'succeeded') {
       return { success: false, message: 'Payment not completed' }
+    }
+
+    // Verify Payment Intent metadata/amount alignment
+    if (
+      order.stripePaymentIntentId &&
+      order.stripePaymentIntentId !== paymentIntentFromStripe.id
+    ) {
+      throw new Error('Payment intent does not match this order')
+    }
+
+    if (paymentIntentFromStripe.amount !== Math.round(order.totalPrice * 100)) {
+      throw new Error('Paid amount does not match order total')
     }
 
     order.isPaid = true
     order.paidAt = new Date()
     order.paymentResult = {
-      id: paymentIntent.id,
-      status: paymentIntent.status,
+      id: paymentIntentFromStripe.id,
+      status: paymentIntentFromStripe.status,
       email_address: userEmail,
-      pricePaid: String(paymentIntent.amount / 100),
+      pricePaid: String(paymentIntentFromStripe.amount / 100),
     }
     await order.save()
 
@@ -280,18 +340,18 @@ export async function getMyOrders({
   page: number
 }) {
 
-  const {
-    common: { pageSize },
-  } = await getSetting()
+  const {common: { pageSize }} = await getSetting()
   
   limit = limit || pageSize
-  await connectToDatabase()
-  const session = await auth()
-    if (!session) {
-      throw new Error('User is not authenticated')
-    }
-
+  
   const skipAmount = (Number(page) - 1) * limit
+
+  const session = await auth()
+  if (!session) {
+    throw new Error('User is not authenticated')
+  }
+  
+  await connectToDatabase()
   
   const orders = await Order.find({
     user: session?.user?.id,
@@ -311,10 +371,12 @@ export async function getMyOrders({
 // GET ORDERS BY USER - ADMIN
 export async function getOrderSummary(date: DateRange) {
 
-  await connectToDatabase()
   const session = await auth()
       if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
+
+  await connectToDatabase()
+
   const {
     common: { pageSize },
   } = await getSetting()
@@ -551,10 +613,11 @@ async function getTopSalesCategories(date: DateRange, limit = 5) {
 // DELETE ORDER - ADMIN
 export async function deleteOrder(id: string) {
   try {
-    await connectToDatabase()
     const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+    if (session?.user.role !== "admin")
+      throw new Error('Admin permission required')
+    
+    await connectToDatabase()
 
     const res = await Order.findByIdAndDelete(id)
     if (!res) throw new Error('Order not found')
@@ -584,10 +647,11 @@ export async function getAllOrders({
   } = await getSetting()
 
   limit = limit || pageSize
-  await connectToDatabase()
   const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+  if (session?.user.role !== "admin")
+    throw new Error('Admin permission required')
+  
+  await connectToDatabase()
 
   const skipAmount = (Number(page) - 1) * limit
   const orders = await Order.find()
@@ -605,11 +669,13 @@ export async function getAllOrders({
 // UPDATE ORDER TO PAID - ADMIN
 export async function updateOrderToPaid(orderId: string) {
   try {
-    await connectToDatabase()
     const session = await auth()
-      if (!session) throw new Error('User not authenticated')
-        if (session.user.role !== "admin")
-          throw new Error('Admin permission required')
+    if (!session) throw new Error('User not authenticated')
+      
+      if (session.user.role !== "admin")
+        throw new Error('Admin permission required')
+      
+    await connectToDatabase()
 
     const order = await Order.findById(orderId).populate<{
       user: { email: string; name: string }
@@ -677,11 +743,13 @@ const updateProductStock = async (orderId: string) => {
 // MARK AS DELIVERED - ADMIN
 export async function deliverOrder(orderId: string) {
   try {
-    await connectToDatabase()
-       const session = await auth()
+   
+    const session = await auth()
       if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
-    
+
+    await connectToDatabase()
+
     const order = await Order.findById(orderId).populate<{
       user: { email: string; name: string }
     }>('user', 'name email')
@@ -702,5 +770,37 @@ export async function deliverOrder(orderId: string) {
     
   } catch (err) {
     return { success: false, message: formatError(err) }
+  }
+}
+
+
+export async function createStripePaymentIntent(orderId: string): Promise<{ clientSecret: string } | { error: string }> {
+  try {
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
+    await connectToDatabase()
+
+    const order = await Order.findById(orderId)
+    if (!order) return { error: 'Order not found' }
+    if (!isAdminOrOwner(session.user.id, session.user.role, order)) return { error: 'Error accessing order' }
+
+    if (order.paymentMethod !== 'Stripe' || order.isPaid) return { error: 'Not payable via Stripe' }
+
+    const Stripe = (await import('stripe')).default
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.totalPrice * 100),
+      currency: 'USD',
+      metadata: { orderId: order._id },
+    })
+
+    // Store the intent ID on the order 
+    order.stripePaymentIntentId = paymentIntent.id
+    await order.save()
+
+    return { clientSecret: paymentIntent.client_secret! }
+  } catch (error) {
+    return { error: formatError(error) }
   }
 }

@@ -1,19 +1,20 @@
 'use client'
 
 import {
-  PayPalButtons,
-  PayPalScriptProvider,
-  usePayPalScriptReducer,
-} from '@paypal/react-paypal-js'
+    PayPalButtons,
+    PayPalScriptProvider,
+    usePayPalScriptReducer,
+  } from '@paypal/react-paypal-js'
+import {
+    approvePayPalOrder,
+    createPayPalOrder,
+    createStripePaymentIntent, 
+  } from '@/lib/actions/order.actions'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import {
-  approvePayPalOrder,
-  createPayPalOrder,
-} from '@/lib/actions/order.actions'
 import { IOrder } from '@/lib/db/models/order.model'
 import { formatDateTime } from '@/lib/utils'
-
 import CheckoutFooter from '../checkout-footer'
 import { redirect, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -23,15 +24,14 @@ import { Elements } from '@stripe/react-stripe-js'
 import StripeForm from './stripe-form'
 import { useTranslations } from 'next-intl'
 
+
 export default function OrderPaymentForm({
   order,
-  paypalClientId,
-  clientSecret,
+  paypalClientId, 
 }: {
   order: IOrder
   paypalClientId: string
-  isAdmin: boolean
-  clientSecret: string | null
+  isAdmin: boolean  
 }) {
   const t = useTranslations('Form')
   const router = useRouter()
@@ -48,9 +48,13 @@ export default function OrderPaymentForm({
   } = order
   const { toast } = useToast()
 
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false)
+
   if (isPaid) {
     redirect(`/account/orders/${order._id}`)
   }
+
   function PrintLoadingState() {
     const [{ isPending, isRejected }] = usePayPalScriptReducer()
     let status = ''
@@ -61,6 +65,7 @@ export default function OrderPaymentForm({
     }
     return status
   }
+
   const handleCreatePayPalOrder = async () => {
     const res = await createPayPalOrder(order._id)
     if (!res.success){
@@ -71,6 +76,7 @@ export default function OrderPaymentForm({
     }
     return res.data
   }
+  
   const handleApprovePayPalOrder = async (data: { orderID: string }) => {
     const res = await approvePayPalOrder(order._id, data)
     toast({
@@ -78,6 +84,20 @@ export default function OrderPaymentForm({
       variant: res.success ? 'default' : 'destructive',
     })
   }
+
+  // new addition:
+  const handleStripePayment = async () => {
+  if (isCreatingIntent) return
+  setIsCreatingIntent(true)
+  const res = await createStripePaymentIntent(order._id)
+  setIsCreatingIntent(false)
+  if ('error' in res) {
+    return toast({ description: res.error, variant: 'destructive' })
+  }
+  setClientSecret(res.clientSecret)
+}
+
+
 
   const CheckoutSummary = () => (
     <Card>
@@ -134,17 +154,22 @@ export default function OrderPaymentForm({
               </div>
             )}
 
-            {!isPaid && paymentMethod === 'Stripe' && clientSecret && (
-              <Elements
-                options={{ clientSecret }}
-                stripe={stripePromise}
-              >
+            {!isPaid && paymentMethod === 'Stripe' && (clientSecret ? (
+              <Elements options={{ clientSecret }} stripe={stripePromise}>
                 <StripeForm
                   priceInCents={Math.round(order.totalPrice * 100)}
                   orderId={order._id}
                 />
               </Elements>
-            )}
+            ) : (
+              <Button
+                className='w-full rounded-full'
+                onClick={handleStripePayment}
+                disabled={isCreatingIntent}
+              >
+                {isCreatingIntent ? t('Submitting') : t('Stripe Checkout')}
+              </Button>
+            ))}
 
             {!isPaid && paymentMethod === 'Cash On Delivery' && (
               <Button

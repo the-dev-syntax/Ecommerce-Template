@@ -29,6 +29,7 @@ import 'next-auth/jwt'
 
 
 export type IReviewInput = z.infer<typeof ReviewInputSchema>
+
 export type IReviewDetails = IReviewInput & {
   _id: string
   createdAt: string
