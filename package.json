@@ -39,7 +39,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "effect": "^3.22.1",
     "embla-carousel-autoplay": "^8.5.2",
     "embla-carousel-react": "^8.5.2",
     "lucide-react": "^0.474.0",
@@ -81,9 +80,12 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^15.5.24",
-    "postcss": "^8.5.26",
     "react-email": "^4.0.15",
     "tailwindcss": "^3.4.1",
     "typescript": "5.9.3"
-  }
+  },
+  "overrides": {
+  "effect": "3.22.1",
+  "postcss": "8.5.23"
+}
 }
