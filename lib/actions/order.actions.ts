@@ -15,7 +15,7 @@ import Product from '../db/models/product.model'
 import User from '../db/models/user.model'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
-
+import { isAdminOrOwner, requireAdmin } from '../access'
  /*
  ? edit1: 
  The cleanest solution is to introduce a reusable helper function that 
@@ -28,22 +28,6 @@ import { revalidateAllLocales } from '../utils-serverOnly'
   - For the payment actions, we throw an exception inside the try block so that it returns a failed result message
  */
 
-// Helper fn are you the order/account owner or admin
-
-const isAdminOrOwner = (
-  userId: string,
-  userRole: string | undefined,
-  order: IOrder
-): boolean => {
-  if (!order || !order.user) return false
-
-  const ownerId =
-    typeof order.user === 'object' && '_id' in order.user
-      ? String((order.user as { _id: unknown })._id)
-      : String(order.user)
-
-  return userId === ownerId || userRole === 'admin'
-}
 
 // CREATE ORDER - PRIVATE
 export const createOrder = async (clientSideCart: Cart) => {
@@ -276,6 +260,38 @@ export async function updateOrderToPaidByStripe(
   }
 }
 
+export async function createStripePaymentIntent(orderId: string): Promise<{ clientSecret: string } | { error: string }> {
+  try {
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
+    await connectToDatabase()
+
+    const order = await Order.findById(orderId)
+    if (!order) return { error: 'Order not found' }
+    if (!isAdminOrOwner(session.user.id, session.user.role, order)) return { error: 'Error accessing order' }
+
+    if (order.paymentMethod !== 'Stripe' || order.isPaid) return { error: 'Not payable via Stripe' }
+
+    const Stripe = (await import('stripe')).default
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.totalPrice * 100),
+      currency: 'USD',
+      metadata: { orderId: order._id },
+    })
+
+    // Store the intent ID on the order 
+    order.stripePaymentIntentId = paymentIntent.id
+    await order.save()
+
+    return { clientSecret: paymentIntent.client_secret! }
+  } catch (error) {
+    return { error: formatError(error) }
+  }
+}
+
+
 // UPDATE ORDER SHIPPING ADDRESS - PRIVATE
 export const calcDeliveryDateAndPrice = async ({
   items,
@@ -371,9 +387,7 @@ export async function getMyOrders({
 // GET ORDERS BY USER - ADMIN
 export async function getOrderSummary(date: DateRange) {
 
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+   requireAdmin(await auth())
 
   await connectToDatabase()
 
@@ -473,9 +487,7 @@ export async function getOrderSummary(date: DateRange) {
 // GET SALES CHART DATA - ADMIN
 async function getSalesChartData(date: DateRange) {
 
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+   requireAdmin(await auth())
 
 
   const result = await Order.aggregate([
@@ -521,9 +533,7 @@ async function getSalesChartData(date: DateRange) {
 // GET TOP SALES PRODUCTS - ADMIN
 async function getTopSalesProducts(date: DateRange) {
  
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+   requireAdmin(await auth())
 
   const result = await Order.aggregate([
     {
@@ -578,9 +588,7 @@ async function getTopSalesProducts(date: DateRange) {
 // GET TOP SALES CATEGORIES - ADMIN
 async function getTopSalesCategories(date: DateRange, limit = 5) {
 
-  const session = await auth()
-      if (session?.user.role !== "admin")
-        throw new Error('Admin permission required')
+   requireAdmin(await auth())
 
 
   const result = await Order.aggregate([
@@ -613,9 +621,7 @@ async function getTopSalesCategories(date: DateRange, limit = 5) {
 // DELETE ORDER - ADMIN
 export async function deleteOrder(id: string) {
   try {
-    const session = await auth()
-    if (session?.user.role !== "admin")
-      throw new Error('Admin permission required')
+     requireAdmin(await auth())
     
     await connectToDatabase()
 
@@ -647,9 +653,8 @@ export async function getAllOrders({
   } = await getSetting()
 
   limit = limit || pageSize
-  const session = await auth()
-  if (session?.user.role !== "admin")
-    throw new Error('Admin permission required')
+
+  requireAdmin(await auth())
   
   await connectToDatabase()
 
@@ -669,11 +674,7 @@ export async function getAllOrders({
 // UPDATE ORDER TO PAID - ADMIN
 export async function updateOrderToPaid(orderId: string) {
   try {
-    const session = await auth()
-    if (!session) throw new Error('User not authenticated')
-      
-      if (session.user.role !== "admin")
-        throw new Error('Admin permission required')
+    requireAdmin(await auth())
       
     await connectToDatabase()
 
@@ -774,33 +775,3 @@ export async function deliverOrder(orderId: string) {
 }
 
 
-export async function createStripePaymentIntent(orderId: string): Promise<{ clientSecret: string } | { error: string }> {
-  try {
-    const session = await auth()
-    if (!session) throw new Error('User not authenticated')
-    await connectToDatabase()
-
-    const order = await Order.findById(orderId)
-    if (!order) return { error: 'Order not found' }
-    if (!isAdminOrOwner(session.user.id, session.user.role, order)) return { error: 'Error accessing order' }
-
-    if (order.paymentMethod !== 'Stripe' || order.isPaid) return { error: 'Not payable via Stripe' }
-
-    const Stripe = (await import('stripe')).default
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(order.totalPrice * 100),
-      currency: 'USD',
-      metadata: { orderId: order._id },
-    })
-
-    // Store the intent ID on the order 
-    order.stripePaymentIntentId = paymentIntent.id
-    await order.save()
-
-    return { clientSecret: paymentIntent.client_secret! }
-  } catch (error) {
-    return { error: formatError(error) }
-  }
-}

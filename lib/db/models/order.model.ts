@@ -1,6 +1,7 @@
 import { IOrderInput } from '@/types'
 import { Document, Model, model, models, Schema } from 'mongoose'
 
+// omit = replace _id of document with _id of mongoose type
 export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   _id: string
   createdAt: Date

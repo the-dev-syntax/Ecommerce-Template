@@ -105,3 +105,5 @@ Replace the current && clientSecret && condition with a ternary:
 clientSecret === null → renders a "Stripe Checkout" button (mirrors the existing COD button style at line 150).
 After a successful click → clientSecret is set → renders <Elements> + <StripeForm> as today.
 I used existing translation keys (t('Stripe Checkout'), t('Submitting')) so no message-file changes are needed; say the word if you'd rather add a dedicated "Pay with Stripe" key to en-US.json/ar.json/fr.json.
+
+<OrderInputSchema>(validator.ts) ==> <IOrderInput> (types/index.ts) ==> <IOrder+_id>(order.model.ts) 
