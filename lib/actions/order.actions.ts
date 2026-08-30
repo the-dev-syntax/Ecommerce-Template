@@ -16,18 +16,25 @@ import User from '../db/models/user.model'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
 import { isAdminOrOwner, requireAdmin } from '../access'
- /*
- ? edit1: 
- The cleanest solution is to introduce a reusable helper function that 
- checks whether the current user owns the order or is an admin,
-  then call it from each of these four functions. 
-  This avoids duplication and maintains consistency.
-  ? also:
-  ensure the error handling remains sane (returning a result vs throwing)
-  - for getById better to through error/empty, avoiding leak of whether the order exists 
-  - For the payment actions, we throw an exception inside the try block so that it returns a failed result message
- */
+import { OrderWithUser } from '../db/models/order.model'
 
+
+export async function dbOrderWith3UserKeys(orderId: string): Promise<OrderWithUser | null> {
+  await connectToDatabase()
+  const order = await Order.findById(orderId).populate<{
+    user: { _id: string; email: string; name: string }
+  }>('user', '_id name email')
+  return order ? (order as OrderWithUser) : null
+}
+// export async function dbOrderWith3UserKeys(orderId: string): Promise<OrderWithUser> {
+
+//   const order = await Order.findById(orderId).populate<{
+//       user: {_id:string, email: string, name: string }
+//     }>('user', '_id name email')
+
+//   if (!order) throw new Error('Order not found')
+//   return order as OrderWithUser
+// }
 
 // CREATE ORDER - PRIVATE
 export const createOrder = async (clientSideCart: Cart) => {
@@ -94,10 +101,10 @@ export async function getOrderById(orderId: string): Promise<IOrder | null> {
     
   await connectToDatabase()
 
-  const order = await Order.findById(orderId)
-   if (!order) return null
+  const order = await dbOrderWith3UserKeys(orderId)
+   if (!order) throw new Error('Order not found')
 
-  if (!isAdminOrOwner(session.user.id, session.user.role, order)) return null
+  if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) return null
 
   return JSON.parse(JSON.stringify(order))
 }
@@ -110,15 +117,9 @@ export async function createPayPalOrder(orderId: string) {
     
     await connectToDatabase()
     
-    // get order from db, 
-    // if exist ==> send to paypal to createOrder(totalPrice) 
-    // update order obj in DB to have a new key paymentResult={...}
-    // save to DB
-    // return success , paypalOrder.id
-    const order = await Order.findById(orderId)
-    if (!order) throw new Error('Order not found')
-
-  if (!isAdminOrOwner(session.user.id, session.user.role, order)) throw new Error('Error accessing order')
+    const order = await dbOrderWith3UserKeys(orderId)
+ if (!order) throw new Error('Order not found')
+  if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) throw new Error('Error accessing order')
 
     if (order) {
       const paypalOrder = await paypal.createOrder(order.totalPrice)
@@ -152,11 +153,10 @@ export async function approvePayPalOrder(
     if (!session) throw new Error('User not authenticated')
       
     await connectToDatabase()
+    const order = await dbOrderWith3UserKeys(orderId)
 
-    const order = await Order.findById(orderId).populate('user', 'email')
     if (!order) throw new Error('Order not found')
-
-    if (!isAdminOrOwner(session.user.id, session.user.role, order)) throw new Error('Error accessing order')
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) throw new Error('Error accessing order')
 
       // orderID is the one returned from createPayPalOrder  {...,  data: paypalOrder.id}
     const captureData = await paypal.capturePayment(data.orderID)
@@ -200,12 +200,10 @@ export async function updateOrderToPaidByStripe(
       
     await connectToDatabase()
 
-    const order = await Order.findById(orderId).populate<{
-      user: { email: string; name: string }
-    }>('user', 'name email')
+    const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
 
-    if (!isAdminOrOwner(session.user.id, session.user.role, order)) throw new Error('Error accessing order')
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) throw new Error('Error accessing order')
     
     if (order.isPaid) return { success: true, message: 'Order already paid' }
 
@@ -266,9 +264,10 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
     if (!session) throw new Error('User not authenticated')
     await connectToDatabase()
 
-    const order = await Order.findById(orderId)
-    if (!order) return { error: 'Order not found' }
-    if (!isAdminOrOwner(session.user.id, session.user.role, order)) return { error: 'Error accessing order' }
+    const order = await dbOrderWith3UserKeys(orderId)
+    if (!order) throw new Error('Order not found')
+    
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) return { error: 'Error accessing order' }
 
     if (order.paymentMethod !== 'Stripe' || order.isPaid) return { error: 'Not payable via Stripe' }
 
@@ -674,15 +673,16 @@ export async function getAllOrders({
 // UPDATE ORDER TO PAID - ADMIN
 export async function updateOrderToPaid(orderId: string) {
   try {
-    requireAdmin(await auth())
+    const session = await auth()
+    if (!session) throw new Error('User not authenticated')
       
     await connectToDatabase()
 
-    const order = await Order.findById(orderId).populate<{
-      user: { email: string; name: string }
-    }>('user', 'name email')
-    
+    const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
+
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) throw new Error('Error accessing order')
+
     if (order.isPaid) throw new Error('Order is already paid')
     order.isPaid = true
     order.paidAt = new Date()
@@ -751,9 +751,7 @@ export async function deliverOrder(orderId: string) {
 
     await connectToDatabase()
 
-    const order = await Order.findById(orderId).populate<{
-      user: { email: string; name: string }
-    }>('user', 'name email')
+    const order = await dbOrderWith3UserKeys(orderId)
 
     if (!order) throw new Error('Order not found')
     if (!order.isPaid) throw new Error('Order is not paid')

@@ -104,13 +104,7 @@ export const ShippingAddressSchema = z.object({
 
 // place order page
 export const OrderInputSchema = z.object({
-  user: z.union([
-    MongoId,
-    z.object({
-      name: z.string(),
-      email: z.string().email(),
-    }),
-  ]),
+  user: MongoId,
   items: z
     .array(OrderItemSchema)
     .min(1, 'Order must contain at least one item'),

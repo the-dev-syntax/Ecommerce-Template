@@ -7,8 +7,12 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   createdAt: Date
   updatedAt: Date
 }
-// type: Schema.Types.ObjectId as unknown as typeof String, ref:"User"  ==> this is a reference to another schema in MONGODB
-// this is the way to reference another Mongo Schema by creating these objects user and product :
+
+export type OrderWithUser = Omit<IOrder, 'user'> & {
+  user: { _id: string, email: string, name: string }
+}
+
+// type: Schema.Types.ObjectId ==> this is a reference to another schema in MONGODB
 // {type: Schema.Types.ObjectId, ref: "Schema-Name", required: "true"}
 const orderSchema = new Schema<IOrder>(
   {

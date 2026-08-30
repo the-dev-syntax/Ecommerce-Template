@@ -5,6 +5,7 @@ import { connectToDatabase } from '@/lib/db'
 import Order from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
 import mongoose from 'mongoose'
+import { dbOrderWith3UserKeys } from '@/lib/actions/order.actions'
 
 export async function POST(req: NextRequest) {
   await connectToDatabase()
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     const email = charge.billing_details.email
     const pricePaidInCents = charge.amount
 
-    const order = await Order.findById(orderId).populate('user', 'email')
+    const order = await dbOrderWith3UserKeys(orderId)
 
     if (order == null) {
       return new NextResponse('Order not found', { status: 400 })

@@ -16,14 +16,14 @@ import {
 } from '@react-email/components'
 
 import { formatCurrency } from '@/lib/utils'
-import { IOrder } from '@/lib/db/models/order.model'
+import { OrderWithUser } from '@/lib/db/models/order.model'
 import { getSetting } from '@/lib/actions/setting.actions'
 
 
 
 
 type OrderInformationProps = {
-  order: IOrder
+  order: OrderWithUser
 }
 
 AskReviewOrderItemsEmail.PreviewProps = {
@@ -64,7 +64,7 @@ AskReviewOrderItemsEmail.PreviewProps = {
     paymentMethod: 'PayPal',
     expectedDeliveryDate: new Date(),
     isDelivered: true,
-  } as IOrder,
+  } as OrderWithUser,
 } satisfies OrderInformationProps
 
 

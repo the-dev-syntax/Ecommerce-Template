@@ -2,9 +2,9 @@
 
 
 import { sendPurchaseReceipt } from '@/emails'
-import Order from '@/lib/db/models/order.model'
 import { connectToDatabase } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { dbOrderWith3UserKeys } from '@/lib/actions/order.actions'
 
 
 
@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
   await connectToDatabase()
 
   const charge = event.data.object
-  const order = await Order.findById(charge.metadata.orderId)
+  
+  const order = await dbOrderWith3UserKeys(charge.metadata.orderId)  
 
   if (!order || order.isPaid) {
     return NextResponse.json({ ok: true })
