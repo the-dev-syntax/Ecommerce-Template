@@ -16,8 +16,9 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { useToast } from '@/hooks/use-toast'
-import { UploadDropzone } from '@/lib/uploadthing'
+// import { useToast } from '@/hooks/use-toast'
+// import { UploadDropzone } from '@/lib/uploadthing'
+import ImageUploader from '@/components/shared/upload/image-uploader'
 import { Checkbox } from '@/components/ui/checkbox'
 import { slugify } from '@/lib/utils'
 import { IProductInputForm } from '@/types'
@@ -35,7 +36,7 @@ interface ProductFormUIProps {
 
  const ProductFormUI = ({ form, onSubmit, isSubmitting, type }: ProductFormUIProps) => {
 
-  const { toast } = useToast()
+  // const { toast } = useToast()
  
   const images = form.watch('images')
   
@@ -191,7 +192,7 @@ interface ProductFormUIProps {
                           height={100}
                         />
                       ))}
-                      <FormControl className="flex-grow flex items-center justify-center">                    
+                      {/* <FormControl className="flex-grow flex items-center justify-center">                    
                         <UploadDropzone
                           endpoint='imageUploader'
                           className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg p-4 text-center"
@@ -228,7 +229,14 @@ interface ProductFormUIProps {
                             })
                           }}
                         />
-                      </FormControl>
+                      </FormControl> */}
+                      <FormControl className="flex-grow flex items-center justify-center">
+                        
+                      <ImageUploader
+                        existingImages={images}
+                        onUploaded={(urls) => form.setValue('images', [...images, ...urls])}
+                      />
+                    </FormControl>
                     </div>
                   </CardContent>
                 </Card>

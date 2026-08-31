@@ -9,6 +9,11 @@ const nextConfig: NextConfig = withNextIntl()({
         hostname: 'utfs.io',
         port: '',
       },
+      {
+      protocol: 'https',
+      hostname: '*.ufs.sh',
+      port: '',
+    },
     ],
   },
 })
