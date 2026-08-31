@@ -6,7 +6,7 @@ import { i18n } from '@/i18n-config'
 // This prevents timeout issues on Vercel serverless functions
 // Generated with: bcrypt.hashSync('password', 12)
 const HASHED_PASSWORDS = {
-  admin: '$2a$12$QHGCkYhj8Np.QvKrJlU7T.8r1H4.RHvVYpzN6gG9zJ8kDdVtZmZEe', // totalena#1And4
+  admin: '$2b$12$hNtUKLP1CFK8BLqe1YlHvOONaaV/piBnwNjvOqLhpO9YSnqkQ3FlC', // totalena#1And4 the.dev-jane-arrow
   user1: '$2a$12$K5.qJL7YNu9RG5r3nEL5UOoD9qZB1qYpNNtVYr5xVJH0.q8R3OdKa', // 12345678
   user: '$2a$12$wQfPEw.AkCNV9J5vS.4XRONc8qZqD.TqFJH8UxNYvKqXjL8.Nq.3W', // 123456
 }
@@ -34,7 +34,7 @@ const users: IUserInput[] = [
   },
   {
     name: 'Jane',
-    email: 'jane@example.com',
+    email: 'deca7200@gmail.com',
 
     password: HASHED_PASSWORDS.user1,
 
@@ -55,7 +55,7 @@ const users: IUserInput[] = [
     name: 'Jack',
     email: 'jack@example.com',
 
-    password: HASHED_PASSWORDS.user,
+    password: `totalena#1And4`,
 
     role: 'user',
     address: {
