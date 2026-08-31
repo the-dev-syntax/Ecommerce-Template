@@ -7,9 +7,14 @@ import { useTranslations } from 'next-intl'
 export default function ImageUploader({
   existingImages,
   onUploaded,
+  multiple = true,
+  maxFiles = 10,
 }: {
   existingImages: string[]
   onUploaded: (urls: string[]) => void
+  multiple?: boolean
+  maxFiles?: number
+
 }) {
   const t = useTranslations('Form')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -23,7 +28,7 @@ export default function ImageUploader({
     setError(null)
 
     const maxSize = 4 * 1024 * 1024 // 4MB, matches core.ts
-    const remaining = 10 - existingImages.length
+    const remaining = maxFiles - existingImages.length
     if (files.length > remaining) {
       setError(t('Max 10 images'))
       return
@@ -68,7 +73,7 @@ export default function ImageUploader({
       <input
         ref={inputRef}
         type='file'
-        multiple
+        multiple={multiple}
         accept='image/*'
         className='hidden'
         onChange={(e) => {

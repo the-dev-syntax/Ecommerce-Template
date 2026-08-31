@@ -8,8 +8,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { toast } from '@/hooks/use-toast'
-import { UploadButton } from '@/lib/uploadthing'
+import ImageUploader from '@/components/shared/upload/image-uploader'
 import { ISettingInput } from '@/types'
 import { TrashIcon } from 'lucide-react'
 import Image from 'next/image'
@@ -117,17 +116,11 @@ export default function CarouselForm({
                   />
                 )}
                 {!watch(`carousels.${index}.image`) && (
-                  <UploadButton
-                    endpoint='imageUploader'
-                    onClientUploadComplete={(res) => {
-                      form.setValue(`carousels.${index}.image`, res[0].ufsUrl)
-                    }}
-                    onUploadError={(error: Error) => {
-                      toast({
-                        variant: 'destructive',
-                        description: `ERROR! ${error.message}`,
-                      })
-                    }}
+                  <ImageUploader
+                      multiple={false}
+                      maxFiles={1}
+                      existingImages={[]}
+                      onUploaded={(urls) => form.setValue(`carousels.${index}.image`, urls[0])}
                   />
                 )}
               </div>

@@ -16,8 +16,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-// import { useToast } from '@/hooks/use-toast'
-// import { UploadDropzone } from '@/lib/uploadthing'
 import ImageUploader from '@/components/shared/upload/image-uploader'
 import { Checkbox } from '@/components/ui/checkbox'
 import { slugify } from '@/lib/utils'
@@ -192,45 +190,7 @@ interface ProductFormUIProps {
                           height={100}
                         />
                       ))}
-                      {/* <FormControl className="flex-grow flex items-center justify-center">                    
-                        <UploadDropzone
-                          endpoint='imageUploader'
-                          className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg p-4 text-center"
-                          content={{
-                              label: ({ ready }) => {  
-                              if (ready) {
-                                return (
-                                  <div>
-                                     {t('Drag and Drop')}
-                                  </div>
-                                );
-                              }
-                              return `${t('Uploading')}`; 
-                            },                            
-                            allowedContent: ({ ready }) => {  
-                              if (ready) {
-                                return (
-                                  <div>
-                                    {t('Only images are allowed, 10 max')}
-                                  </div>
-                                );
-                              }
-                              return `${t('checking permissions')}`; 
-                            },
-                          }}
-                          onClientUploadComplete={(res: { ufsUrl: string }[]) => {
-                            const newImageUrls = res.map((file) => file.ufsUrl);
-                            form.setValue('images', [...images, ...newImageUrls]);
-                          }}
-                          onUploadError={(error: Error) => {
-                            toast({
-                              variant: 'destructive',
-                              description: `${t('ERROR!')} ${error.message}`,
-                            })
-                          }}
-                        />
-                      </FormControl> */}
-                      <FormControl className="flex-grow flex items-center justify-center">
+                    <FormControl className="flex-grow flex items-center justify-center">
                         
                       <ImageUploader
                         existingImages={images}
