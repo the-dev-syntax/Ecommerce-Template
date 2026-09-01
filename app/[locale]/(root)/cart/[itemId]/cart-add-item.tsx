@@ -17,7 +17,7 @@ import useSettingStore from '@/hooks/use-setting-store'
 export default function CartAddItem({ itemId }: { itemId: string }) {
   const { cart: { items, itemsPrice }  } = useCartStore()
   const { setting: { common: { freeShippingMinPrice } } } = useSettingStore()
-  const t = useTranslations('Cart')  
+  const t = useTranslations()  
 
   const item = items.find((x) => x.clientId === itemId)
   if (!item) return notFound()

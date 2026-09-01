@@ -26,7 +26,7 @@ export default function CarouselForm({
 }) {
   // should add translation to the FormField name= and   {errors.carousels?.[index]?.title?.message}
   // by translating the error messages in SettingInputSchema validator file, add translation to Admin for all of them.
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const { watch,  formState: { errors } } = form
 

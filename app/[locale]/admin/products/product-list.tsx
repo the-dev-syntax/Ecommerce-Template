@@ -32,7 +32,7 @@ type ProductListDataProps = {
 }
 const ProductList = () => {
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const [page, setPage] = useState<number>(1)
   const [inputValue, setInputValue] = useState<string>('')

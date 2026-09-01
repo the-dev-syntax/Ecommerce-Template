@@ -14,7 +14,7 @@ export default function BrowsingHistoryList({
   className?: string
 }) {
   const { products } = useBrowsingHistory()
-  const t = useTranslations('Home')
+  const t = useTranslations()
   return (
     products.length !== 0 && (
       <div id='browsing-history' className='bg-background'>

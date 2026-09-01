@@ -33,7 +33,7 @@ import { useTranslations } from 'next-intl'
 
 export default function OverviewReport() {
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const [date, setDate] = useState<DateRange | undefined>({
     from: calculatePastDate(30),

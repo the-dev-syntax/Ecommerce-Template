@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 
 export function GoogleSignInForm() {
 
-  const t = useTranslations('SignInForm')
+  const t = useTranslations()
   const SignInButton = () => {
     const { pending } = useFormStatus()
     return (

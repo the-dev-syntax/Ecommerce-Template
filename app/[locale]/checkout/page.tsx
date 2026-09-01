@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
-  const t = await getTranslations('Cart')
+  const t = await getTranslations()
   return {
     title: t('Checkout'),    
   }

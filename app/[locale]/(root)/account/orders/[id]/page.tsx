@@ -27,8 +27,8 @@ export default async function OrderDetailsPage(props: {
 
   const { id } = params
 
-  const t = await getTranslations('ProfileManager')
-  const tH = await getTranslations('Header')
+  const t = await getTranslations()
+  const tH = await getTranslations()
 
   const order = await getOrderById(id)
   if (!order) notFound()

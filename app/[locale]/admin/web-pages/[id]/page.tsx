@@ -7,7 +7,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata() {
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
   return {
     title: t('Admin WebPage'),
   }
@@ -20,7 +20,7 @@ export default async function UpdateWebPage(props: { params: Promise<{ id: strin
   const webPage = await getWebPageById(id)
   if (!webPage) notFound()
 
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
 
   return (
     <main className='max-w-6xl mx-auto p-4'>

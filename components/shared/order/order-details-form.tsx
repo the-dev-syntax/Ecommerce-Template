@@ -29,7 +29,7 @@ export default function OrderDetailsForm({
   isAdmin: boolean
 }) {
 
-  const t = useTranslations('Form')
+  const t = useTranslations()
   const {
     shippingAddress,
     items,

@@ -26,7 +26,7 @@ export default function ThemeSwitcher() {
 
   const { theme, setTheme } = useTheme()
   const { availableColors, color, setColor } = useColorStore(theme)
-  const t = useTranslations('Header')
+  const t = useTranslations()
 
   const changeTheme = (value: string) => {
     setTheme(value)

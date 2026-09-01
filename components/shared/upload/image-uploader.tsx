@@ -16,7 +16,7 @@ export default function ImageUploader({
   maxFiles?: number
 
 }) {
-  const t = useTranslations('Form')
+  const t = useTranslations()
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragActive, setIsDragActive] = useState(false)
   const [isUploading, setIsUploading] = useState(false)

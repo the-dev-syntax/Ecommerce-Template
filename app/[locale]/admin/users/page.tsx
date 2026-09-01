@@ -19,7 +19,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata() {
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
   return {
     title: t('Admin Users'),
   }
@@ -31,7 +31,7 @@ export default async function AdminUser(props: {
 }) {
   const searchParams = await props.searchParams
 
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
 
   const session = await auth()
   if (session?.user.role !== 'admin')

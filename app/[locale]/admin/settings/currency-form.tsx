@@ -31,7 +31,7 @@ export default function CurrencyForm({
   id: string
 }) {
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

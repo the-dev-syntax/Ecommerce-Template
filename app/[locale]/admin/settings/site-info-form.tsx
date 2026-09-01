@@ -26,7 +26,7 @@ export default function SiteInfoForm({
   id: string
 }) {
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
   const { watch, control } = form
 
   const siteLogo = watch('site.logo')

@@ -7,7 +7,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata(){
-   const t = await getTranslations("Admin")
+   const t = await getTranslations()
    return {
      title: t('Edit Product'),
    }
@@ -21,7 +21,7 @@ const UpdateProduct = async (props: {
 }) => {
   const params = await props.params
   const { id } = params
-  const t = await getTranslations("Admin")
+  const t = await getTranslations()
 
   const product = await getProductById(id)
   if (!product) notFound()

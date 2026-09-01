@@ -9,7 +9,7 @@ export default async function CheckoutLayout({
 }: {
   children: React.ReactNode
 }) {
-  const t = await getTranslations('Cart')
+  const t = await getTranslations()
   return (
     <div className='p-4'>
       <header className='bg-card mb-4 border-b'>

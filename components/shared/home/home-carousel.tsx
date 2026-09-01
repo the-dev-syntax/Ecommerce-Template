@@ -18,7 +18,7 @@ import { ICarousel } from '@/types'
 
 export function HomeCarousel({ items }: { items: ICarousel[] }) {
 
-  const t = useTranslations('Home')
+  const t = useTranslations()
   
   const plugin = React.useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })

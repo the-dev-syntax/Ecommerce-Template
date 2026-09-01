@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl'
 
 export default function SettingNav() {
 
-  const t = useTranslations('Admin')  
+  const t = useTranslations()  
 
   const [active, setActive] = useState('')
 

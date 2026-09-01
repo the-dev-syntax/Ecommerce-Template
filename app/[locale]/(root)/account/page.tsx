@@ -9,7 +9,7 @@ import React from 'react'
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
-  const t = await getTranslations('ProfileManager');
+  const t = await getTranslations();
   return {
     title: t('YourAccount'),
   };
@@ -17,7 +17,7 @@ export async function generateMetadata() {
 
 export default async function AccountPage() {
 
-  const t = await getTranslations('ProfileManager')
+  const t = await getTranslations()
   return (
     <div>
       <h1 className='h1-bold py-4'>{t('YourAccount')}</h1>

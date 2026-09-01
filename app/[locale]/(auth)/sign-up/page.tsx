@@ -13,7 +13,7 @@ export default async function SignUpPage(props: { searchParams: Promise<{ callba
   
   const searchParams = await props.searchParams
 
-  const t = await getTranslations('Form')
+  const t = await getTranslations()
 
   const { callbackUrl } = searchParams
 

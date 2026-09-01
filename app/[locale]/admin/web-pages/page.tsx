@@ -17,7 +17,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata(){
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
   return {
     title: t('Admin WebPage'),
   }
@@ -25,7 +25,7 @@ export async function generateMetadata(){
 
 export default async function WebPageAdminPage() {
   const webPages = await getAllWebPages()
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
 
     if (!webPages || webPages.length === 0) {
         return (

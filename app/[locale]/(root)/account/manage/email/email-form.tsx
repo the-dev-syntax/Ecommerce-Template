@@ -24,8 +24,8 @@ import { IUserEmail } from '@/types'
 
 
 export const EmailForm = () => {
-  const tForm = useTranslations('Form')
-  const tProduct = useTranslations('Product')
+  const tForm = useTranslations()
+  const tProduct = useTranslations()
   const router = useRouter()
   const { data: session, update } = useSession()
   const { toast } = useToast()

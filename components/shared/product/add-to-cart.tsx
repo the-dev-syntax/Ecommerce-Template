@@ -27,7 +27,7 @@ export default function AddToCart({
 }) {
   const router = useRouter()
   const { toast } = useToast()
-  const t = useTranslations('Product')
+  const t = useTranslations()
 
   const { addItem } = useCartStore()
 

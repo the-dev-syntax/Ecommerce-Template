@@ -59,7 +59,7 @@ export default async function ProductDetails(props: {
 
   const session = await auth()
 
-  const t = await getTranslations('Product')
+  const t = await getTranslations()
   
   //used in order: AddToBrowsingHistory, ProductGallery, Rating, Separator, ProductPrice, SelectVariant, Separator, Card, addToCart
   return (

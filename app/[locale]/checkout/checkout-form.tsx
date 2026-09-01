@@ -64,7 +64,7 @@ const shippingAddressDefaultValues =
     }
 const CheckoutForm = () => {
   const router = useRouter()
-  const t = useTranslations('Form')
+  const t = useTranslations()
 
   const { setting: {
     site,

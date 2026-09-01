@@ -53,7 +53,7 @@ const WebPageForm = ({
   webPage?: IWebPage
   webPageId?: string
 }) => {
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const router = useRouter()
   const { toast } = useToast()

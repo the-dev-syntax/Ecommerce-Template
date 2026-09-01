@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { getTranslations } from 'next-intl/server'
 
 export async function generateMetadata() {
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
   return {
     title: t('Admin Dashboard'),
   }

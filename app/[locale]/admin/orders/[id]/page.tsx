@@ -25,7 +25,7 @@ const OrderDetailsPage = async (props: {
   const order = await getOrderById(id)
   if (!order) notFound()
 
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
 
   return (
     <main className='max-w-6xl mx-auto p-4'>

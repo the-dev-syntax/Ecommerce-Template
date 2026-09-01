@@ -34,7 +34,7 @@ export default function CartPage() {
     removeItem,
   } = useCartStore()
 
-  const t = useTranslations("Cart")
+  const t = useTranslations()
   const router = useRouter()
 
   return (

@@ -29,7 +29,7 @@ export default function LanguageForm({
   form: UseFormReturn<ISettingInput>
   id: string
 }) {
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

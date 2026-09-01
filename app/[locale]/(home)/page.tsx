@@ -16,7 +16,7 @@ import { Metadata } from 'next'
 
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('Home');
+  const t = await getTranslations();
   return {
     title: t('Home Page'),
   };
@@ -36,7 +36,7 @@ export default async function Page() {
     featureds,
     bestSellers,
   ] = await Promise.all([
-    getTranslations('Home'),
+    getTranslations(),
     getSetting(),
     getProductsByTag({ tag: 'todays-deal' }),
     getProductsByTag({ tag: 'best-seller' }),

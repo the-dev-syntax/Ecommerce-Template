@@ -26,7 +26,7 @@ export function CalendarDateRangePicker({
 }) {
   const [calendarDate, setCalendarDate] = React.useState<DateRange | undefined>( defaultDate )
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   return (
     <div className={cn('grid gap-2', className)}>

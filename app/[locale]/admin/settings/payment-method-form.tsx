@@ -29,7 +29,7 @@ export default function PaymentMethodForm({
   id: string
 }) {
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
     // just to show the difference.
   const {

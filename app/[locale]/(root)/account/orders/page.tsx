@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 
 //{ params: { locale } }: { params: { locale: string }}
 export async function generateMetadata() {
-  const t = await getTranslations('ProfileManager');
+  const t = await getTranslations();
   return {
     title: t('YourOrders'),
   };
@@ -33,7 +33,7 @@ export default async function OrdersPage(props: {  searchParams: Promise<{ page:
 
   const orders = await getMyOrders({ page })
 
-  const t = await getTranslations('ProfileManager')
+  const t = await getTranslations()
 
   return (
     <div>

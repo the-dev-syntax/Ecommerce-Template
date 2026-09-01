@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { EmailForm } from './email-form'
 
 export async function generateMetadata() {
-  const t = await getTranslations('ProfileManager');
+  const t = await getTranslations();
   return {
     title: t('ChangeEmail'),
   };
@@ -15,7 +15,7 @@ export async function generateMetadata() {
 
 export default async function ChangeEmailPage() {
   const session = await auth()
-  const t = await getTranslations('ProfileManager')
+  const t = await getTranslations()
 
   return (
     <div className='mb-24'>

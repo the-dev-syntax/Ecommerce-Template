@@ -33,7 +33,7 @@ export default function OrderPaymentForm({
   paypalClientId: string
   isAdmin: boolean  
 }) {
-  const t = useTranslations('Form')
+  const t = useTranslations()
   const router = useRouter()
   const {
     shippingAddress,

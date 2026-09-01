@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation'
 
 export function SignOutButton() {
   const { clearCart } = useCartStore()
-  const t = useTranslations("Header")
+  const t = useTranslations()
 
   // 2. Create the handler function
   const handleSignOut = async () => {    

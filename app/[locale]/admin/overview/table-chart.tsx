@@ -46,7 +46,7 @@ export default function TableChart({
   data = [],
 }: TableChartProps) {
 
-  const t = useTranslations('Admin');
+  const t = useTranslations();
   const max = Math.max(...data.map((item) => item.value))
   const dataWithPercentage = data.map((x) => {
   let finalLabel = x.label;

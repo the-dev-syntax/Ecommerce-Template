@@ -34,61 +34,61 @@ export default function Footer() {
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           <ChevronUp className='mr-2 h-4 w-4' />
-          {t('Footer.Back to top')}
+          {t('Back to top')}
         </Button>
       </div>
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto'>
           <div>
-            <h3 className='font-bold text-primary mb-2'>{t('Footer.Get to Know Us')}</h3>
+            <h3 className='font-bold text-primary mb-2'>{t('Get to Know Us')}</h3>
             <ul className='space-y-2'>
               <li>
-                <Link href='/page/careers'>{t('Footer.Careers')}</Link>
+                <Link href='/page/careers'>{t('Careers')}</Link>
               </li>
               <li>
-                <Link href='/page/blog'>{t('Footer.Blog')}</Link>
+                <Link href='/page/blog'>{t('Blog')}</Link>
               </li>
               <li>
                 <Link href='/page/about-us'>
-                  {t('Footer.About name', { name: site.name })}
+                  {t('About name', { name: site.name })}
                 </Link>
               </li>
             </ul>
           </div>
           <div>
-            <h3 className='font-bold text-primary mb-2'>{t('Footer.Make Money with Us')}</h3>
+            <h3 className='font-bold text-primary mb-2'>{t('Make Money with Us')}</h3>
             <ul className='space-y-2'>
               <li>
                 <Link href='/page/sell'>
-                  {t('Footer.Sell products on', { name: site.name })}
+                  {t('Sell products on', { name: site.name })}
                 </Link>
               </li>
               <li>
                 <Link href='/page/become-affiliate'>
-                  {t('Footer.Become an Affiliate')}
+                  {t('Become an Affiliate')}
                 </Link>
               </li>
               <li>
                 <Link href='/page/advertise'>
-                  {t('Footer.Advertise Your Products')}
+                  {t('Advertise Your Products')}
                 </Link>
               </li>
             </ul>
           </div>
           <div>
-            <h3 className='font-bold text-primary mb-2'>{t('Footer.Let Us Help You')}</h3>
+            <h3 className='font-bold text-primary mb-2'>{t('Let Us Help You')}</h3>
             <ul className='space-y-2'>
               <li>
                 <Link href='/page/shipping'>
-                  {t('Footer.Shipping Rates & Policies')}
+                  {t('Shipping Rates & Policies')}
                 </Link>
               </li>
               <li>
                 <Link href='/page/returns-policy'>
-                  {t('Footer.Returns & Replacements')}
+                  {t('Returns & Replacements')}
                 </Link>
               </li>
               <li>
-                <Link href='/page/help'>{t('Footer.Help')}</Link>
+                <Link href='/page/help'>{t('Help')}</Link>
               </li>
             </ul>
           </div>
@@ -114,7 +114,7 @@ export default function Footer() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('Footer.Select a language')} />
+                  <SelectValue placeholder={t('Select a language')} />
                 </SelectTrigger>
                 <SelectContent>
                   {locales.map((lang, index) => (                                         
@@ -134,7 +134,7 @@ export default function Footer() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('Footer.Select a currency')} />
+                  <SelectValue placeholder={t('Select a currency')} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableCurrencies
@@ -151,9 +151,9 @@ export default function Footer() {
         </div>
       <div className='p-4'>
         <div className='flex justify-center gap-3 text-sm'>
-          <Link href='/page/conditions-of-use'> {t('Footer.Conditions of Use')} </Link>
-          <Link href='/page/privacy-policy'>{t('Footer.Privacy Notice')}</Link>
-          <Link href='/page/help'>{t('Footer.Help')}</Link>
+          <Link href='/page/conditions-of-use'> {t('Conditions of Use')} </Link>
+          <Link href='/page/privacy-policy'>{t('Privacy Notice')}</Link>
+          <Link href='/page/help'>{t('Help')}</Link>
         </div>
         <div className='flex justify-center text-sm'>
           <p> © {site.copyright}</p>

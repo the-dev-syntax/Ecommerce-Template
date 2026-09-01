@@ -10,7 +10,7 @@ export default function ErrorPage({
   error: Error
   reset: () => void
 }) {
-  const t = useTranslations('Error')
+  const t = useTranslations()
   return (
     <div className='flex flex-col items-center justify-center min-h-screen '>
       <div className='p-6 rounded-lg shadow-md w-1/3 text-center'>

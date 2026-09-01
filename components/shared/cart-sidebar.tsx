@@ -42,13 +42,13 @@ export default function CartSidebar() {
       <div className={`w-32 fixed  h-full ${getDirection(locale) === 'rtl' ? 'border-r' : 'border-l'}`} >
         <div className='p-2 h-full flex flex-col gap-2 justify-center items-center'>
           <div className='text-center space-y-2'>
-             <div> {t('Cart.Subtotal')}</div>
+             <div> {t('Subtotal')}</div>
             <div className='font-bold '>
               <ProductPrice price={itemsPrice} plain />
             </div>
             {itemsPrice > freeShippingMinPrice && (
               <div className=' text-center text-xs'>
-                 {t('Cart.Your order qualifies for FREE Shipping')}
+                 {t('Your order qualifies for FREE Shipping')}
               </div>
             )}
 
@@ -59,7 +59,7 @@ export default function CartSidebar() {
               )}
               href='/cart'
             >
-               {t('Cart.Go to Cart')}
+               {t('Go to Cart')}
             </Link>
             <Separator className='mt-3' />
           </div>

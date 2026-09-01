@@ -32,7 +32,7 @@ export default function DeliveryDateForm({
   id: string
 }) {
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

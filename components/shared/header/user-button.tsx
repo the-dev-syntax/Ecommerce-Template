@@ -30,10 +30,10 @@ export default async function UserButton() {
           <div className='flex items-center'>
             <div className='flex flex-col text-xs text-left'>
               <span>
-                {t('Header.Hello')},{' '}
-                {session ? session.user.name : t('Header.sign in')}
+                {t('Hello')},{' '}
+                {session ? session.user.name : t('sign in')}
               </span>
-              <span className='font-bold'>{t('Header.Account & Orders')}</span>
+              <span className='font-bold'>{t('Account & Orders')}</span>
             </div>
              <ChevronDownIcon />
           </div>
@@ -53,29 +53,29 @@ export default async function UserButton() {
             <DropdownMenuGroup>
               {verified ? (
                 <Link className='w-full' href='/account'>
-                   <DropdownMenuItem>{t('Header.Your account')}</DropdownMenuItem>
+                   <DropdownMenuItem>{t('Your account')}</DropdownMenuItem>
                 </Link>
                 ) : (
-                  <DropdownMenuItem disabled>{t('Header.Your account')}</DropdownMenuItem>
+                  <DropdownMenuItem disabled>{t('Your account')}</DropdownMenuItem>
                 )}
                 {verified ? (
                   <Link className='w-full' href='/account/orders'>
-                    <DropdownMenuItem>{t('Header.Your orders')}</DropdownMenuItem>
+                    <DropdownMenuItem>{t('Your orders')}</DropdownMenuItem>
                   </Link>
                 ) : (
-                  <DropdownMenuItem disabled>{t('Header.Your orders')}</DropdownMenuItem>
+                  <DropdownMenuItem disabled>{t('Your orders')}</DropdownMenuItem>
                 )}
                 {verified ? (
                 null
                 ) : (
                    <Link className='w-full' href='/verify-email'>
-                    <DropdownMenuItem>{t('Header.Verify Your Email')}</DropdownMenuItem>
+                    <DropdownMenuItem>{t('Verify Your Email')}</DropdownMenuItem>
                   </Link>
                 )}
                 
               {session.user.role === 'admin' && (
                 <Link className='w-full' href='/admin/overview'>
-                   <DropdownMenuItem>{t('Header.Admin')}</DropdownMenuItem>
+                   <DropdownMenuItem>{t('Admin')}</DropdownMenuItem>
                 </Link>
               )}
             </DropdownMenuGroup>
@@ -98,14 +98,14 @@ export default async function UserButton() {
                   className={cn(buttonVariants(), 'w-full')}
                   href='/sign-in'
                 >
-                  {t('Header.Sign in')}
+                  {t('Sign in')}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuLabel>
               <div className='font-normal'>
-                {t('Header.New Customer')}?{' '}
-                <Link href='/sign-up'>{t('Header.Sign up')}</Link>
+                {t('New Customer')}?{' '}
+                <Link href='/sign-up'>{t('Sign up')}</Link>
               </div>
             </DropdownMenuLabel>
           </DropdownMenuContent>

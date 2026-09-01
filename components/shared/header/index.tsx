@@ -13,7 +13,7 @@ import { auth } from '@/auth'
 export default async function Header() {
   const session = await auth()
   const { site } = await getSetting()
-  const t = await getTranslations('Header')
+  const t = await getTranslations()
   const categories = await getAllCategories()
 
   const visibleMenus = data.headerMenus.filter((menu) => {

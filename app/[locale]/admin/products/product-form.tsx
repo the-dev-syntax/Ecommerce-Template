@@ -38,7 +38,7 @@ interface ProductFormUIProps {
  
   const images = form.watch('images')
   
-  const t = useTranslations('Form')
+  const t = useTranslations()
 //   console.log(form.formState.errors)
   return (
     <Form {...form}>

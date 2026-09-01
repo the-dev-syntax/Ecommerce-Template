@@ -19,7 +19,7 @@ import { setCurrencyOnServer } from '@/lib/actions/setting.actions'
 import { ChevronDownIcon } from 'lucide-react'
 
 export default function LanguageSwitcher() {
-  const t = useTranslations('Header')
+  const t = useTranslations()
   const { locales } = i18n
   const locale = useLocale()
   const pathname = usePathname()

@@ -44,13 +44,13 @@ export default function RatingSummary({
         <div className='flex flex-wrap items-center gap-1 cursor-help'>
           <Rating rating={avgRating} />
           <span className='text-lg font-semibold'>
-            {t('Product.avgRating out of 5', {
+            {t('avgRating out of 5', {
               avgRating: avgRating.toFixed(1),
             })}
           </span>
         </div>
         <div className='text-lg '>
-          {t('Product.numReviews ratings', { numReviews })}
+          {t('numReviews ratings', { numReviews })}
         </div>
 
         <div className='space-y-3'>
@@ -63,7 +63,7 @@ export default function RatingSummary({
               >
                 <div className='text-sm'>
                   {' '}
-                  {t('Product.rating star', { rating })}
+                  {t('rating star', { rating })}
                 </div>
                 <Progress value={percentage} className='h-4' />
                 <div className='text-sm text-right'>{percentage}%</div>
@@ -79,7 +79,7 @@ export default function RatingSummary({
       <Popover>
         <PopoverTrigger asChild>
           <Button variant='ghost' className='px-2 [&_svg]:size-6 text-base'>
-            <span> {t('Product.avgRating out of 5', {
+            <span> {t('avgRating out of 5', {
               avgRating: avgRating.toFixed(1),
             })}</span>
             <Rating rating={avgRating} />
@@ -92,14 +92,14 @@ export default function RatingSummary({
             <Separator />
 
             <Link className='highlight-link text-center' href='#reviews'>
-               {t('Product.See customer reviews')}
+               {t('See customer reviews')}
             </Link>
           </div>
         </PopoverContent>
       </Popover>
       <div className=' '>
         <Link href='#reviews' className='highlight-link'>
-          {t('Product.numReviews ratings', { numReviews })}
+          {t('numReviews ratings', { numReviews })}
         </Link>
       </div>
     </div>

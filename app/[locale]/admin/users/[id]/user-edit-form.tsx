@@ -36,7 +36,7 @@ export default function UserEditForm({ user }: { user: IUser })  {
 
   const router = useRouter()
   const { toast } = useToast()
-  const t = useTranslations('Form')
+  const t = useTranslations()
 
   const form = useForm<z.infer<typeof UserUpdateSchema>>({
     resolver: zodResolver(UserUpdateSchema),

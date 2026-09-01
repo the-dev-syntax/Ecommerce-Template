@@ -9,7 +9,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata() {
-  const t = await getTranslations('ProfileManager');
+  const t = await getTranslations();
   return {
     title: t('ChangeName'),
   };
@@ -18,7 +18,7 @@ export async function generateMetadata() {
 export default async function ChangeNamePage() {
   // const session = await auth()    then passed here as a prop <SessionProvider session={session}>
   const { site } = await getSetting()
- const t = await getTranslations('ProfileManager')
+ const t = await getTranslations()
 
   return (
     <div className='mb-24'>

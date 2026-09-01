@@ -32,7 +32,7 @@ export default function CommonForm({
 }) {
   const { control } = form
 
-  const t = useTranslations('Admin')
+  const t = useTranslations()
 
   return (
     <Card id={id}>

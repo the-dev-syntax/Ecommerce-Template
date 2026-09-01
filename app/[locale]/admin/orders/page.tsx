@@ -20,7 +20,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata(){
-   const t = await getTranslations("Admin")
+   const t = await getTranslations()
    return {
      title: t('Admin Orders')
    }
@@ -41,7 +41,7 @@ export default async function OrdersPage(props: {
     page: Number(page),
   })
 
-  const t = await getTranslations("Admin")
+  const t = await getTranslations()
 
     if (!orders.data || orders.data.length === 0) {
     return (

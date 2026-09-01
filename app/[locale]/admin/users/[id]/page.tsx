@@ -6,7 +6,7 @@ import { getTranslations } from 'next-intl/server'
 
 
 export async function generateMetadata() {
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
   return {
     title: t('Edit User'),
   }
@@ -18,7 +18,7 @@ export default async function UserEditPage(props: {
     id: string
   }>
 }) {
-  const t = await getTranslations('Admin')
+  const t = await getTranslations()
   const params = await props.params
 
   const { id } = params

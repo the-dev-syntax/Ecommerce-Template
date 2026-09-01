@@ -25,8 +25,8 @@ import { useTranslations } from 'next-intl'
 
 export const ProfileForm = () => {
 
-  const tForm = useTranslations('Form')
-  const tProduct = useTranslations('Product')
+  const tForm = useTranslations()
+  const tProduct = useTranslations()
 
   const router = useRouter()
 

@@ -30,7 +30,7 @@ export async function generateMetadata(props: {
   }>
 }) {
   const searchParams = await props.searchParams
-  const t = await getTranslations('Search')
+  const t = await getTranslations()
   const {
     q = 'all',
     category = 'all',
@@ -73,13 +73,13 @@ export default async function SearchPage(props: {
 }) {
   const searchParams = await props.searchParams
 
-  // const t = await getTranslations('Search')
-  // const tCategory = await getTranslations('Category')
-  // const tTags = await getTranslations('Tags')
+  // const t = await getTranslations()
+  // const tCategory = await getTranslations()
+  // const tTags = await getTranslations()
 const [t, tCategory, tTags] = await Promise.all([
-  getTranslations('Search'),
-  getTranslations('Category'),
-  getTranslations('Tags')
+  getTranslations(),
+  getTranslations(),
+  getTranslations()
 ])
 
   const {

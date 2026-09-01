@@ -25,7 +25,7 @@ export default function StripeForm({
     const [email, setEmail] = useState<string>()
 
     // const { setting: { site } } = useSettingStore()
-    const t = useTranslations('Form')
+    const t = useTranslations()
    
     // Use the current browser origin so Stripe redirects back to the same host.
     // This works correctly on both localhost and Vercel without relying on env vars.

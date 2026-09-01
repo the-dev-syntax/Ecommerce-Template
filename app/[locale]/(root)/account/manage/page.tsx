@@ -9,7 +9,7 @@ import { getTranslations } from 'next-intl/server'
 
 // page title = 'Login & Security'
 export async function generateMetadata() {
-  const t = await getTranslations('ProfileManager');
+  const t = await getTranslations();
   return {
     title: t('LoginSecurity'),
   };
@@ -18,8 +18,8 @@ export async function generateMetadata() {
 export default async function ProfilePage() {
   const session = await auth()
 console.log('MANAGE PAGE -------- session:', session)
-  const t = await getTranslations('ProfileManager')
-  const tForm = await getTranslations('Form')
+  const t = await getTranslations()
+  const tForm = await getTranslations()
 
   return (
     <div className='mb-24'>

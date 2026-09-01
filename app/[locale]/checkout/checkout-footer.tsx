@@ -11,7 +11,7 @@ export default function CheckoutFooter() {
     setting: { site },
   } = useSettingStore()
   const siteName = site.name
-  const t = useTranslations('CheckoutFooter')
+  const t = useTranslations()
 
   return (
     <div className='border-t-2 space-y-2 my-4 py-4 text-sm text-muted-foreground'>

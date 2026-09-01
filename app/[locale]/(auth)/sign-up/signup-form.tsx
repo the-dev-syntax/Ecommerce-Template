@@ -42,8 +42,8 @@ const signUpDefaultValues =
 
 export default function SignUpForm() {
   const { setting: { site } } = useSettingStore()  
-  const tForm = useTranslations('Form')
-  const tFooter = useTranslations('Footer')
+  const tForm = useTranslations()
+  const tFooter = useTranslations()
   
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'

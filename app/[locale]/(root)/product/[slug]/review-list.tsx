@@ -71,7 +71,7 @@ export default function ReviewList({
   const [reviews, setReviews] = useState<IReviewDetails[]>([])
   const { ref, inView } = useInView({ triggerOnce: true })
 
-  const t = useTranslations('Product')
+  const t = useTranslations()
   
   const reload = async () => {
     try {
