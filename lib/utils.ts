@@ -272,3 +272,20 @@ export function formatSeconds(seconds: number) {
   
   return minutes > 0 ? `${minutes}m ${remainingSeconds}s` : `${remainingSeconds}s`;
 }
+
+export function dateParam(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+export function parseDateParam(
+  dateParam: string | undefined,
+  endOfDay: boolean
+): Date | undefined {
+  if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return undefined
+  const d = endOfDay
+    ? new Date(`${dateParam}T23:59:59.999`)
+    : new Date(`${dateParam}T00:00:00`)
+  return isNaN(d.getTime()) ? undefined : d
+}

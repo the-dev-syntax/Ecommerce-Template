@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { calculatePastDate, formatDateTime, formatNumber } from '@/lib/utils'
+import { calculatePastDate, dateParam, formatDateTime, formatNumber, parseDateParam } from '@/lib/utils'
 import SalesCategoryPieChart from './sales-category-pie-chart'
 import React, { useEffect, useState, useTransition } from 'react'
 import { DateRange } from 'react-day-picker'
@@ -27,18 +27,65 @@ import { IOrderList } from '@/types'
 import ProductPrice from '@/components/shared/product/product-price'
 import TableChart from './table-chart'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import {  DATE_RANGE_KEY } from '@/lib/constants'
 
 
+function storedDateRange(): DateRange | undefined {
+  try {
+    const raw = window.localStorage.getItem(DATE_RANGE_KEY)
+    if (!raw) return undefined
+    const { from, to } = JSON.parse(raw)
+    const f = parseDateParam(from, false)
+    const t = parseDateParam(to, true)
+    if (f && t && f.getTime() <= t.getTime()) return { from: f, to: t }
+  } catch {
+    return undefined
+  }
+  return undefined
+}
 
-export default function OverviewReport() {
-
+export default function OverviewReport({
+  fromParam,
+  toParam,
+}: {
+  fromParam?: string
+  toParam?: string
+}) {
   const t = useTranslations()
+  const router = useRouter()
 
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: calculatePastDate(30),
-    to: new Date(),
+  useEffect(() => {
+    if (fromParam || toParam) return          // URL already wins; don't override
+    const stored = storedDateRange()
+    if (stored) setDate(stored)    
+  }, [])
+
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const f = parseDateParam(fromParam, false)
+    const tEnd = parseDateParam(toParam, true)
+    if (f && tEnd && f.getTime() <= tEnd.getTime()) return { from: f, to: tEnd }
+    return { from: calculatePastDate(30), to: new Date() }
   })
+
+  const handleSetDate: React.Dispatch<
+    React.SetStateAction<DateRange | undefined>
+  > = (value) => {
+    setDate(value)
+    const next = typeof value === 'function' ? undefined : value
+    if (next?.from && next?.to) {
+      const from = dateParam(next.from)
+      const to = dateParam(next.to)
+      window.localStorage.setItem(
+        DATE_RANGE_KEY,
+        JSON.stringify({ from, to })
+      )
+      router.replace(`/admin/overview?from=${from}&to=${to}`, {
+        scroll: false,
+      })
+    }
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<{ [key: string]: any }>()
  
@@ -90,7 +137,7 @@ export default function OverviewReport() {
     <div>
       <div className='flex items-center justify-between mb-2'>
         <h1 className='h1-bold'>{t('Dashboard')}</h1>
-        <CalendarDateRangePicker defaultDate={date} setDate={setDate} />
+        <CalendarDateRangePicker defaultDate={date} setDate={handleSetDate} />
       </div>
       <div className='space-y-4'>
         <div className='grid gap-4  grid-cols-2 lg:grid-cols-4'>

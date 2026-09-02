@@ -8,12 +8,21 @@ export async function generateMetadata() {
     title: t('Admin Dashboard'),
   }
 }
-const DashboardPage = async () => {
+const DashboardPage = async (props: {
+  searchParams: Promise<{ from?: string; to?: string }>
+}) => {
+  const searchParams = await props.searchParams
+  
   const session = await auth()
   if (session?.user.role !== 'admin')
     throw new Error('Admin permission required')
 
-  return <OverviewReport />
+  return (
+    <OverviewReport
+      fromParam={searchParams.from}
+      toParam={searchParams.to}
+    />
+  )
 }
 
 export default DashboardPage
