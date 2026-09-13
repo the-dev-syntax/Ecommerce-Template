@@ -1,12 +1,10 @@
 import { clsx, type ClassValue } from 'clsx'
-// import { CloudCog } from 'lucide-react'
-// import { collectMeta } from 'next/dist/build/utils'
-// import { cloneElement } from 'react'
 import { twMerge } from 'tailwind-merge'
 import qs from 'query-string'
 import { nanoid } from 'nanoid'
 import crypto from 'crypto'
 import { OtpResult } from '@/types'
+import { i18n } from '@/i18n-config'
 
 
 
@@ -289,3 +287,7 @@ export function parseDateParam(
     : new Date(`${dateParam}T00:00:00`)
   return isNaN(d.getTime()) ? undefined : d
 }
+
+export const showLocaleRe = new RegExp(
+  `^/(${i18n.locales.map((loc) => loc.code).join('|')})(?=/|$)`
+)

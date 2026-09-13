@@ -77,15 +77,16 @@ body {
 
   .highlight-link a,
   a.highlight-link {
-    @apply text-sky-700 hover:text-orange-700 hover:underline;
+    @apply text-primary hover:text-primary/80 hover:underline active:text-primary/60;
   }
 
   .header-button {
-    @apply cursor-pointer p-1 border border-transparent hover:border-white rounded-[2px];
+    @apply cursor-pointer p-1 border border-transparent hover:text-primary/60 rounded-[2px] active:bg-white/15;
+
   }
 
   .item-button {
-    @apply p-3 hover:bg-muted hover:no-underline;
+    @apply p-3 hover:bg-muted hover:no-underline active:bg-muted-foreground/20;
   }
 
   .h1-bold {
@@ -115,4 +116,12 @@ body {
 
 .web-page-content p {
   @apply py-2;
+}
+
+
+
+@layer base {
+  :where(a:active, button:active) {
+    color: hsl(var(--primary));
+  }
 }

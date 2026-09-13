@@ -1,3 +1,8 @@
+Bugs:
+1- when entering any tags like today's deal or featured prducts ==> if browse history clicked , there is nothing to navigate to.neither a page nor a #.
+
+2- carousel in home page.
+
 to continue last session in opencode
 in terminal in powershell type ==>  opencode
 opencode --continue
@@ -107,3 +112,6 @@ After a successful click → clientSecret is set → renders <Elements> + <Strip
 I used existing translation keys (t('Stripe Checkout'), t('Submitting')) so no message-file changes are needed; say the word if you'd rather add a dedicated "Pay with Stripe" key to en-US.json/ar.json/fr.json.
 
 <OrderInputSchema>(validator.ts) ==> <IOrderInput> (types/index.ts) ==> <IOrder+_id>(order.model.ts) 
+
+
+--------------------------------

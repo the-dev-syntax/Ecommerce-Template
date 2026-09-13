@@ -9,7 +9,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-// import { SignOut } from '@/lib/actions/user.actions'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { ChevronDownIcon } from 'lucide-react'

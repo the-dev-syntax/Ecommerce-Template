@@ -57,8 +57,8 @@ export function AdminNav({
           key={item.href}
           href={item.href}
           className={cn(
-            'hover:text-sky-500 transition-colors',
-            pathname.includes(item.href) ? '' : 'text-muted-foreground'
+            'transition-colors hover:text-sky-400 active:text-white active:opacity-70',
+             pathname.includes(item.href) ? 'text-sky-400' : 'text-muted-foreground'
           )}
         >
           {t(item.title)}

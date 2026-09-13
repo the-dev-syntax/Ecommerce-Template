@@ -1,11 +1,12 @@
 'use client'
-import React from 'react'
+import React, { Suspense } from 'react'
 import useCartSidebar from '@/hooks/use-cart-sidebar'
 import CartSidebar from './cart-sidebar'
 import { Toaster } from '../ui/toaster'
 import { ThemeProvider } from './theme-provider'
 import SettingsInitializer from './settings-initializer'
 import { ClientSetting } from '@/types'
+import TopProgressBar from './top-progress-bar'
 
 
 
@@ -20,7 +21,12 @@ export default function ClientProviders({
 
   return (  
     <>
+      <Suspense fallback={null}>
+        <TopProgressBar />
+      </Suspense>
+
       <SettingsInitializer setting={setting}  />
+      
         <ThemeProvider attribute='class' defaultTheme={setting.common.defaultTheme.toLocaleLowerCase()}>
           {visible ? (
             <div className='flex min-h-screen'>

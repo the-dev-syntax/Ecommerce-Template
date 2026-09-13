@@ -4,16 +4,16 @@ import Link from 'next/link'
 import Menu from './menu'
 import Sidebar from './sidebar'
 import { getSetting } from '@/lib/actions/setting.actions'
-import { getTranslations } from 'next-intl/server'
 import data from '@/lib/data'
 import Search from './search'
 import { auth } from '@/auth'
+import HeaderMenuLinks from './menu-links'
+import { Suspense } from 'react'
 
 
 export default async function Header() {
   const session = await auth()
   const { site } = await getSetting()
-  const t = await getTranslations()
   const categories = await getAllCategories()
 
   const visibleMenus = data.headerMenus.filter((menu) => {
@@ -54,15 +54,9 @@ export default async function Header() {
       <div className='flex items-center px-3 mb-[1px]  bg-gray-800'>
       <Sidebar categories={categories} />
         <div className='flex items-center flex-wrap gap-3 overflow-hidden   max-h-[42px]'>
-          {visibleMenus.map((menu) => (         
-            <Link
-              href={menu.href}
-              key={menu.href}
-              className='header-button !p-2'
-            >
-              {t(menu.name)}
-            </Link>
-          ))}
+          <Suspense fallback={null}>
+            <HeaderMenuLinks menus={visibleMenus} />
+          </Suspense>
         </div>
       </div>
     </header>
