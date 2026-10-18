@@ -33,7 +33,10 @@ async function sendReceiptOnce(orderId: string) {
     await sendPurchaseReceipt({ order: order as unknown as OrderWithUser })
   } catch (error) {
     await Order.findByIdAndUpdate(orderId, { $unset: { receiptSentAt: 1 } })
-    console.error('Purchase receipt email failed (order remains paid):', error)
+    console.error(
+      'Purchase receipt email failed (order remains paid):',
+      error instanceof Error ? error.name : 'Unknown error'
+    )
   }
 }
 

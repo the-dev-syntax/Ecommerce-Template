@@ -36,6 +36,15 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `createStripePaymentIntent` reuses an existing reusable PaymentIntent, returns an error for already-paid/processing intents, and stores the intent ID on the order. `paypal.createOrder` now sends the order currency and a two-decimal amount.
 - Why: payment completion could previously be triggered by an unsigned worker, a success-page call, a webhook or a manual admin action, each with its own stock and email logic. That allowed double stock decrements, races between providers, and orders marked paid without matching the captured amount.
 
+## P0-4 — Remove credential, OTP and PII logging (2026-10-18)
+
+- Removed `console.log('signInWithCredentials', user)` from `lib/actions/user.actions.ts`. It wrote the plaintext password to server logs on every sign-in.
+- Removed the sign-up and user-update `console.log` calls that serialized full user objects, including the password, password hash, email address and role.
+- Removed the verification-email logs in `emails/verification-email.tsx` and `emails/index.tsx` that printed the recipient address and the OTP.
+- Removed client-side debug logs in `app/[locale]/(auth)/sign-up/signup-form.tsx` (form values contain the password), `app/[locale]/verify-email/VerifyClientToken.tsx`, the account manage page (full session) and the admin user edit form (user object and submitted values).
+- Sanitized the remaining error logs in `updateUserEmail` and `sendReceiptOnce` so they no longer serialize user or order data.
+- Why: application logs are retained and forwarded by hosting providers. Logging passwords, OTPs or full user/session objects turns routine debugging output into a credential and PII disclosure.
+
 ## Verification
 
 ### P0-1
@@ -49,6 +58,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run build` — PASS (on this Windows machine use `NODE_OPTIONS=--max-old-space-size=4096`; clear `.next` if a previous failed build leaves the machine low on memory)
 
 ### P0-3
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-4
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)

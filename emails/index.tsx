@@ -34,17 +34,15 @@ export const sendAskReviewOrderItems = async ({ order }: { order: OrderWithUser 
 export const sendVerificationEmail = async ( props: VerificationPropsType ) => {
   const { name, email, token, update } = props
   try {
-    console.log('HHHHHHHHHHHHHHHHHHH Sending verification email to:', email)
     await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to: email,
       subject: `${token} -DON'T REPLY- Verify your email address`,
       react: <VerificationEmail email={email} token={token} name={name || 'User'} update={update} />,
     })
-    console.log(`Verification email sent to ${email}`);
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw error;
+    console.error('Error sending verification email')
+    throw error
   }
 }
 

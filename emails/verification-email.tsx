@@ -215,8 +215,6 @@ import {
      const logoSrc = new URL(site.logo, site.url).toString();
      const signUpMessage = `Thank you for signing up with ${site.name}. To complete your registration, please verify your email {email} by using the OTP below.`
      const updateMessage = `To complete your Email Update, please verify your new email ${email} by using the OTP below.`
-    //  console.log('sendVerificationEmail to #################################:', email, 'with link:', verificationLink);
-     console.log('sendVerificationEmail to #################################:', email, 'with OTP:', token);
 
      return (
       <Html>

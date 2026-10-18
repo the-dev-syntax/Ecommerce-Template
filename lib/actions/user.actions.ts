@@ -23,7 +23,7 @@ import { EMAIL_EXPIRATION_TIME } from '../constants'
 
 // SIGN IN
 export async function signInWithCredentials(user: IUserSignIn) {    
-  console.log('signInWithCredentials', user)
+
   return await signIn('credentials', { ...user, redirect: false })
 }
 
@@ -41,9 +41,6 @@ export const SignInWithGoogle = async () => {
 // CREATE USER - PUBLIC    
 export async function registerUser(userSignUp: IUserSignUp) {
 
-  console.log('============>>>>>>>>  from registerUser user.actions')
-  console.log('from registerUser user.actions userSignUp:', userSignUp)
-
   const normalizedEmail = normalizeEmail(userSignUp.email) 
 
   const user = await UserSignUpSchema.parseAsync({
@@ -58,26 +55,20 @@ export async function registerUser(userSignUp: IUserSignUp) {
   }
 
   try {
-    console.log('in user.action in register user before checkEmailRateLimit in registerUser')
     // 1. FIRST DEFENSE: Stop bots/spam by IP (No DB connection yet)
     await limitAuthActionsByIP();
-    console.log('11111111111111111111 after checkEmailRateLimit in try')
 
     await connectToDatabase()
-    console.log('222222222222222222222 after connectToDatabase ')
 
     // Check if the email is already in use
     const existingUser = await User.findOne({ email: normalizedEmail })
-    console.log('33333333333333333333 after check existing user')
 
     if (existingUser) {
       return { success: false, message: 'Email is already in use' }
 
     }
-    console.log('44444444444444444444 after check existing user')
 
     const { otp, hashedOtp } = await generateOtp()
-    console.log('55555555555555555555 after generate OTP')
 
     const createdUser = await User.create({
       ...user,
@@ -87,15 +78,12 @@ export async function registerUser(userSignUp: IUserSignUp) {
       verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME, 
     })
 
-    console.log('666666666666666666666 user created:', createdUser)
-
     const verificationProps: VerificationPropsType = {
       name: createdUser.name,
       email: normalizedEmail,
       token: otp,
       update: false,     
     }
-    console.log('77777777777777777777 user created:')
     await sendVerificationEmail(verificationProps)
 
     await checkAndSetEmailRateLimit(normalizedEmail);   
@@ -209,7 +197,6 @@ export async function getAllUsers({
 // UPDATE USER - BY ADMIN
 export async function updateUser(rawUser: IUserUpdate) {
   
-  console.log('updateUser:', rawUser)
   const validatedData = UserUpdateSchema.safeParse(rawUser);
     if (!validatedData.success) {
     return {
@@ -220,7 +207,6 @@ export async function updateUser(rawUser: IUserUpdate) {
     };
   }
   const user = validatedData.data
-  console.log('updateUser:user:', user)
   const session = await auth()
     if(session?.user.role !== "admin")
       throw new Error('Admin permission required')
@@ -231,11 +217,9 @@ export async function updateUser(rawUser: IUserUpdate) {
       return { success: false, message: "You cannot demote the last admin account." };
     }
   }
-  console.log('updateUser:user:pass checked then try')
   try {
     await connectToDatabase()      
     const normalizedEmail = normalizeEmail(user.email)  
-    console.log('before DB update')
       const updatedUser = await User.findOneAndUpdate(
       { _id: user._id },
       [
@@ -256,7 +240,6 @@ export async function updateUser(rawUser: IUserUpdate) {
       ],
       { new: true }
     );
-       console.log('after DB update', updatedUser)
     if (!updatedUser) throw new Error('User not found')
   
     await revalidateAllLocales('/admin/users');
@@ -341,7 +324,7 @@ export async function updateUserEmail(values: IUserEmail) {
 
     const { token, hashedToken } = generateVerificationToken()
 
-    const updatedUser = await User.findOneAndUpdate(
+    await User.findOneAndUpdate(
       { _id: userId },
       { $set: { 
               email : normalizedEmail,
@@ -351,8 +334,6 @@ export async function updateUserEmail(values: IUserEmail) {
             } }, // The update operation
       { new: true } // Return the updated document
     )
-    console.log(`Updating user ${currentUser.name} email to ${normalizedEmail}. Replace with your DB call`);
-    console.log(updatedUser);
 
     const verificationProps = {
       name: currentUser.name,
@@ -375,7 +356,7 @@ export async function updateUserEmail(values: IUserEmail) {
     }
 
   } catch (error) {
-    console.error('Error updating user email:', error)
+    console.error('Error updating user email')
     return {
       success: false,
       message: 'An unexpected error occurred. Please try again',
@@ -466,7 +447,6 @@ export async function sendVerifyEmailAgain() {
     
     const DBUser = await User.findById(userId).select('emailVerified').lean()
     if (DBUser?.emailVerified) {     
-      console.log('ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg') 
       revalidateAllLocales('/');
       return { success: false, message: 'Email is already verified' }
     }
@@ -483,10 +463,6 @@ export async function sendVerifyEmailAgain() {
     if (!updatedUser) {
       return { success: false, message: 'User not found' };
     }
-
-    console.log('AGAIN ==> sendVerificationEmail', updatedUser);
-
-  
     const verificationProps: VerificationPropsType = {
       name: userName || 'User',
       email: userEmail, 

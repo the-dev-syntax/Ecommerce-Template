@@ -70,12 +70,9 @@ export default function VerifyClientOtp() {
             variant: 'destructive',
             description: result.message,
           });
-          console.log('Email is already verified - updating session');
           // const emailVerified = data?.user?.emailVerified;
           // await update(emailVerified);   // null
-          // console.log('Email is already verified - after updating session');
           await update({ id: data?.user?.id });   // string
-          console.log('Email is already verified - after updating session again');
           setMessage(result.message);
           // useRouter().push(`/${locale}/`); // Redirect to home page    
           router.push(`/${locale}/`); // Redirect to home page      

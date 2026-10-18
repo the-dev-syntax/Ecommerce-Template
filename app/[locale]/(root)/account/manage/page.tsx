@@ -17,7 +17,6 @@ export async function generateMetadata() {
 
 export default async function ProfilePage() {
   const session = await auth()
-console.log('MANAGE PAGE -------- session:', session)
   const t = await getTranslations()
   const tForm = await getTranslations()
 

@@ -56,14 +56,9 @@ export default function SignUpForm() {
   const { control, handleSubmit } = form
 
   const onSubmit = async (data: IUserSignUp) => {
-    console.log('from sign up form (onSubmit)')
     try {
-      console.log('about to call registerUser')
-      console.log('about to call registerUser:', data)
       const res = await registerUser(data)
-      console.log('after calling registerUser')
       if (!res.success) {
-         console.log('from sign up form (onSubmit failed 1111)')
         toast({
           title: 'Error',
           description: res.error, // fetch failed message

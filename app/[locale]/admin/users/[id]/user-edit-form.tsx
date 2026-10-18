@@ -42,10 +42,8 @@ export default function UserEditForm({ user }: { user: IUser })  {
     resolver: zodResolver(UserUpdateSchema),
     defaultValues: user,
   })
-  console.log('user edit form', user)
 
   async function onSubmit(values: z.infer<typeof UserUpdateSchema>) {
-    console.log('onSubmit Update User Button values', values)
     try {
       const res = await updateUser({
         ...values,
