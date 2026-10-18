@@ -114,6 +114,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Product search now escapes user input before building the `$regex` filter in both the storefront and admin product lists. Previously a crafted query could act as an arbitrary regular expression and consume excessive database CPU.
 - Why: unpublished products/pages were reachable through bulk public endpoints and the sitemap, and raw regex input was a denial-of-service vector.
 
+## P0-13 — Paid orders cannot be hard-deleted (2026-10-18)
+
+- `deleteOrder` in `lib/actions/order.actions.ts` now loads the order and refuses deletion when `isPaid` is true.
+- The admin order list only renders the delete dialog for unpaid orders.
+- Why: deleting a paid order removed the payment record and order history while leaving stock and `numSales` already decremented, breaking accounting and sales reports. Paid orders must be retained; cancellation/refunds should be handled as new records instead.
+
 ## Verification
 
 ### P0-1
@@ -183,6 +189,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ### P0-12
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-13
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)

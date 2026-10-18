@@ -775,6 +775,15 @@ export async function deleteOrder(id: string) {
     
     await connectToDatabase()
 
+    const order = await Order.findById(id).select('isPaid')
+    if (!order) throw new Error('Order not found')
+    if (order.isPaid)
+      return {
+        success: false,
+        message:
+          'Paid orders cannot be deleted. Keep them for accounting and order history.',
+      }
+
     const res = await Order.findByIdAndDelete(id)
     if (!res) throw new Error('Order not found')
    
