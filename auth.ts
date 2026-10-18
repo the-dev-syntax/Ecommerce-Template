@@ -101,11 +101,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!freshUser) return null
 
         // A password change/reset invalidates tokens issued before it.
+        // Tokens issued before this check existed have no `authTime`; they
+        // must be rejected too, otherwise a stolen pre-deploy token would
+        // survive a password reset.
         if (
           freshUser.passwordChangedAt &&
-          token.authTime &&
-          token.authTime * 1000 <
-            new Date(freshUser.passwordChangedAt).getTime()
+          (!token.authTime ||
+            token.authTime * 1000 <
+              new Date(freshUser.passwordChangedAt).getTime())
         ) {
           return null
         }

@@ -136,6 +136,30 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Applied the clamps to `getAllProducts`, `getAllProductsForAdmin`, `getRelatedProductsByCategory`, `getProductsForCard`, `getProductsByTag`, `getReviews`, `getMyOrders`, `getAllOrders` and `getAllUsers`.
 - Why: server actions exported from `'use server'` files are reachable by any client, even when the UI only calls them from an authenticated page. Read helpers therefore need their own authorization, and every client-supplied pagination value needs a hard upper bound.
 
+## Fix — Regression audit of P0-1..P0-15 (2026-10-18)
+
+Audited every P0 change against the current code. Regressions found and fixed:
+
+- **P0-11 sign-in lockout.** `UserSignInSchema` reused the registration `Password` policy, so the new 72-character cap (and the older complexity rules) were applied when signing in. Accounts with legacy passwords that do not satisfy today's policy could no longer log in. Added a separate `SignInPassword` (`min 1`, `max 256`) in `lib/validator.ts:232`; registration keeps the full `Password` policy via `UserSignUpSchema` (`lib/validator.ts:270`).
+- **P0-8 invalidation bypass for old tokens.** The JWT callback only rejected tokens when `token.authTime` existed. Tokens issued before that field was introduced therefore survived a password change/reset. `auth.ts:108` now also rejects tokens with no `authTime` once `passwordChangedAt` is set.
+- **P0-15 fallback bypass.** `clampLimit` returned the fallback unchanged, so a `pageSize` setting above `MAX_PAGE_SIZE` bypassed the cap. `lib/utils.ts:69` now clamps the fallback too.
+- **P0-2 size/color validation.** `buildOrderItems` accepted any size/color when the product had an empty `sizes`/`colors` array, contradicting the "must be valid for the product" rule. `lib/actions/order.actions.ts:85` now requires a match whenever a size/color is supplied.
+- **P0-13 delete race.** `deleteOrder` read `isPaid` and then deleted in a second query, so a payment landing between the two could delete a paid order. `lib/actions/order.actions.ts:794` now deletes with `{ _id, isPaid: { $ne: true } }` atomically.
+- **P0-3 intent reuse.** `createStripePaymentIntent` reused a stored PaymentIntent without re-checking its `orderId` metadata, amount or currency. `lib/actions/order.actions.ts:403` now verifies all three before returning its client secret.
+- **P0-10 last-admin check.** The demotion guard queried MongoDB before `connectToDatabase()` and relied on mongoose buffering. `lib/actions/user.actions.ts:363` now connects first.
+
+Known gaps (not regressions; left as follow-ups):
+
+- Middleware runs `auth.config.ts`, whose JWT callback does not re-read the database. A demoted/deleted admin's role stays stale in middleware until the JWT expires, but every Node-side page/action re-checks the current role from the database.
+- The unique index on `email` is still case-sensitive (see P0-9 production note).
+- Invalidation only works where `passwordChangedAt` is set; accounts that never changed/reset a password keep their normal JWT lifetime.
+
+### Verification
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=6144` after clearing `.next` (4096 hit the Windows heap limit during static generation)
+
 ## Fix — Invalid next-intl keys (2026-10-18)
 
 - Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.

@@ -226,9 +226,14 @@ export const UserInputSchema = z.object({
   }),
 })
 
+// Sign-in must not re-apply the current password policy: accounts created
+// before a policy change (or long passwords added before the 72-char cap)
+// would otherwise be locked out. Only reject empty/impossibly long values.
+const SignInPassword = z.string().min(1, 'Password is required').max(256)
+
 export const UserSignInSchema = z.object({
   email: Email,
-  password: Password,
+  password: SignInPassword,
   callbackUrl: z.string().optional(),
 }).strip()
 
@@ -264,6 +269,7 @@ export const ResetPasswordSchema = z
 
 export const UserSignUpSchema = UserSignInSchema.extend({
   name: UserName,
+  password: Password,
   confirmPassword: Password,
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

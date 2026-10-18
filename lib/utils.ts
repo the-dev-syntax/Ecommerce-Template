@@ -67,8 +67,14 @@ export const clampPage = (page: unknown): number => {
 }
 
 export const clampLimit = (limit: unknown, fallback: number): number => {
+  const fallbackValue = Math.floor(Number(fallback))
+  const safeFallback =
+    Number.isFinite(fallbackValue) && fallbackValue > 0
+      ? Math.min(fallbackValue, MAX_PAGE_SIZE)
+      : 1
+
   const value = Math.floor(Number(limit))
-  if (!Number.isFinite(value) || value < 1) return fallback
+  if (!Number.isFinite(value) || value < 1) return safeFallback
   return Math.min(value, MAX_PAGE_SIZE)
 }
 

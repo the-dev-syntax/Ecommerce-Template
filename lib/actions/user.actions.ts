@@ -360,6 +360,7 @@ export async function updateUser(rawUser: IUserUpdate) {
       throw new Error('Admin permission required')
     
     if (user.role !== 'admin' && user._id === session.user.id) {
+    await connectToDatabase()
     const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount <= 1) {
       return { success: false, message: "You cannot demote the last admin account." };

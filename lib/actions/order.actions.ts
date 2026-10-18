@@ -82,9 +82,9 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
 
     const size = item.size?.trim() || undefined
     const color = item.color?.trim() || undefined
-    if (size && product.sizes?.length && !product.sizes.includes(size))
+    if (size && !(product.sizes ?? []).includes(size))
       throw new Error(`Invalid size for ${product.name}`)
-    if (color && product.colors?.length && !product.colors.includes(color))
+    if (color && !(product.colors ?? []).includes(color))
       throw new Error(`Invalid color for ${product.name}`)
 
     return {
@@ -400,6 +400,13 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
       const existing = await stripe.paymentIntents.retrieve(
         order.stripePaymentIntentId
       )
+      if (existing.metadata.orderId !== order._id.toString())
+        return { error: 'Payment intent does not match this order' }
+      if (
+        existing.amount !== Math.round(order.totalPrice * 100) ||
+        existing.currency.toLowerCase() !== currency
+      )
+        return { error: 'Payment intent does not match this order total' }
       if (existing.status === 'succeeded')
         return { error: 'Order is already paid' }
       if (existing.status === 'processing' || existing.status === 'requires_capture')
@@ -784,17 +791,21 @@ export async function deleteOrder(id: string) {
     
     await connectToDatabase()
 
-    const order = await Order.findById(id).select('isPaid')
-    if (!order) throw new Error('Order not found')
-    if (order.isPaid)
+    // Delete atomically so a payment that lands between the check and the
+    // delete cannot remove a paid order.
+    const res = await Order.findOneAndDelete({
+      _id: id,
+      isPaid: { $ne: true },
+    })
+    if (!res) {
+      const stillExists = await Order.exists({ _id: id })
+      if (!stillExists) throw new Error('Order not found')
       return {
         success: false,
         message:
           'Paid orders cannot be deleted. Keep them for accounting and order history.',
       }
-
-    const res = await Order.findByIdAndDelete(id)
-    if (!res) throw new Error('Order not found')
+    }
    
    await revalidateAllLocales(`/admin/orders`)
 
