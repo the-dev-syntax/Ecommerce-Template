@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/react'
 import  useCartStore  from '@/hooks/use-cart-store'
 import { useTranslations } from 'next-intl'
 import { redirect } from 'next/navigation'
+import { flushBrowsingHistoryNow } from '@/lib/sync-browsing-history'
 
 
 
@@ -13,9 +14,12 @@ export function SignOutButton() {
 
   // 2. Create the handler function
   const handleSignOut = async () => {    
+    // Persist browsing history to the DB account before clearing the browser copy.
+    await flushBrowsingHistoryNow()
     clearCart()
     localStorage.removeItem('EV-cart')
     localStorage.removeItem('browsingHistoryStore')
+    sessionStorage.removeItem('browsingHistoryHydrated')
 
     await signOut()
     redirect('/')

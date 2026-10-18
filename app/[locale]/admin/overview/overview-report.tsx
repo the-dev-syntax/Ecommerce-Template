@@ -60,6 +60,7 @@ export default function OverviewReport({
     if (fromParam || toParam) return          // URL already wins; don't override
     const stored = storedDateRange()
     if (stored) setDate(stored)    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const [date, setDate] = useState<DateRange | undefined>(() => {

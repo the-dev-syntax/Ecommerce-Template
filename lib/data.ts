@@ -1679,7 +1679,7 @@ const data: Data = {
     },
     {
       name: 'Browsing History',
-      href: '#browsing-history',
+      href: '/account/browsing-history',
     },
     {
       name: 'Customer Service',

@@ -7,6 +7,7 @@ import { ThemeProvider } from './theme-provider'
 import SettingsInitializer from './settings-initializer'
 import { ClientSetting } from '@/types'
 import TopProgressBar from './top-progress-bar'
+import SyncBrowsingHistory from './sync-browsing-history'
 
 
 
@@ -24,6 +25,7 @@ export default function ClientProviders({
       <Suspense fallback={null}>
         <TopProgressBar />
       </Suspense>
+      <SyncBrowsingHistory />
 
       <SettingsInitializer setting={setting}  />
       

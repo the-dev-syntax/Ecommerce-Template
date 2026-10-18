@@ -8,6 +8,7 @@ export interface IUser extends Omit<Document, '_id'>, IUserInput {
   _id: string;
   createdAt: Date;
   updatedAt: Date;
+  browsingHistory?: { product: string; category: string; viewedAt: Date }[];
 }
 
 // 2. Interface for statics
@@ -24,6 +25,13 @@ const UserSchema = new Schema<IUser, IUserModel>({
   emailVerified: { type: Date, default: null },
   verificationToken: { type: String, select: false },
   verificationTokenExpires: { type: Date, select: false },
+  browsingHistory: [
+    {
+      product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+      category: { type: String, required: true },
+      viewedAt: { type: Date, default: Date.now },
+    },
+  ],
 }, { timestamps: true });
 
 // 4. Static method implementation

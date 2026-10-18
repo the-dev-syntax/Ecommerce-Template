@@ -1,5 +1,6 @@
 'use client'
 import useBrowsingHistory from '@/hooks/use-browsing-history'
+import { markBrowsingHistoryDirty } from '@/lib/sync-browsing-history'
 import { useEffect } from 'react'
 
 export default function AddToBrowsingHistory({
@@ -11,8 +12,8 @@ export default function AddToBrowsingHistory({
 }) {
   const { addItem } = useBrowsingHistory()
   useEffect(() => {
-    // console.log('addItem({ id, category })')
     addItem({ id, category })
+    markBrowsingHistoryDirty()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return null

@@ -1,3 +1,9 @@
+how to open opencode in vscode:
+1- open terminal in vscode
+2- type ==> opencode
+
+
+
 Bugs:
 1- when entering any tags like today's deal or featured prducts ==> if browse history clicked , there is nothing to navigate to.neither a page nor a #.
 
@@ -115,3 +121,59 @@ I used existing translation keys (t('Stripe Checkout'), t('Submitting')) so no m
 
 
 --------------------------------
+.env.local
+
+NEXT_PUBLIC_APP_NAME=Essential Vital
+NEXT_PUBLIC_APP_SLOGAN=Be Healthy, Be Happy.
+NEXT_PUBLIC_APP_DESCRIPTION=Discover premium, science-backed supplements designed to support your health and wellness goals. Shop natural, high-quality vitamins, minerals, and herbal formulas for energy, immunity, and overall well-being.
+
+# MY WEBSITE URL ==> change it to essentialVital.com
+NEXT_PUBLIC_SERVER_URL=https://ev-web-zeta.vercel.app/
+NEXT_PUBLIC_BASE_URL=https://ev-web-zeta.vercel.app/
+AUTH_TRUST_HOST=true
+
+# DATABASE
+# MONGODB_URI=mongodb+srv://mywebitself:6FTGDwqkeHtkJyoz@cluster0.fvvrp.mongodb.net/EVS?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_URI=
+AUTH_SECRET=
+
+
+# GOOGLE
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+
+
+# RESEND
+RESEND_API_KEY=
+SENDER_EMAIL=contact@contact.essentialvital.com
+SENDER_NAME=support
+
+
+# PAYPAL
+PAYPAL_API_URL=https://sandbox.paypal.com 
+PAYPAL_CLIENT_ID=
+PAYPAL_APP_SECRET=
+
+
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# UPLOADTHING
+UPLOADTHING_TOKEN=
+UPLOADTHING_SECRET=
+
+# AUTH0
+TENANT_DOMAIN=
+
+
+UPSTASH_REDIS_REST_URL="https://correct-mammal-93922.upstash.io"
+UPSTASH_REDIS_REST_TOKEN=
+
+# Upstash/QSTASH
+QSTASH_URL=
+QSTASH_TOKEN=
+QSTASH_CURRENT_SIGNING_KEY=
+QSTASH_NEXT_SIGNING_KEY=

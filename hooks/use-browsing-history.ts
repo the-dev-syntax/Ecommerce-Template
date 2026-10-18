@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { MAX_BROWSING_HISTORY } from '@/lib/constants'
 
 type BrowsingHistory = {
   products: { id: string; category: string }[]
@@ -26,7 +27,7 @@ export default function useBrowsingHistory() {
       if (index !== -1) products.splice(index, 1) //if product exist in the list ==> Remove duplicate by splice=delete(starting from, how many)
       products.unshift(product) //else Add products to the start
 
-      if (products.length > 10) products.pop() // Remove excess items if length exceeds 10
+      if (products.length > MAX_BROWSING_HISTORY) products.pop() // Remove excess items if length exceeds cap
 
       browsingHistoryStore.setState({
         products,

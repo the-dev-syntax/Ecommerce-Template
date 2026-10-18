@@ -21,4 +21,6 @@ export const PRICE_RANGES = [
 ]
 
 export const EMAIL_EXPIRATION_TIME = 3 * 60 * 1000;
+
+export const MAX_BROWSING_HISTORY = 50;
 export const DATE_RANGE_KEY = 'admin-overview-date-range'
