@@ -90,6 +90,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Why: registration and email changes stored lowercased addresses, but lookups were exact-match. That caused failed logins for case variants and allowed case-variant duplicates to slip past the pre-checks (the database unique index is case-sensitive).
 - Production note: the existing unique index on `email` is case-sensitive. A one-time audit should confirm there are no case-variant duplicates, and the index can be replaced with a case-insensitive unique index (`collation: { locale: 'en', strength: 2 }`) during deployment.
 
+## P0-10 — Prevent deleting the last admin (2026-10-18)
+
+- `deleteUser` in `lib/actions/user.actions.ts` now loads the target user first and, when the target is an admin, counts the remaining admins. If only one admin exists, deletion is refused.
+- This mirrors the existing last-admin guard in `updateUser`, which prevents demoting the last admin.
+- Why: an admin could delete the only admin account (including themselves) and permanently lock everyone out of `/admin`, products, orders and settings. The only recovery would be a manual database edit.
+
 ## Verification
 
 ### P0-1
@@ -141,6 +147,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Routes `/forgot-password` and `/reset-password` are present in the build output.
 
 ### P0-9
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-10
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)

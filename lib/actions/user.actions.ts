@@ -274,6 +274,18 @@ export async function deleteUser(id:string) {
   try {
     await connectToDatabase()
 
+    const target = await User.findById(id).select('role')
+    if (!target) throw new Error('User not found')
+
+    if (target.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' })
+      if (adminCount <= 1)
+        return {
+          success: false,
+          message: 'You cannot delete the last admin account.',
+        }
+    }
+
     const res = await User.findByIdAndDelete(id)
     if (!res) throw new Error('User not found')
 
