@@ -23,6 +23,7 @@ import {
   SiteLanguageSchema,
   UserEmailSchema,
   UserUpdateSchema,
+  ChangePasswordSchema,
 } from '@/lib/validator'
 
 import 'next-auth/jwt'
@@ -86,6 +87,7 @@ export type IUserSignIn = z.infer<typeof UserSignInSchema>
 export type IUserSignUp = z.infer<typeof UserSignUpSchema>
 export type IUserName = z.infer<typeof UserNameSchema>
 export type IUserEmail = z.infer<typeof UserEmailSchema>
+export type IChangePassword = z.infer<typeof ChangePasswordSchema>
 export type IUserUpdate = z.infer<typeof UserUpdateSchema>
 
 // webpage

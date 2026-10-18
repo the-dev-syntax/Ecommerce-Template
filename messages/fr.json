@@ -462,5 +462,13 @@
   "to write a review": "pour rédiger un avis",
   "todays-deal": "affaire du jour",
   "todaysDeals": "Offre du jour",
-  "up": "et plus"
+  "up": "et plus",
+  "Change Password": "Changer le mot de passe",
+  "Current Password": "Mot de passe actuel",
+  "New Password": "Nouveau mot de passe",
+  "PasswordChangeWarning": "Après avoir changé votre mot de passe, utilisez le nouveau lors de votre prochaine connexion.",
+  "Password updated successfully": "Mot de passe mis à jour avec succès",
+  "Current password is incorrect": "Le mot de passe actuel est incorrect",
+  "New password must be different from the current password": "Le nouveau mot de passe doit être différent du mot de passe actuel",
+  "This account does not have a password set.": "Ce compte n'a pas de mot de passe défini."
 }

@@ -462,5 +462,13 @@
   "to write a review": "لكتابة مراجعة",
   "todays-deal": "عرض اليوم",
   "todaysDeals": "صفقة اليوم",
-  "up": "وما فوق"
+  "up": "وما فوق",
+  "Change Password": "تغيير كلمة المرور",
+  "Current Password": "كلمة المرور الحالية",
+  "New Password": "كلمة المرور الجديدة",
+  "PasswordChangeWarning": "بعد تغيير كلمة المرور، استخدم كلمة المرور الجديدة في المرة القادمة التي تسجل فيها الدخول.",
+  "Password updated successfully": "تم تحديث كلمة المرور بنجاح",
+  "Current password is incorrect": "كلمة المرور الحالية غير صحيحة",
+  "New password must be different from the current password": "يجب أن تكون كلمة المرور الجديدة مختلفة عن كلمة المرور الحالية",
+  "This account does not have a password set.": "لا تحتوي هذا الحساب على كلمة مرور."
 }

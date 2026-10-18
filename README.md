@@ -61,6 +61,14 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - The limiter fails closed if Redis is unavailable, matching the existing auth-action limiters.
 - Why: the credentials endpoint had no lockout or throttling, so an attacker could guess passwords indefinitely. Per-IP limits blunt one-source attacks; per-email limits blunt distributed attacks against a single account.
 
+## P0-7 — Password change for signed-in users (2026-10-18)
+
+- Added `ChangePasswordSchema` in `lib/validator.ts`: current password required, new password must satisfy the existing password policy, confirmation must match, and the new password must differ from the current one.
+- Added `updateUserPassword` in `lib/actions/user.actions.ts`. It requires a session, rate-limits attempts, verifies the current password with bcrypt, and stores the new hash with bcrypt cost 12. Google-only accounts without a password get an explicit error instead of a misleading one.
+- Added `app/[locale]/(root)/account/manage/password/page.tsx` and `password-form.tsx`. This fixes the existing `/account/manage/password` link, which previously pointed to a missing route.
+- Added the new UI strings to `en-US`, `ar` and `fr`.
+- Why: users had no way to rotate a compromised password while signed in, and the account UI exposed a dead "Edit password" link.
+
 ## Verification
 
 ### P0-1
@@ -96,6 +104,13 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-7
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (472 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+- Route `/account/manage/password` is present in the build output.
 
 ---
 

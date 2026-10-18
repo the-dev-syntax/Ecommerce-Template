@@ -462,5 +462,13 @@
   "to write a review": "to write a review",
   "todays-deal": "Today's deal",
   "todaysDeals": "Today's Deal",
-  "up": "up"
+  "up": "up",
+  "Change Password": "Change Password",
+  "Current Password": "Current Password",
+  "New Password": "New Password",
+  "PasswordChangeWarning": "After changing your password, use the new password the next time you sign in.",
+  "Password updated successfully": "Password updated successfully",
+  "Current password is incorrect": "Current password is incorrect",
+  "New password must be different from the current password": "New password must be different from the current password",
+  "This account does not have a password set.": "This account does not have a password set."
 }

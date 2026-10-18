@@ -1,8 +1,8 @@
 'use server'
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
-import { IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate, VerificationPropsType } from '@/types'
-import { UserEmailSchema, UserNameSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
+import { IChangePassword, IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate, VerificationPropsType } from '@/types'
+import { ChangePasswordSchema, UserEmailSchema, UserNameSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
 import { formatError, generateOtp, generateVerificationToken, normalizeEmail } from '../utils'
@@ -124,6 +124,41 @@ export async function updateUserName(user: IUserName) {
       message: 'User updated successfully',
       data: JSON.parse(JSON.stringify(updatedUser)), // return updated user to the frontend
     }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// UPDATE USER PASSWORD - PRIVATE
+export async function updateUserPassword(values: IChangePassword) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) throw new Error('User is not authenticated')
+
+    const { currentPassword, newPassword } =
+      ChangePasswordSchema.parse(values)
+
+    // Slow down password guessing from a hijacked session.
+    await limitAuthActionsByIP()
+
+    await connectToDatabase()
+
+    const user = await User.findById(session.user.id).select('+password')
+    if (!user) throw new Error('User not found')
+    if (!user.password)
+      return {
+        success: false,
+        message: 'This account does not have a password set.',
+      }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password)
+    if (!isMatch)
+      return { success: false, message: 'Current password is incorrect' }
+
+    user.password = await bcrypt.hash(newPassword, 12)
+    await user.save()
+
+    return { success: true, message: 'Password updated successfully' }
   } catch (error) {
     return { success: false, message: formatError(error) }
   }
