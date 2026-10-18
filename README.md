@@ -53,6 +53,14 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - The JWT still stores identity for edge middleware, but every Node-side `auth()` call (admin layout, admin pages, every server action, UploadThing) now sees the current database role.
 - Why: with JWT sessions, demoting or deleting an admin did not revoke their privileges until the token expired. A removed admin could keep using `/admin` and admin server actions for the remaining token lifetime.
 
+## P0-6 — Rate-limit credential sign-in (2026-10-18)
+
+- Added `limitSignInAttempts` in `lib/rate-limit.ts` with two Upstash sliding windows: 30 attempts per 10 minutes per IP and 10 attempts per 10 minutes per normalized email.
+- Wired it into the Credentials `authorize` callback in `auth.ts` before `User.authenticate`, so the limit applies even when an attacker calls the NextAuth callback directly instead of using the sign-in form.
+- Over-limit attempts return the same generic failure as bad credentials, so the response does not reveal whether the email exists or that a limiter fired.
+- The limiter fails closed if Redis is unavailable, matching the existing auth-action limiters.
+- Why: the credentials endpoint had no lockout or throttling, so an attacker could guess passwords indefinitely. Per-IP limits blunt one-source attacks; per-email limits blunt distributed attacks against a single account.
+
 ## Verification
 
 ### P0-1
@@ -78,6 +86,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ### P0-5
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-6
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)

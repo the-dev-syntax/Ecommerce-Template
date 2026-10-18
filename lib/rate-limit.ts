@@ -1,7 +1,7 @@
 import { redis } from './redis'; 
 import { Ratelimit } from '@upstash/ratelimit';
 import { headers } from 'next/headers';
-import { formatSeconds } from './utils';
+import { formatSeconds, normalizeEmail } from './utils';
 
 
 
@@ -23,6 +23,40 @@ export async function limitAuthActionsByIP() {
   if (!success) {
     const retrySeconds = Math.ceil((reset - Date.now()) / 1000);
     throw new Error(`Too many requests. Please wait ${formatSeconds(retrySeconds)}`);
+  }
+}
+
+// Credential sign-in limiters: slow down brute force and credential stuffing.
+// Per-IP catches distributed email guessing; per-email catches many IPs
+// targeting one account. Successful sign-ins count too, so keep the windows
+// high enough for normal use.
+const signInIpLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, "10 m"),
+  prefix: "v1:ratelimit:sign-in-ip",
+});
+
+const signInEmailLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, "10 m"),
+  prefix: "v1:ratelimit:sign-in-email",
+});
+
+export async function limitSignInAttempts(email: string) {
+  const ip = await getIP();
+  const normalized = normalizeEmail(email);
+
+  const [byIp, byEmail] = await Promise.all([
+    signInIpLimit.limit(ip),
+    signInEmailLimit.limit(normalized),
+  ]);
+
+  if (!byIp.success || !byEmail.success) {
+    const reset = Math.max(byIp.reset, byEmail.reset);
+    const retrySeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    throw new Error(
+      `Too many sign-in attempts. Please wait ${formatSeconds(retrySeconds)}`
+    );
   }
 }
 

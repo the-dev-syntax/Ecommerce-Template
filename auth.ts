@@ -9,6 +9,7 @@ import User from './lib/db/models/user.model'
 import Google from 'next-auth/providers/google'
 import { UserSignInSchema } from './lib/validator'
 import { UserRole } from './types'
+import { limitSignInAttempts } from './lib/rate-limit'
 // import { AuthenticatedUser } from './types/next-auth'
 
 
@@ -54,7 +55,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (validatedFields.data == null) return null
           
         const { email, password } = validatedFields.data;
-      
+
+        try {
+          await limitSignInAttempts(email)
+        } catch {
+          return null
+        }
+
           const user = await User.authenticate(email, password);
 
           if (!user) return null
