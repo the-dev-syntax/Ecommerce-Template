@@ -19,8 +19,11 @@ export const ReviewInputSchema = z.object({
   product: MongoId,
   user: MongoId,
   isVerifiedPurchase: z.boolean(),
-  title: z.string().min(1, 'Title is required'),
-  comment: z.string().min(1, 'Comment is required'),
+  title: z.string().min(1, 'Title is required').max(120, 'Title is too long'),
+  comment: z
+    .string()
+    .min(1, 'Comment is required')
+    .max(3000, 'Comment is too long'),
   rating: z.coerce
     .number()
     .int()
@@ -73,11 +76,17 @@ export const ProductUpdateSchema = ProductInputSchema.extend({
 
 // One Item to add, Schema
 export const OrderItemSchema = z.object({
-  clientId: z.string().min(1, 'clientId is required'), //unique id for specific instance of an item being added to an order or cart, generated each time.
-  product: z.string().min(1, 'Product is required'),
-  name: z.string().min(1, 'Name is required'),
-  slug: z.string().min(1, 'Slug is required'), // URL generation, SEO, human-readable ID , fixed name 
-  category: z.string().min(1, 'Category is required'),
+  clientId: z
+    .string()
+    .min(1, 'clientId is required')
+    .max(100, 'clientId is too long'), //unique id for specific instance of an item being added to an order or cart, generated each time.
+  product: MongoId,
+  name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
+  slug: z.string().min(1, 'Slug is required').max(200, 'Slug is too long'), // URL generation, SEO, human-readable ID , fixed name 
+  category: z
+    .string()
+    .min(1, 'Category is required')
+    .max(100, 'Category is too long'),
   quantity: z
     .number()
     .int()
@@ -86,20 +95,41 @@ export const OrderItemSchema = z.object({
     .number()
     .int()
     .nonnegative('Count in stock must be a non-negative number'),
-  image: z.string().min(1, 'Image is required'),
+  image: z
+    .string()
+    .min(1, 'Image is required')
+    .max(2048, 'Image URL is too long'),
   price: Price('Price'),
-  size: z.string().optional(),
-  color: z.string().optional(),
+  size: z.string().max(50, 'Size is too long').optional(),
+  color: z.string().max(50, 'Color is too long').optional(),
 })
 
 export const ShippingAddressSchema = z.object({
-  fullName: z.string().min(1, 'Full name is required'),
-  street: z.string().min(1, 'Address is required'),
-  city: z.string().min(1, 'City is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  province: z.string().min(1, 'Province is required'),
-  phone: z.string().min(1, 'Phone number is required'),
-  country: z.string().min(1, 'Country is required'),
+  fullName: z
+    .string()
+    .min(1, 'Full name is required')
+    .max(100, 'Full name is too long'),
+  street: z
+    .string()
+    .min(1, 'Address is required')
+    .max(200, 'Address is too long'),
+  city: z.string().min(1, 'City is required').max(100, 'City is too long'),
+  postalCode: z
+    .string()
+    .min(1, 'Postal code is required')
+    .max(20, 'Postal code is too long'),
+  province: z
+    .string()
+    .min(1, 'Province is required')
+    .max(100, 'Province is too long'),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .max(30, 'Phone number is too long'),
+  country: z
+    .string()
+    .min(1, 'Country is required')
+    .max(100, 'Country is too long'),
 })
 
 // place order page
@@ -107,7 +137,8 @@ export const OrderInputSchema = z.object({
   user: MongoId,
   items: z
     .array(OrderItemSchema)
-    .min(1, 'Order must contain at least one item'),
+    .min(1, 'Order must contain at least one item')
+    .max(50, 'Order cannot contain more than 50 items'),
   shippingAddress: ShippingAddressSchema,
   paymentMethod: z.string().min(1, 'Payment method is required'),
   currency: z.string().min(3).max(3),
@@ -141,7 +172,8 @@ export const OrderInputSchema = z.object({
 export const CartSchema = z.object({
   items: z
     .array(OrderItemSchema)
-    .min(1, 'Order must contain at least one item'),
+    .min(1, 'Order must contain at least one item')
+    .max(50, 'Cart cannot contain more than 50 items'),
   itemsPrice: z.number(),
   taxPrice: z.optional(z.number()),
   shippingPrice: z.optional(z.number()),
@@ -156,13 +188,18 @@ export const CartSchema = z.object({
 const UserName = z
   .string()
   .min(2, { message: 'Username must be at least 2 characters' })
-  .max(50, { message: 'Username must be at most 30 characters' })
-const Email = z.string().min(1, 'Email is required').email('Email is invalid')
+  .max(50, { message: 'Username must be at most 50 characters' })
+const Email = z
+  .string()
+  .min(1, 'Email is required')
+  .max(254, 'Email is too long')
+  .email('Email is invalid')
 // const Password = z.string().min(6, 'Password must be at least 6 characters')
 const UserRole = z.enum(['user', 'admin']);
 
 const Password = z.string()
     .min(8, "Password must be at least 8 characters")
+    .max(72, "Password must be at most 72 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number")

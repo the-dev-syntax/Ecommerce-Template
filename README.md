@@ -96,6 +96,16 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - This mirrors the existing last-admin guard in `updateUser`, which prevents demoting the last admin.
 - Why: an admin could delete the only admin account (including themselves) and permanently lock everyone out of `/admin`, products, orders and settings. The only recovery would be a manual database edit.
 
+## P0-11 — Bound user-controlled payloads (2026-10-18)
+
+- `OrderInputSchema` and `CartSchema` now cap `items` at 50. `buildOrderItems` enforces the same cap before querying products, so an oversized array is rejected before any database work.
+- `OrderItemSchema` now requires a real MongoDB ObjectId for `product` and caps `clientId`, `name`, `slug`, `category`, `image`, `size` and `color`.
+- `ShippingAddressSchema` caps every field (`fullName` 100, `street` 200, `city` 100, `postalCode` 20, `province` 100, `phone` 30, `country` 100).
+- `ReviewInputSchema` caps title at 120 and comment at 3000 characters.
+- `Email` is capped at 254 characters and `Password` at 72 characters (bcrypt's effective input limit).
+- Browsing-history sync slices incoming items to `MAX_BROWSING_HISTORY`, accepts only valid ObjectId product ids and string categories, and caps category length before writing.
+- Why: server actions and the browsing-history beacon accepted unbounded arrays and strings. A logged-in user could store huge order/review/address values or make the server iterate and query over oversized arrays, bloating the database and wasting CPU.
+
 ## Verification
 
 ### P0-1
@@ -153,6 +163,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ### P0-10
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-11
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)

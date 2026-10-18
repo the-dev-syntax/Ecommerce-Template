@@ -43,6 +43,8 @@ export async function dbOrderWith3UserKeys(orderId: string): Promise<OrderWithUs
 const buildOrderItems = async (clientItems: OrderItem[]) => {
   if (!Array.isArray(clientItems) || clientItems.length === 0)
     throw new Error('Order must contain at least one item')
+  if (clientItems.length > 50)
+    throw new Error('Order cannot contain more than 50 items')
 
   const productIds = [...new Set(clientItems.map((item) => item.product))]
 

@@ -26,10 +26,19 @@ export async function mergeBrowsingHistory(
 
   const merged: BrowsingHistoryItem[] = []
   const seen = new Set<string>()
-  for (const item of [...items, ...existing]) {
-    if (!item?.productId || seen.has(item.productId)) continue
+  const incoming = Array.isArray(items)
+    ? items.slice(0, MAX_BROWSING_HISTORY)
+    : []
+
+  for (const item of [...incoming, ...existing]) {
+    if (!item?.productId || !/^[0-9a-fA-F]{24}$/.test(item.productId)) continue
+    if (typeof item.category !== 'string') continue
+    if (seen.has(item.productId)) continue
     seen.add(item.productId)
-    merged.push({ productId: item.productId, category: item.category })
+    merged.push({
+      productId: item.productId,
+      category: item.category.trim().slice(0, 100),
+    })
     if (merged.length >= MAX_BROWSING_HISTORY) break
   }
 
