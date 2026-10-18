@@ -46,7 +46,10 @@ UserSchema.statics.authenticate = async function (
   password: string
 ): Promise<AuthenticatedUser | null> {
  
-  const user = await this.findOne({ email }).select("+password");
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await this.findOne({ email: normalizedEmail })
+    .collation({ locale: 'en', strength: 2 })
+    .select("+password");
   if (!user || !user.password) return null;
 
   const isMatch = await bcrypt.compare(password, user.password);

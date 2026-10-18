@@ -81,6 +81,15 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Added an account-layout guard that redirects to `/sign-in` when the session is no longer valid.
 - Why: there was no recovery path at all, and a password reset without invalidation would leave an attacker's existing JWT (up to 30 days) working after the victim recovered the account.
 
+## P0-9 — Case-insensitive email handling (2026-10-18)
+
+- `User.authenticate` in `lib/db/models/user.model.ts` now normalizes the email and looks it up with a case-insensitive collation (`locale: 'en', strength: 2`). Previously a user who registered `user@example.com` could not sign in as `User@Example.com`, and mixed-case accounts created by Google were unreachable by credentials login.
+- `authorize` in `auth.ts` normalizes the email before the sign-in rate limiter and `User.authenticate`, so the limiter buckets all case variants of the same address together.
+- Fixed `updateUserEmail`: it queried `{ normalizedEmail }` — a field that does not exist — so the duplicate check never ran. It now queries `{ email: normalizedEmail }` with the same collation.
+- Registration and admin user updates now perform their duplicate-email checks with the same case-insensitive collation.
+- Why: registration and email changes stored lowercased addresses, but lookups were exact-match. That caused failed logins for case variants and allowed case-variant duplicates to slip past the pre-checks (the database unique index is case-sensitive).
+- Production note: the existing unique index on `email` is case-sensitive. A one-time audit should confirm there are no case-variant duplicates, and the index can be replaced with a case-insensitive unique index (`collation: { locale: 'en', strength: 2 }`) during deployment.
+
 ## Verification
 
 ### P0-1
@@ -130,6 +139,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 - Routes `/forgot-password` and `/reset-password` are present in the build output.
+
+### P0-9
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ---
 

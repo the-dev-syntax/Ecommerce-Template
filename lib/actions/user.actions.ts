@@ -60,8 +60,9 @@ export async function registerUser(userSignUp: IUserSignUp) {
 
     await connectToDatabase()
 
-    // Check if the email is already in use
+    // Check if the email is already in use (case-insensitive)
     const existingUser = await User.findOne({ email: normalizedEmail })
+      .collation({ locale: 'en', strength: 2 })
 
     if (existingUser) {
       return { success: false, message: 'Email is already in use' }
@@ -355,6 +356,20 @@ export async function updateUser(rawUser: IUserUpdate) {
   try {
     await connectToDatabase()      
     const normalizedEmail = normalizeEmail(user.email)  
+
+    const emailTaken = await User.findOne({
+      email: normalizedEmail,
+      _id: { $ne: user._id },
+    })
+      .collation({ locale: 'en', strength: 2 })
+      .select('_id')
+
+    if (emailTaken)
+      return {
+        success: false,
+        message: 'This email is already in use by another account.',
+      }
+
       const updatedUser = await User.findOneAndUpdate(
       { _id: user._id },
       [
@@ -445,10 +460,11 @@ export async function updateUserEmail(values: IUserEmail) {
     await connectToDatabase()
 
     // Check if the new email is already in use by another user
-    const existingUser = await User.findOne({ normalizedEmail })
-      if (existingUser && existingUser._id.toString() !== userId) {
-        return { success: false, message: 'This email is already in use' };
-      }
+    const existingUser = await User.findOne({ email: normalizedEmail })
+      .collation({ locale: 'en', strength: 2 })
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return { success: false, message: 'This email is already in use' };
+    }
 
     const currentUser = await User.findById(userId).select('email').lean()
     if (!currentUser) throw new Error('User not found')  
