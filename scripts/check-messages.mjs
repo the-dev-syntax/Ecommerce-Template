@@ -13,6 +13,10 @@ const others = { ar: read(files.ar), fr: read(files.fr) }
 const enKeys = Object.keys(en)
 const issues = []
 
+for (const k of enKeys) {
+  if (k.includes('.')) issues.push(`INVALID KEY (contains "."): "${k}"`)
+}
+
 for (const [lang, obj] of Object.entries(others)) {
   for (const k of enKeys) {
     if (!(k in obj)) issues.push(`MISSING in ${lang}: "${k}"`)

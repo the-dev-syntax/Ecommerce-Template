@@ -29,7 +29,7 @@ export default async function ResetPasswordPage({
           </CardHeader>
           <CardContent className='flex flex-col gap-4'>
             <p className='text-sm'>
-              {t('This reset link is invalid or has expired.')}
+              {t('This reset link is invalid or has expired')}
             </p>
             <Link href='/forgot-password'>
               <Button className='w-full' variant='outline'>

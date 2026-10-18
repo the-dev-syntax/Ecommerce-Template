@@ -51,7 +51,7 @@ export function ForgotPasswordForm() {
       <div className='flex flex-col gap-4'>
         <p className='text-sm'>
           {t(
-            'If an account exists for that email, a reset link has been sent.'
+            'If an account exists for that email, a reset link has been sent'
           )}
         </p>
         <Link href='/sign-in'>

@@ -470,13 +470,12 @@
   "Password updated successfully": "تم تحديث كلمة المرور بنجاح",
   "Current password is incorrect": "كلمة المرور الحالية غير صحيحة",
   "New password must be different from the current password": "يجب أن تكون كلمة المرور الجديدة مختلفة عن كلمة المرور الحالية",
-  "This account does not have a password set.": "لا تحتوي هذا الحساب على كلمة مرور.",
   "Forgot Password": "هل نسيت كلمة المرور؟",
   "ForgotPasswordInstructions": "أدخل البريد الإلكتروني المرتبط بحسابك وسنرسل لك رابط إعادة تعيين كلمة المرور.",
   "Send Reset Link": "إرسال رابط إعادة التعيين",
-  "If an account exists for that email, a reset link has been sent.": "إذا كان هناك حساب مرتبط بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة التعيين.",
+  "If an account exists for that email, a reset link has been sent": "إذا كان هناك حساب مرتبط بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة التعيين.",
   "Reset Password": "إعادة تعيين كلمة المرور",
   "ResetPasswordInstructions": "اختر كلمة مرور جديدة لحسابك.",
-  "This reset link is invalid or has expired.": "رابط إعادة التعيين غير صالح أو منتهي الصلاحية.",
+  "This reset link is invalid or has expired": "رابط إعادة التعيين غير صالح أو منتهي الصلاحية.",
   "Back to Sign In": "العودة لتسجيل الدخول"
 }

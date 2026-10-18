@@ -120,6 +120,25 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - The admin order list only renders the delete dialog for unpaid orders.
 - Why: deleting a paid order removed the payment record and order history while leaving stock and `numSales` already decremented, breaking accounting and sales reports. Paid orders must be retained; cancellation/refunds should be handled as new records instead.
 
+## P0-14 — Baseline security headers (2026-10-18)
+
+- `next.config.ts` now sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Content-Security-Policy: frame-ancestors 'self'`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/microphone/geolocation disabled) and `X-Permitted-Cross-Domain-Policies: none` on every response.
+- `Strict-Transport-Security` (`max-age=31536000; includeSubDomains`) is added in production only.
+- `poweredByHeader: false` removes the `X-Powered-By: Next.js` version hint.
+- Why: these are the baseline browser protections against MIME sniffing, clickjacking, referrer leakage, unnecessary device permissions and protocol downgrade. A full resource CSP is left as a follow-up because Stripe, PayPal and UploadThing require a carefully tested allow-list.
+
+## Fix — Invalid next-intl keys (2026-10-18)
+
+- Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.
+- Renamed `If an account exists for that email, a reset link has been sent.` and `This reset link is invalid or has expired.` to versions without trailing periods, and updated the two `t(...)` call sites.
+- `scripts/check-messages.mjs` now fails when any key contains `.`, because next-intl treats dots as namespace separators.
+- Why: next-intl throws `INVALID_KEY` at render time, which took down every page through the locale layout.
+
+### Verification
+- `npm run i18n:check` — PASS (479 keys, no dotted keys)
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+
 ## Verification
 
 ### P0-1
@@ -199,6 +218,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-14
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096` (includes the known Auth.js/`jose` Edge Runtime `CompressionStream` warning, which is not a build error)
 
 ---
 
