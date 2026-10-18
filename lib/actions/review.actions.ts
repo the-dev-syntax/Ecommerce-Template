@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { connectToDatabase } from '../db'
 import Product from '../db/models/product.model'
 import Review, { IReview } from '../db/models/review.model'
-import { formatError } from '../utils'
+import { clampLimit, clampPage, formatError } from '../utils'
 import { ReviewInputSchema } from '../validator'
 import { IReviewDetails, IReviewInput } from '@/types'
 import { getSetting } from './setting.actions'
@@ -133,10 +133,10 @@ export async function getReviews({
     common: { pageSize },
   } = await getSetting()
   
-  limit = limit || pageSize
+  limit = clampLimit(limit, pageSize)
 
   await connectToDatabase()
-  const skipAmount = (page - 1) * limit
+  const skipAmount = (clampPage(page) - 1) * limit
   const reviews = await Review.find({ product: productId })
     .populate('user', 'name')
     .sort({

@@ -5,7 +5,7 @@ import { IChangePassword, IRequestPasswordReset, IResetPassword, IUserEmail, IUs
 import { ChangePasswordSchema, RequestPasswordResetSchema, ResetPasswordSchema, UserEmailSchema, UserNameSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
-import { formatError, generateOtp, generateVerificationToken, normalizeEmail } from '../utils'
+import { clampLimit, clampPage, formatError, generateOtp, generateVerificationToken, normalizeEmail } from '../utils'
 import { redirect } from 'next/navigation'
 import { getSetting } from './setting.actions'
 import { sendPasswordResetEmail, sendVerificationEmail } from '@/emails'
@@ -318,9 +318,9 @@ export async function getAllUsers({
 
     const { common: { pageSize } } = await getSetting()
     
-    limit = limit || pageSize
+    limit = clampLimit(limit, pageSize)
     
-    const skipAmount = (Number(page) -1)  * limit
+    const skipAmount = (clampPage(page) - 1) * limit
 
     const usersQuery = User.find()
       .sort({ createdAt: 'desc' })

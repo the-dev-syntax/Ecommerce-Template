@@ -46,8 +46,12 @@ export const getAllWebPages = async () => {
   return JSON.parse(JSON.stringify(WebPages)) as IWebPage[]
 }
 
-// GET ONE WEB PAGE BY ID - PUBLIC
+// GET ONE WEB PAGE BY ID - ADMIN
 export async function getWebPageById(webPageId: string) {
+  const session = await auth()
+  if (session?.user.role !== 'admin')
+    throw new Error('Admin permission required')
+
   await connectToDatabase()
 
   const webPage = await WebPage.findById(webPageId)

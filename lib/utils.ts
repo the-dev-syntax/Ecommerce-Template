@@ -58,6 +58,20 @@ export function formatNumber(number: number) {
 export const round2 = (num: number) =>
   Math.round((num + Number.EPSILON) * 100) / 100
 
+export const MAX_PAGE_SIZE = 100
+
+// Pagination values arrive from the client, so never trust them as-is.
+export const clampPage = (page: unknown): number => {
+  const value = Math.floor(Number(page))
+  return Number.isFinite(value) && value > 0 ? value : 1
+}
+
+export const clampLimit = (limit: unknown, fallback: number): number => {
+  const value = Math.floor(Number(limit))
+  if (!Number.isFinite(value) || value < 1) return fallback
+  return Math.min(value, MAX_PAGE_SIZE)
+}
+
 // generate a unique id for each item
 export const generateId = () => nanoid()
 

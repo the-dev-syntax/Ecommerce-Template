@@ -3,7 +3,14 @@
 import type Stripe from 'stripe'
 
 import { Cart, IOrderList, OrderItem, ShippingAddress } from '@/types'
-import { calculateFutureDate, formatError, generateId, round2 } from '../utils'
+import {
+  calculateFutureDate,
+  clampLimit,
+  clampPage,
+  formatError,
+  generateId,
+  round2,
+} from '../utils'
 import { connectToDatabase } from '../db'
 import { auth } from '@/auth'
 import { OrderInputSchema } from '../validator'
@@ -21,7 +28,9 @@ import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
 
 
-export async function dbOrderWith3UserKeys(orderId: string): Promise<OrderWithUser | null> {
+// Internal helper. Must NOT be exported from a 'use server' module, otherwise
+// every client could call it as a server action and read any order by id.
+async function dbOrderWith3UserKeys(orderId: string): Promise<OrderWithUser | null> {
   await connectToDatabase()
   const order = await Order.findById(orderId).populate<{
     user: { _id: string; email: string; name: string }
@@ -508,9 +517,9 @@ export async function getMyOrders({
 
   const {common: { pageSize }} = await getSetting()
   
-  limit = limit || pageSize
+  limit = clampLimit(limit, pageSize)
   
-  const skipAmount = (Number(page) - 1) * limit
+  const skipAmount = (clampPage(page) - 1) * limit
 
   const session = await auth()
   if (!session) {
@@ -811,13 +820,13 @@ export async function getAllOrders({
     common: { pageSize },
   } = await getSetting()
 
-  limit = limit || pageSize
+  limit = clampLimit(limit, pageSize)
 
   requireAdmin(await auth())
   
   await connectToDatabase()
 
-  const skipAmount = (Number(page) - 1) * limit
+  const skipAmount = (clampPage(page) - 1) * limit
   const orders = await Order.find()
     .populate('user', 'name')
     .sort({ createdAt: 'desc' })

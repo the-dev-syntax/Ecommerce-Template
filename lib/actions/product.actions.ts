@@ -1,7 +1,7 @@
 'use server'
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
-import { escapeRegExp, formatError } from '../utils'
+import { clampLimit, clampPage, escapeRegExp, formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
@@ -35,7 +35,7 @@ export async function getProductsForCard({
     }
   )
     .sort({ createdAt: 'desc' })
-    .limit(limit)
+    .limit(clampLimit(limit, 4))
   return JSON.parse(JSON.stringify(products)) as {
     name: string
     href: string
@@ -57,7 +57,7 @@ export async function getProductsByTag({
     isPublished: true,
   })
     .sort({ createdAt: 'desc' })
-    .limit(limit)
+    .limit(clampLimit(limit, 10))
   return JSON.parse(JSON.stringify(products)) as IProduct[]
 }
 
@@ -84,7 +84,8 @@ export async function getRelatedProductsByCategory({
 
 
   await connectToDatabase()
-  const skipAmount = (Number(page) - 1) * limit // explaination down
+  limit = clampLimit(limit, 4)
+  const skipAmount = (clampPage(page) - 1) * limit // explaination down
   const conditions = {
     isPublished: true,
     category,
@@ -126,8 +127,8 @@ export async function getAllProducts({
     common: { pageSize },
   } = await getSetting()
 
-  limit = limit || pageSize
- 
+  limit = clampLimit(limit, pageSize)
+  const safePage = clampPage(page)
 
   await connectToDatabase()
 
@@ -189,25 +190,25 @@ export async function getAllProducts({
     ...isPublished, // isPublished: true
   })
     .sort(order)
-    .skip(limit * (Number(page) - 1))
+    .skip(limit * (safePage - 1))
     .limit(limit)
     .lean()
 
   const countProducts = await Product.countDocuments({
     ...queryFilter,
-    ...tagFilter,
-    ...categoryFilter,
+    ...tagFilter,   
+    ...categoryFilter,   // category
     ...priceFilter,
-    ...ratingFilter,
-    ...isPublished,
+    ...ratingFilter, // avgRating: { $gte: Number(rating),
+    ...isPublished, // isPublished: true
   })
 
   return {
     products: JSON.parse(JSON.stringify(products)) as IProduct[],
     totalPages: Math.ceil(countProducts / limit),
     totalProducts: countProducts,
-    from: limit * (Number(page) - 1) + 1,
-    to: limit * (Number(page) - 1) + products.length,
+    from: limit * (safePage - 1) + 1,
+    to: limit * (safePage - 1) + products.length,
   }
 }
 
@@ -277,7 +278,8 @@ export async function getAllProductsForAdmin({
     common: { pageSize },
   } = await getSetting()
 
-  limit = limit || pageSize
+  limit = clampLimit(limit, pageSize)
+  const safePage = clampPage(page)
 
   const queryFilter =
     query && query !== 'all'
@@ -303,7 +305,7 @@ export async function getAllProductsForAdmin({
     ...queryFilter,
   })
     .sort(order)
-    .skip(limit * (Number(page) - 1))
+    .skip(limit * (safePage - 1))
     .limit(limit)
     .lean()
 
@@ -314,8 +316,8 @@ export async function getAllProductsForAdmin({
     products: JSON.parse(JSON.stringify(products)) as IProduct[],
     totalPages: Math.ceil(countProducts / pageSize),
     totalProducts: countProducts,
-    from: pageSize * (Number(page) - 1) + 1,
-    to: pageSize * (Number(page) - 1) + products.length,
+    from: pageSize * (safePage - 1) + 1,
+    to: pageSize * (safePage - 1) + products.length,
   }
 }
 
@@ -365,8 +367,12 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
   }
 }
 
-// GET ONE PRODUCT BY ID - PUBLIC
+// GET ONE PRODUCT BY ID - ADMIN
 export async function getProductById(productId: string) {
+  const session = await auth()
+  if (session?.user.role !== 'admin')
+    throw new Error('Admin permission required')
+
   await connectToDatabase()
   const product = await Product.findById(productId)
   return JSON.parse(JSON.stringify(product)) as IProduct

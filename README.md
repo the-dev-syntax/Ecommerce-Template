@@ -127,6 +127,15 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `poweredByHeader: false` removes the `X-Powered-By: Next.js` version hint.
 - Why: these are the baseline browser protections against MIME sniffing, clickjacking, referrer leakage, unnecessary device permissions and protocol downgrade. A full resource CSP is left as a follow-up because Stripe, PayPal and UploadThing require a carefully tested allow-list.
 
+## P0-15 — Lock down read helpers and bound pagination (2026-10-18)
+
+- `dbOrderWith3UserKeys` in `lib/actions/order.actions.ts` is no longer exported. It lives in a `'use server'` module, so every exported function was a client-callable server action; an unauthenticated caller could read any order (items, shipping address, and the owner's name/email) by id. It is now a module-private helper used only after the calling action has authorized the session.
+- `getProductById` and `getWebPageById` now require an admin session. They are only used by the admin edit pages and previously returned unpublished/draft records to anyone who called the action with an id.
+- `getNoCachedSetting` now requires an admin session as well; it returns the uncached full settings document and is only used by the admin settings page.
+- Added `clampPage` and `clampLimit` (`MAX_PAGE_SIZE = 100`) in `lib/utils.ts`. Pagination and `limit` values come from the client, so a caller could previously request an arbitrarily large page/limit and force MongoDB to scan and serialize huge result sets.
+- Applied the clamps to `getAllProducts`, `getAllProductsForAdmin`, `getRelatedProductsByCategory`, `getProductsForCard`, `getProductsByTag`, `getReviews`, `getMyOrders`, `getAllOrders` and `getAllUsers`.
+- Why: server actions exported from `'use server'` files are reachable by any client, even when the UI only calls them from an authenticated page. Read helpers therefore need their own authorization, and every client-supplied pagination value needs a hard upper bound.
+
 ## Fix — Invalid next-intl keys (2026-10-18)
 
 - Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.
@@ -224,6 +233,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096` (includes the known Auth.js/`jose` Edge Runtime `CompressionStream` warning, which is not a build error)
+
+### P0-15
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ---
 

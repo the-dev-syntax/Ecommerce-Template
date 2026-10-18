@@ -11,6 +11,10 @@ const globalForSettings = global as unknown as {
   cachedSettings: ISettingInput | null
 }
 export const getNoCachedSetting = async (): Promise<ISettingInput> => {
+  const session = await auth()
+  if (session?.user.role !== 'admin')
+    throw new Error('Admin permission required')
+
   await connectToDatabase()
   const setting = await Setting.findOne()
   return JSON.parse(JSON.stringify(setting)) as ISettingInput
