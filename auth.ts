@@ -109,28 +109,55 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return token;
     },
-      async session({ session, token, user, trigger }) {
-      // console.log('in SESSION callback auth user: 555555555555555555555555', user)
-      // console.log('in SESSION callback auth token: 6666666666666666666666666666', token)
-      // console.log('SESSION callback in auth: 777777777777777777777777777777', session)
-      // console.log('TRIGGER callback in trigger: =============================', trigger)
-        session  = {
-          ...session,         
-          user : {            
-            id: token.sub as string,
-            role: token.role as UserRole,
-            emailVerified: token.emailVerified as Date | null,
-            image: token.picture ?? "",
-            name: token.name ?? "",
-            email: token.email ?? "",
+      async session({ session, token }) {
+        // Never trust role/emailVerified from the JWT alone: a role change or
+        // account deletion must take effect on the next request, not when the
+        // token expires. Re-read the current user from the database.
+        const userId = token.sub as string | undefined
+        let role = token.role as UserRole | undefined
+        let emailVerified = token.emailVerified as Date | null
+        let name = token.name ?? ''
+        let email = token.email ?? ''
+
+        if (userId) {
+          try {
+            await connectToDatabase()
+            const freshUser = await User.findById(userId)
+              .select('name email role emailVerified')
+              .lean()
+
+            if (freshUser) {
+              role = freshUser.role as UserRole
+              emailVerified = (freshUser.emailVerified ?? null) as Date | null
+              name = freshUser.name ?? name
+              email = freshUser.email ?? email
+            } else {
+              // Account was deleted: keep the session usable as a guest but
+              // strip every privileged flag.
+              role = 'user'
+              emailVerified = null
+            }
+          } catch {
+            // If the lookup fails, fail closed for privileged access.
+            role = 'user'
+            emailVerified = null
           }
-        }  
+        }
 
-      // console.log('SESSION callback in auth token: 888888888888888888888888888', token)
-      // console.log('SESSION callback in auth: 9999999999999999999999999999', session)
+        session = {
+          ...session,
+          user: {
+            id: userId ?? '',
+            role: role ?? 'user',
+            emailVerified,
+            image: token.picture ?? '',
+            name,
+            email,
+          },
+        }
 
-      return session
-    },      
+        return session
+      },      
   },
 })
 

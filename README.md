@@ -45,6 +45,14 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Sanitized the remaining error logs in `updateUserEmail` and `sendReceiptOnce` so they no longer serialize user or order data.
 - Why: application logs are retained and forwarded by hosting providers. Logging passwords, OTPs or full user/session objects turns routine debugging output into a credential and PII disclosure.
 
+## P0-5 — Revalidate session role from the database (2026-10-18)
+
+- The `session` callback in `auth.ts` now re-reads `name`, `email`, `role` and `emailVerified` from the `users` collection on every session build instead of copying them from the JWT.
+- If the account no longer exists, the session is reduced to a non-privileged guest (`role: 'user'`, `emailVerified: null`).
+- If the database lookup fails, the callback fails closed the same way, so a transient error can never leave a stale `admin` role in place.
+- The JWT still stores identity for edge middleware, but every Node-side `auth()` call (admin layout, admin pages, every server action, UploadThing) now sees the current database role.
+- Why: with JWT sessions, demoting or deleting an admin did not revoke their privileges until the token expired. A removed admin could keep using `/admin` and admin server actions for the remaining token lifetime.
+
 ## Verification
 
 ### P0-1
@@ -64,6 +72,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ### P0-4
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-5
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
