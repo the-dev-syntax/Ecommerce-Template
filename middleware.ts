@@ -59,7 +59,14 @@ export default auth((req) => {
       // console.log('middleware:', session.user)
       // console.log('middleware: id',session.user.id)
       // console.log('middleware: role',session.user.role)
-      
+
+      const isAdminRoute = /(?:^|\/)admin(?:\/|$)/i.test(pathname)
+      if (isAdminRoute && session.user.role !== 'admin') {
+        const homeUrl =
+          locale === routing.defaultLocale ? '/' : `/${locale}`
+        return Response.redirect(new URL(homeUrl, req.nextUrl.origin))
+      }
+
        const isEmailVerified = !!session.user.emailVerified;
       // console.log('middleware:User email verification status:', isEmailVerified);
        const verificationRequiredRoutes = ['/checkout', '/account'];

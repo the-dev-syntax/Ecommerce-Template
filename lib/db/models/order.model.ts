@@ -6,6 +6,7 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   _id: string
   createdAt: Date
   updatedAt: Date
+  receiptSentAt?: Date
 }
 
 export type OrderWithUser = Omit<IOrder, 'user'> & {
@@ -51,7 +52,14 @@ const orderSchema = new Schema<IOrder>(
     },
     expectedDeliveryDate: { type: Date, required: true },
     paymentMethod: { type: String, required: true },
-    paymentResult: { id: String, status: String, email_address: String },
+    currency: { type: String, required: true, default: 'USD' },
+    paymentResult: {
+      id: String,
+      status: String,
+      email_address: String,
+      pricePaid: String,
+    },
+    receiptSentAt: { type: Date },
     itemsPrice: { type: Number, required: true },
     shippingPrice: { type: Number, required: true },
     taxPrice: { type: Number, required: true },

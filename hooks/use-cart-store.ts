@@ -66,7 +66,6 @@ const useCartStore = create(
         set({
           cart: {
             ...get().cart,
-            items: updatedCartItems,
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress,
@@ -103,7 +102,6 @@ const useCartStore = create(
         set({
           cart: {
             ...get().cart,
-            items: updatedCartItems,
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress
@@ -122,7 +120,6 @@ const useCartStore = create(
         set({
           cart: {
             ...get().cart,
-            items: updatedCartItems,
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress

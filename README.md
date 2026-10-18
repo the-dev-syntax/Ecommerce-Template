@@ -1,3 +1,61 @@
+# Essential Vital — Production Readiness Log
+
+Changes are recorded here in the order they are implemented. Each point lists what changed and why.
+
+## P0-1 — Security hardening (2026-10-18)
+
+- Removed `app/api/stripe-worker/route.ts`. It was publicly reachable and accepted an unsigned JSON payload that could mark any order as paid. Payment fulfillment must only run through the signature-verified Stripe webhook (or another explicitly verified worker).
+- Added admin-role enforcement in `middleware.ts`: every `/admin/*` route now requires `session.user.role === 'admin'`, not just any logged-in session.
+- Added a second admin-role check in `app/[locale]/admin/layout.tsx` as defense in depth; non-admins are redirected to the storefront.
+- Changed `updateOrderToPaid` in `lib/actions/order.actions.ts` to use `requireAdmin(...)`. Previously an order owner could invoke the action and mark their own order as paid.
+- Restricted UploadThing uploads in `app/api/uploadthing/core.ts` to admins. Previously any logged-in customer could upload files to the store's storage quota.
+- Why: these were direct paths to fake paid orders, unauthorized admin access, and storage abuse. They must be closed before any real order can be accepted.
+
+## P0-2 — Server-side order re-pricing and validation (2026-10-18)
+
+- Added `buildOrderItems` in `lib/actions/order.actions.ts`. Every cart line is re-fetched from MongoDB; names, slugs, images, categories, prices, stock, sizes and colors come from the database, never from the browser.
+- `createOrderFromCart` now ignores client-supplied `itemsPrice`, `shippingPrice`, `taxPrice`, `totalPrice` and `expectedDeliveryDate`. It recalculates the items price from DB prices, shipping/tax from settings, and the delivery date from the selected delivery option.
+- Added validation: the product must exist and be published, quantity must be an integer >= 1 and <= stock, size/color must be valid for the product, the delivery index must be valid, the payment method must be enabled in settings, and the session user must match the order owner.
+- `calcDeliveryDateAndPrice` now also re-prices the cart from the DB, so cart and checkout totals cannot be tampered with. An empty cart is still allowed while the customer removes items.
+- Tightened `OrderItemSchema.quantity` to a positive integer in `lib/validator.ts`.
+- Added a duplicate-submit guard (`isPlacingOrder`) to the checkout buttons so double-clicks cannot create two orders.
+- Why: previously a customer could edit the persisted cart and submit any price, stock value or payment method, and the server stored it as-is.
+
+## P0-3 — Single idempotent fulfillment path for every payment provider (2026-10-18)
+> idempotent means that making the same API request multiple times will yield the exact same server state and result as executing it a single time
+
+- Added `lib/orders/fulfill-order.ts`. It is now the only code that marks an order paid, decrements stock and increments `numSales`. It runs inside a MongoDB transaction and re-checks the order, payment method, currency and paid amount before writing.
+- Fulfillment is idempotent. A duplicate webhook or double approval sees `isPaid` and returns without decrementing stock again. Concurrent calls conflict on the order document, so the transaction retries and then observes the paid order.
+- Stock is decremented with an atomic `countInStock >= quantity` filter, so an oversold line aborts the whole transaction instead of producing negative stock.
+- Purchase receipts are sent at most once via `receiptSentAt`, claimed atomically before sending. A failed email clears the claim so a later retry can send it, and an email failure never un-pays an order.
+- `app/api/webhooks/stripe/route.ts` now fulfills from `payment_intent.succeeded` (signature-verified), with a `charge.succeeded` fallback, and returns HTTP 500 on fulfillment failure so Stripe retries. It verifies the paid amount and currency against the stored order.
+- `approvePayPalOrder` checks that the PayPal order ID matches the one stored on the order, captures the payment, and passes the captured amount/currency to `fulfillOrder` instead of trusting client input.
+- `updateOrderToPaidByStripe` (success-page fallback) retrieves the PaymentIntent from Stripe, verifies its status, `orderId` metadata, amount and currency, then calls `fulfillOrder`.
+- `updateOrderToPaid` (admin/manual) also goes through `fulfillOrder`, so manual payments get the same stock and receipt handling.
+- Added `currency`, `receiptSentAt` and `paymentResult.pricePaid` to `lib/db/models/order.model.ts`. `currency` is set from `getSetting().defaultCurrency` when the order is created and is required by `OrderInputSchema`.
+- `createStripePaymentIntent` reuses an existing reusable PaymentIntent, returns an error for already-paid/processing intents, and stores the intent ID on the order. `paypal.createOrder` now sends the order currency and a two-decimal amount.
+- Why: payment completion could previously be triggered by an unsigned worker, a success-page call, a webhook or a manual admin action, each with its own stock and email logic. That allowed double stock decrements, races between providers, and orders marked paid without matching the captured amount.
+
+## Verification
+
+### P0-1
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
+
+### P0-2
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS
+- `npm run build` — PASS (on this Windows machine use `NODE_OPTIONS=--max-old-space-size=4096`; clear `.next` if a previous failed build leaves the machine low on memory)
+
+### P0-3
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (464 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+---
+
 how to open opencode in vscode:
 1- open terminal in vscode
 2- type ==> opencode
@@ -121,59 +179,4 @@ I used existing translation keys (t('Stripe Checkout'), t('Submitting')) so no m
 
 
 --------------------------------
-.env.local
 
-NEXT_PUBLIC_APP_NAME=Essential Vital
-NEXT_PUBLIC_APP_SLOGAN=Be Healthy, Be Happy.
-NEXT_PUBLIC_APP_DESCRIPTION=Discover premium, science-backed supplements designed to support your health and wellness goals. Shop natural, high-quality vitamins, minerals, and herbal formulas for energy, immunity, and overall well-being.
-
-# MY WEBSITE URL ==> change it to essentialVital.com
-NEXT_PUBLIC_SERVER_URL=https://ev-web-zeta.vercel.app/
-NEXT_PUBLIC_BASE_URL=https://ev-web-zeta.vercel.app/
-AUTH_TRUST_HOST=true
-
-# DATABASE
-# MONGODB_URI=mongodb+srv://mywebitself:6FTGDwqkeHtkJyoz@cluster0.fvvrp.mongodb.net/EVS?retryWrites=true&w=majority&appName=Cluster0
-MONGODB_URI=
-AUTH_SECRET=
-
-
-# GOOGLE
-AUTH_GOOGLE_ID=
-AUTH_GOOGLE_SECRET=
-
-
-# RESEND
-RESEND_API_KEY=
-SENDER_EMAIL=contact@contact.essentialvital.com
-SENDER_NAME=support
-
-
-# PAYPAL
-PAYPAL_API_URL=https://sandbox.paypal.com 
-PAYPAL_CLIENT_ID=
-PAYPAL_APP_SECRET=
-
-
-
-# Stripe
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-
-# UPLOADTHING
-UPLOADTHING_TOKEN=
-UPLOADTHING_SECRET=
-
-# AUTH0
-TENANT_DOMAIN=
-
-
-UPSTASH_REDIS_REST_URL="https://correct-mammal-93922.upstash.io"
-UPSTASH_REDIS_REST_TOKEN=
-
-# Upstash/QSTASH
-QSTASH_URL=
-QSTASH_TOKEN=
-QSTASH_CURRENT_SIGNING_KEY=
-QSTASH_NEXT_SIGNING_KEY=

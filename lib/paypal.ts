@@ -1,7 +1,7 @@
 const base = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com'
 
 export const paypal = {
-  createOrder: async function createOrder(price: number) {
+  createOrder: async function createOrder(price: number, currency = 'USD') {
     const accessToken = await generateAccessToken()
     const url = `${base}/v2/checkout/orders`
     const response = await fetch(url, {
@@ -15,8 +15,8 @@ export const paypal = {
         purchase_units: [
           {
             amount: {
-              currency_code: 'USD',
-              value: price,
+              currency_code: currency.toUpperCase(),
+              value: price.toFixed(2),
             },
           },
         ],

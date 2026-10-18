@@ -131,8 +131,11 @@ const CheckoutForm = () => {
 
   const [isDeliveryDateSelected, setIsDeliveryDateSelected] = useState<boolean>(false)
 
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+
   const handlePlaceOrder = async () => {
-    // TODO: place order
+    if (isPlacingOrder) return
+
     if (!selectedDelivery) {
       toast({
         description: 'Please select a delivery date',
@@ -140,25 +143,29 @@ const CheckoutForm = () => {
       })
       return
     }
-    console.log('placing order with following details:')
-    const res = await createOrder({
-      items,
-      shippingAddress,
-      expectedDeliveryDate: calculateFutureDate(selectedDelivery.daysToDeliver),
-      deliveryDateIndex: deliveryDateIndex ?? 0,
-      paymentMethod,
-      itemsPrice,
-      shippingPrice,
-      taxPrice,
-      totalPrice,
-    })
-    console.log('order creation response:', res)
-    if (!res.success) {
-      toast({
-        description: res.message,
-        variant: 'destructive',
+
+    setIsPlacingOrder(true)
+    try {
+      const res = await createOrder({
+        items,
+        shippingAddress,
+        expectedDeliveryDate: calculateFutureDate(selectedDelivery.daysToDeliver),
+        deliveryDateIndex: deliveryDateIndex ?? 0,
+        paymentMethod,
+        itemsPrice,
+        shippingPrice,
+        taxPrice,
+        totalPrice,
       })
-    } else {
+
+      if (!res.success) {
+        toast({
+          description: res.message,
+          variant: 'destructive',
+        })
+        return
+      }
+
       toast({
         description: res.message,
         variant: 'default',
@@ -166,6 +173,8 @@ const CheckoutForm = () => {
       // Don't clear cart here - it should only be cleared after successful payment
       // The cart will be cleared in the payment success page/webhook
       router.push(`/checkout/${res.data?.orderId}`)
+    } finally {
+      setIsPlacingOrder(false)
     }
   }
   const handleSelectPaymentMethod = () => {
@@ -210,8 +219,12 @@ const CheckoutForm = () => {
         )}
         {isPaymentMethodSelected && isAddressSelected && (
           <div>
-            <Button onClick={handlePlaceOrder} className='rounded-full w-full'>
-              {t('Place Your Order')}
+            <Button
+              onClick={handlePlaceOrder}
+              className='rounded-full w-full'
+              disabled={isPlacingOrder}
+            >
+              {isPlacingOrder ? t('Submitting') : t('Place Your Order')}
             </Button>
             <p className='text-xs text-center py-2'>
               {t.rich('agreementNotice', {
@@ -708,8 +721,12 @@ const CheckoutForm = () => {
 
               <Card className='hidden md:block '>
                 <CardContent className='p-4 flex flex-col md:flex-row justify-between items-center gap-3'>
-                  <Button onClick={handlePlaceOrder} className='rounded-full'>
-                    {t('Place Your Order')}
+                  <Button
+                    onClick={handlePlaceOrder}
+                    className='rounded-full'
+                    disabled={isPlacingOrder}
+                  >
+                    {isPlacingOrder ? t('Submitting') : t('Place Your Order')}
                   </Button>
                   <div className='flex-1'>
                     <p className='font-bold text-lg'>

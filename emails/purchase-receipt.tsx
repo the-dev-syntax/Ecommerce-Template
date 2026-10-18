@@ -57,6 +57,7 @@ import { getSetting } from '@/lib/actions/setting.actions'
         },
       ],
       paymentMethod: 'PayPal',
+      currency: 'USD',
       expectedDeliveryDate: new Date(),
       isDelivered: true,
     } as OrderWithUser,

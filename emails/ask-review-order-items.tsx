@@ -62,6 +62,7 @@ AskReviewOrderItemsEmail.PreviewProps = {
       },
     ],
     paymentMethod: 'PayPal',
+    currency: 'USD',
     expectedDeliveryDate: new Date(),
     isDelivered: true,
   } as OrderWithUser,

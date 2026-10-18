@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { sendPurchaseReceipt } from '@/emails'
-import { connectToDatabase } from '@/lib/db'
-import Order from '@/lib/db/models/order.model'
-import Product from '@/lib/db/models/product.model'
-import mongoose from 'mongoose'
-import { dbOrderWith3UserKeys } from '@/lib/actions/order.actions'
+
+import { fulfillOrder } from '@/lib/orders/fulfill-order'
 
 export async function POST(req: NextRequest) {
-  await connectToDatabase()
-
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
-  // ✅ Validate the webhook signature — return 400 if invalid instead of crashing
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(
@@ -25,95 +18,79 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Invalid signature', { status: 400 })
   }
 
-  if (event.type === 'charge.succeeded') {
-    const charge = event.data.object
-    const orderId = charge.metadata.orderId
-    const email = charge.billing_details.email
-    const pricePaidInCents = charge.amount
-
-    const order = await dbOrderWith3UserKeys(orderId)
-
-    if (order == null) {
-      return new NextResponse('Order not found', { status: 400 })
-    }
-
-    // Idempotency guard — Stripe may send duplicate events
-    if (order.isPaid) {
-      return NextResponse.json({ message: 'Order already paid' })
-    }
-
-    order.isPaid = true
-    order.paidAt = new Date()
-    order.paymentResult = {
-      id: event.id,
-      status: 'COMPLETED',
-      email_address: email || '',
-      pricePaid: (pricePaidInCents / 100).toFixed(2),
-    }
-
-    await order.save()
-
-    // ✅ Decrement product stock — mirrors the PayPal flow
-    try {
-      await updateProductStock(order._id)
-    } catch (stockErr) {
-      console.error('Stock update failed after Stripe payment (order still paid):', stockErr)
-    }
-
-    // Send receipt — failure must never surface as a payment error
-    try {
-      await sendPurchaseReceipt({ order })
-    } catch (emailErr) {
-      console.error('Purchase receipt email failed (order still paid):', emailErr)
-    }
-
-    return NextResponse.json({ message: 'Order marked as paid successfully' })
-  }
-
-  return new NextResponse(null, { status: 200 })
-}
-
-// Decrement countInStock for each item in the order using a transaction
-async function updateProductStock(orderId: string) {
-  const session = await mongoose.connection.startSession()
   try {
-    session.startTransaction()
-    const opts = { session }
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent
+      const orderId = paymentIntent.metadata.orderId
 
-    const order = await Order.findById(orderId).session(session)
-    if (!order) throw new Error('Order not found')
+      if (!orderId) {
+        console.error('Stripe payment intent has no orderId:', paymentIntent.id)
+        return NextResponse.json({ received: true })
+      }
 
-    for (const item of order.items) {
-      const product = await Product.findById(item.product).session(session)
-      if (!product) throw new Error(`Product not found: ${item.product}`)
-      product.countInStock -= item.quantity
-      await Product.updateOne(
-        { _id: product._id },
-        { countInStock: product.countInStock },
-        opts
+      const result = await fulfillOrder({
+        orderId,
+        provider: 'Stripe',
+        paymentId: paymentIntent.id,
+        amountPaid: paymentIntent.amount / 100,
+        currency: paymentIntent.currency,
+        email: paymentIntent.receipt_email ?? '',
+        status: paymentIntent.status,
+      })
+
+      return NextResponse.json({
+        received: true,
+        alreadyPaid: result.alreadyPaid,
+      })
+    }
+
+    // Backward-compatible fallback if the endpoint is still subscribed to charges.
+    if (event.type === 'charge.succeeded') {
+      const charge = event.data.object as Stripe.Charge
+      if (!charge.paid) return NextResponse.json({ received: true })
+
+      let orderId = charge.metadata.orderId
+      if (!orderId && typeof charge.payment_intent === 'string') {
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          charge.payment_intent
+        )
+        orderId = paymentIntent.metadata.orderId
+      }
+
+      if (!orderId) {
+        console.error('Stripe charge has no orderId:', charge.id)
+        return NextResponse.json({ received: true })
+      }
+
+      const result = await fulfillOrder({
+        orderId,
+        provider: 'Stripe',
+        paymentId: charge.id,
+        amountPaid: charge.amount / 100,
+        currency: charge.currency,
+        email: charge.billing_details?.email ?? '',
+        status: 'COMPLETED',
+      })
+
+      return NextResponse.json({
+        received: true,
+        alreadyPaid: result.alreadyPaid,
+      })
+    }
+
+    if (event.type === 'payment_intent.payment_failed') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent
+      console.error(
+        'Stripe payment failed:',
+        paymentIntent.id,
+        paymentIntent.last_payment_error?.message
       )
     }
 
-    await session.commitTransaction()
+    return NextResponse.json({ received: true })
   } catch (error) {
-    await session.abortTransaction()
-    throw error
-  } finally {
-    session.endSession()
+    console.error('Stripe webhook fulfillment failed:', error)
+    // Returning 500 lets Stripe retry the event.
+    return new NextResponse('Fulfillment failed', { status: 500 })
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

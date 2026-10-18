@@ -156,6 +156,7 @@ const generateOrder = async (
     })),
     shippingAddress: data.users[i % users.length].address,
     paymentMethod: data.users[i % users.length].paymentMethod,
+    currency: data.settings[0].defaultCurrency,
     isPaid: true,
     isDelivered: true,
     paidAt: calculatePastDate(i),

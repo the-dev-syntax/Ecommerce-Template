@@ -23,6 +23,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import StripeForm from './stripe-form'
 import { useTranslations } from 'next-intl'
+import useCartStore from '@/hooks/use-cart-store'
 
 
 export default function OrderPaymentForm({
@@ -47,6 +48,7 @@ export default function OrderPaymentForm({
     isPaid,
   } = order
   const { toast } = useToast()
+  const { clearCart } = useCartStore()
 
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
@@ -83,6 +85,11 @@ export default function OrderPaymentForm({
       description: res.message,
       variant: res.success ? 'default' : 'destructive',
     })
+    if (res.success) {
+      clearCart()
+      router.push(`/account/orders/${order._id}`)
+      router.refresh()
+    }
   }
 
   // new addition:

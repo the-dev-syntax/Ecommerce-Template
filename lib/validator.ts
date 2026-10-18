@@ -81,11 +81,11 @@ export const OrderItemSchema = z.object({
   quantity: z
     .number()
     .int()
-    .nonnegative('Quantity must be a non-negative number'),
+    .positive('Quantity must be at least 1'),
   countInStock: z
     .number()
     .int()
-    .nonnegative('Quantity must be a non-negative number'),
+    .nonnegative('Count in stock must be a non-negative number'),
   image: z.string().min(1, 'Image is required'),
   price: Price('Price'),
   size: z.string().optional(),
@@ -110,6 +110,7 @@ export const OrderInputSchema = z.object({
     .min(1, 'Order must contain at least one item'),
   shippingAddress: ShippingAddressSchema,
   paymentMethod: z.string().min(1, 'Payment method is required'),
+  currency: z.string().min(3).max(3),
   paymentResult: z
     .object({
       id: z.string(),
