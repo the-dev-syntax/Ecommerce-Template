@@ -1,18 +1,18 @@
 'use server'
 import bcrypt from 'bcryptjs'
 import { auth, signIn, signOut } from '@/auth'
-import { IChangePassword, IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate, VerificationPropsType } from '@/types'
-import { ChangePasswordSchema, UserEmailSchema, UserNameSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
+import { IChangePassword, IRequestPasswordReset, IResetPassword, IUserEmail, IUserName, IUserSignIn, IUserSignUp, IUserUpdate, VerificationPropsType } from '@/types'
+import { ChangePasswordSchema, RequestPasswordResetSchema, ResetPasswordSchema, UserEmailSchema, UserNameSchema, UserSignUpSchema, UserUpdateSchema } from '../validator'
 import { connectToDatabase } from '../db'
 import User, { IUser } from '../db/models/user.model'
 import { formatError, generateOtp, generateVerificationToken, normalizeEmail } from '../utils'
 import { redirect } from 'next/navigation'
 import { getSetting } from './setting.actions'
-import { sendVerificationEmail } from '@/emails'
-import { incrementIPEmailTokenAttempt, resetIPAttempt, checkAndSetEmailRateLimit, limitAuthActionsByIP } from '@/lib/rate-limit';
+import { sendPasswordResetEmail, sendVerificationEmail } from '@/emails'
+import { incrementIPEmailTokenAttempt, resetIPAttempt, checkAndSetEmailRateLimit, limitAuthActionsByIP, limitPasswordResetRequests, limitPasswordResetConfirm } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { revalidateAllLocales } from '../utils-serverOnly'
-import { EMAIL_EXPIRATION_TIME } from '../constants'
+import { EMAIL_EXPIRATION_TIME, PASSWORD_RESET_EXPIRATION_TIME } from '../constants'
 // import { getToken } from 'next-auth/jwt';
 
 
@@ -156,9 +156,109 @@ export async function updateUserPassword(values: IChangePassword) {
       return { success: false, message: 'Current password is incorrect' }
 
     user.password = await bcrypt.hash(newPassword, 12)
+    user.passwordResetToken = undefined
+    user.passwordResetExpires = undefined
+    user.passwordChangedAt = new Date()
     await user.save()
 
     return { success: true, message: 'Password updated successfully' }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// REQUEST PASSWORD RESET - PUBLIC
+export async function requestPasswordReset(values: IRequestPasswordReset) {
+  try {
+    const { email } = RequestPasswordResetSchema.parse(values)
+    const normalizedEmail = normalizeEmail(email)
+
+    await limitPasswordResetRequests(normalizedEmail)
+    await connectToDatabase()
+
+    // Collation makes the lookup case-insensitive for OAuth-created accounts.
+    const user = await User.findOne({ email: normalizedEmail })
+      .collation({ locale: 'en', strength: 2 })
+      .select('name email')
+
+    if (user) {
+      const { token, hashedToken } = generateVerificationToken()
+
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          passwordResetToken: hashedToken,
+          passwordResetExpires: new Date(
+            Date.now() + PASSWORD_RESET_EXPIRATION_TIME
+          ),
+        },
+      })
+
+      const { site } = await getSetting()
+      const resetLink = new URL(
+        `/reset-password?token=${encodeURIComponent(token)}`,
+        site.url
+      ).toString()
+
+      try {
+        await sendPasswordResetEmail({
+          name: user.name || 'User',
+          email: user.email,
+          resetLink,
+        })
+      } catch {
+        console.error('Password reset email failed')
+      }
+    }
+
+    return {
+      success: true,
+      message:
+        'If an account exists for that email, a reset link has been sent.',
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// RESET PASSWORD WITH TOKEN - PUBLIC
+export async function resetPassword(values: IResetPassword) {
+  try {
+    const { token, newPassword } = ResetPasswordSchema.parse(values)
+
+    await limitPasswordResetConfirm()
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+    const password = await bcrypt.hash(newPassword, 12)
+
+    await connectToDatabase()
+
+    // The filter makes the token single-use and time-limited.
+    const user = await User.findOneAndUpdate(
+      {
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: new Date() },
+      },
+      {
+        $set: {
+          password,
+          passwordResetToken: null,
+          passwordResetExpires: null,
+          passwordChangedAt: new Date(),
+        },
+      },
+      { new: true }
+    )
+
+    if (!user)
+      return {
+        success: false,
+        message: 'This reset link is invalid or has expired.',
+      }
+
+    return {
+      success: true,
+      message: 'Password reset successfully. You can now sign in.',
+    }
   } catch (error) {
     return { success: false, message: formatError(error) }
   }

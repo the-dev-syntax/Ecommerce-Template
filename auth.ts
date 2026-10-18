@@ -74,96 +74,64 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],  
   callbacks: { 
-     async jwt({ token, user, account, profile, trigger, session }) {
-      //2. after sign in - it is encrypted will not be accessed 
-      // Runs on first sign-in; `user` is the value returned by authorize() also account will have value , both only the first time from autherize
-      // token is {name, email, picture, sub}      
-      // console.log('in auth jwt callback user 1111111111111111111111111111111***', user)  // user from autherize first pass only
-      // console.log('in auth jwt callback token 222222222222222222222222222222', token)  // always have its own craeted value
-      // console.log('in auth jwt callback account ++++++++++++++++++++++++++', account) // only the first have value
-      // console.log('in auth jwt callback profile $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$', profile) // only with OAUTH
-      // console.log('in auth jwt callback session !!!!!!!!!!!!!!!!!!!!!!!!!!!!!', session) // if useSession().update the will have a value
-      // console.log('in auth jwt callback trigger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@', trigger) // "signIn" | "signUp" | "update" | undefined
-
-      if (user?.id){
-         token = { 
-          ...token, 
+     async jwt({ token, user }) {
+      if (user?.id) {
+        token = {
+          ...token,
           ...user,
-          sub: user.id 
+          sub: user.id,
+          // Keep the original sign-in time; Auth.js re-issues the JWT on
+          // every session read, so token.iat is not stable.
+          authTime: Math.floor(Date.now() / 1000),
         }
-      }  
-    
-      if (trigger === "update" && session?.id as string) { // update the token by session update
-        // console.log('jwt callback trigger === "update" && token.sub *********************************')
-        const freshUser  = await User.findById(session.id).lean() // get the fresh user from DB;
-        // console.log('jwt callback freshUser *********************************', freshUser)
-        if (freshUser)  {
-           token = { 
-            ...token, 
-            ...freshUser, // convert Mongoose doc to plain object 
-            name : freshUser.name, // keep the old name if not updated
-            email : freshUser.email,
-            role : freshUser.role,
-            picture: freshUser.image,
-            emailVerified: freshUser.emailVerified,
-          }
-        }
-        // console.log('jwt callback token >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', token)
       }
 
-      // console.log('in auth jwt callback user 333333333333333333333333333333333', user)  
-      // console.log('in auth jwt callback token 4444444444444444444444444444444', token)  
+      const userId = token.sub as string | undefined
+      if (!userId) return token
 
-      return token;
+      try {
+        await connectToDatabase()
+        const freshUser = await User.findById(userId)
+          .select('name email role emailVerified passwordChangedAt')
+          .lean()
+
+        // The account was deleted: returning null clears the session cookie.
+        if (!freshUser) return null
+
+        // A password change/reset invalidates tokens issued before it.
+        if (
+          freshUser.passwordChangedAt &&
+          token.authTime &&
+          token.authTime * 1000 <
+            new Date(freshUser.passwordChangedAt).getTime()
+        ) {
+          return null
+        }
+
+        token.role = freshUser.role as UserRole
+        token.emailVerified = (freshUser.emailVerified ?? null) as Date | null
+        token.name = freshUser.name ?? token.name
+        token.email = freshUser.email ?? token.email
+      } catch {
+        // If the lookup fails, fail closed for privileged access.
+        token.role = 'user'
+        token.emailVerified = null
+      }
+
+      return token
     },
       async session({ session, token }) {
-        // Never trust role/emailVerified from the JWT alone: a role change or
-        // account deletion must take effect on the next request, not when the
-        // token expires. Re-read the current user from the database.
-        const userId = token.sub as string | undefined
-        let role = token.role as UserRole | undefined
-        let emailVerified = token.emailVerified as Date | null
-        let name = token.name ?? ''
-        let email = token.email ?? ''
-
-        if (userId) {
-          try {
-            await connectToDatabase()
-            const freshUser = await User.findById(userId)
-              .select('name email role emailVerified')
-              .lean()
-
-            if (freshUser) {
-              role = freshUser.role as UserRole
-              emailVerified = (freshUser.emailVerified ?? null) as Date | null
-              name = freshUser.name ?? name
-              email = freshUser.email ?? email
-            } else {
-              // Account was deleted: keep the session usable as a guest but
-              // strip every privileged flag.
-              role = 'user'
-              emailVerified = null
-            }
-          } catch {
-            // If the lookup fails, fail closed for privileged access.
-            role = 'user'
-            emailVerified = null
-          }
-        }
-
-        session = {
+        return {
           ...session,
           user: {
-            id: userId ?? '',
-            role: role ?? 'user',
-            emailVerified,
+            id: token.sub as string,
+            role: (token.role as UserRole) ?? 'user',
+            emailVerified: token.emailVerified as Date | null,
             image: token.picture ?? '',
-            name,
-            email,
+            name: token.name ?? '',
+            email: token.email ?? '',
           },
         }
-
-        return session
       },      
   },
 })

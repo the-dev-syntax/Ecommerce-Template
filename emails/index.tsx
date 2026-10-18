@@ -4,6 +4,7 @@ import { OrderWithUser } from '@/lib/db/models/order.model'
 import { SENDER_EMAIL, SENDER_NAME } from '@/lib/constants'
 import AskReviewOrderItemsEmail from './ask-review-order-items'
 import VerificationEmail from './verification-email'
+import PasswordResetEmail, { PasswordResetEmailProps } from './password-reset-email'
 import { VerificationPropsType } from '@/types'
  
 
@@ -28,6 +29,15 @@ export const sendAskReviewOrderItems = async ({ order }: { order: OrderWithUser 
     subject: 'Review your order items',
     react: <AskReviewOrderItemsEmail order={order} />,
     scheduledAt: oneDayFromNow,
+  })
+}
+
+export const sendPasswordResetEmail = async (props: PasswordResetEmailProps) => {
+  await resend.emails.send({
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+    to: props.email,
+    subject: 'Reset your password',
+    react: <PasswordResetEmail {...props} />,
   })
 }
 

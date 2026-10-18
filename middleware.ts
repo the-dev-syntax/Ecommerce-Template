@@ -13,7 +13,9 @@ const publicPages = [
   '/cart/(.*)',
   '/product/(.*)',
   '/page/(.*)',
-  '/verify-email'
+  '/verify-email',
+  '/forgot-password',
+  '/reset-password'
   // (/secret requires auth)
 ]
 

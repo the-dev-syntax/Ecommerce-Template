@@ -21,6 +21,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { UserSignInSchema } from '@/lib/validator'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import useSettingStore from '@/hooks/use-setting-store'
+import { useTranslations } from 'next-intl'
 import { Suspense } from 'react'
 
 const signInDefaultValues =
@@ -55,6 +56,7 @@ export default function CredentialsSignInForm() {
 
 
   const { setting: { site } } = useSettingStore()
+  const t = useTranslations()
 
   const form = useForm<IUserSignIn>({
     resolver: zodResolver(UserSignInSchema),   // zod validation
@@ -132,6 +134,11 @@ export default function CredentialsSignInForm() {
 
             <div>
               <Button type='submit'>Sign In</Button>
+            </div>
+            <div className='text-sm text-right'>
+              <Link href='/forgot-password' className='underline'>
+                {t('Forgot Password')}
+              </Link>
             </div>
             <div className='text-sm'>
               By signing in, you agree to {site.name}&apos;s{' '}

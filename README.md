@@ -69,6 +69,18 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Added the new UI strings to `en-US`, `ar` and `fr`.
 - Why: users had no way to rotate a compromised password while signed in, and the account UI exposed a dead "Edit password" link.
 
+## P0-8 — Account recovery and password-change session invalidation (2026-10-18)
+
+- Added `passwordResetToken` (hashed), `passwordResetExpires` and `passwordChangedAt` to `lib/db/models/user.model.ts`. Reset tokens are SHA-256 hashes; the raw token is only sent by email.
+- Added `requestPasswordReset` and `resetPassword` in `lib/actions/user.actions.ts`. A request always returns the same generic message, so it cannot be used to discover registered emails. Tokens expire after 30 minutes and are single-use: the reset update filters on the hash and expiry and clears both fields atomically.
+- Reset requests are rate-limited per IP (5 per 15 minutes) and per email (3 per 15 minutes); token submissions are rate-limited per IP (20 per 15 minutes).
+- Added `emails/password-reset-email.tsx` and `sendPasswordResetEmail`. The email contains a link to `/reset-password` and states the expiry.
+- Added public `/forgot-password` and `/reset-password` pages, added both to the middleware public list, and added a "Forgot Password" link to the sign-in form.
+- Password change (`updateUserPassword`) now also clears outstanding reset tokens and sets `passwordChangedAt`.
+- Session invalidation: the JWT callback stores the original sign-in time (`authTime`) and compares it with `passwordChangedAt` on every session read. Tokens issued before a password change/reset return `null`, which makes Auth.js clear the session cookie. Deleted accounts are treated the same way. Role/email/verification freshness from P0-5 now happens in the same JWT callback.
+- Added an account-layout guard that redirects to `/sign-in` when the session is no longer valid.
+- Why: there was no recovery path at all, and a password reset without invalidation would leave an attacker's existing JWT (up to 30 days) working after the victim recovered the account.
+
 ## Verification
 
 ### P0-1
@@ -111,6 +123,13 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run i18n:check` — PASS (472 keys in en-US, ar, fr)
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 - Route `/account/manage/password` is present in the build output.
+
+### P0-8
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+- Routes `/forgot-password` and `/reset-password` are present in the build output.
 
 ---
 

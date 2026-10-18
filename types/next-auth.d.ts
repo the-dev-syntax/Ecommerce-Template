@@ -6,6 +6,7 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     role?: UserRole;
     emailVerified?: Date | null;
+    authTime?: number;
   }
 }
 

@@ -1,5 +1,6 @@
 import React from 'react'
 import { SessionProvider } from 'next-auth/react'
+import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 
 export default async function AccountLayout({
@@ -8,6 +9,8 @@ export default async function AccountLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
+  if (!session?.user?.id) redirect('/sign-in')
+
   return (
     <div className=' flex-1 p-4'>
       <SessionProvider session={session}>

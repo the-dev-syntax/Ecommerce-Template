@@ -210,6 +210,21 @@ export const ChangePasswordSchema = z
     path: ['newPassword'],
   })
 
+export const RequestPasswordResetSchema = z.object({
+  email: Email,
+})
+
+export const ResetPasswordSchema = z
+  .object({
+    token: z.string().min(1, 'Reset token is required'),
+    newPassword: Password,
+    confirmPassword: Password,
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
+
 export const UserSignUpSchema = UserSignInSchema.extend({
   name: UserName,
   confirmPassword: Password,

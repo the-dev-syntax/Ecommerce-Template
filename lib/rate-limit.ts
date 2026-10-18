@@ -60,6 +60,55 @@ export async function limitSignInAttempts(email: string) {
   }
 }
 
+// Password reset request limiters: stop inbox flooding and email probing.
+const passwordResetIpLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "15 m"),
+  prefix: "v1:ratelimit:password-reset-ip",
+});
+
+const passwordResetEmailLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, "15 m"),
+  prefix: "v1:ratelimit:password-reset-email",
+});
+
+const passwordResetConfirmIpLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, "15 m"),
+  prefix: "v1:ratelimit:password-reset-confirm-ip",
+});
+
+export async function limitPasswordResetRequests(email: string) {
+  const ip = await getIP();
+  const normalized = normalizeEmail(email);
+
+  const [byIp, byEmail] = await Promise.all([
+    passwordResetIpLimit.limit(ip),
+    passwordResetEmailLimit.limit(normalized),
+  ]);
+
+  if (!byIp.success || !byEmail.success) {
+    const reset = Math.max(byIp.reset, byEmail.reset);
+    const retrySeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    throw new Error(
+      `Too many reset requests. Please wait ${formatSeconds(retrySeconds)}`
+    );
+  }
+}
+
+export async function limitPasswordResetConfirm() {
+  const ip = await getIP();
+  const { success, reset } = await passwordResetConfirmIpLimit.limit(ip);
+
+  if (!success) {
+    const retrySeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    throw new Error(
+      `Too many attempts. Please wait ${formatSeconds(retrySeconds)}`
+    );
+  }
+}
+
 // Email limiter (use sliding window) ==> 3 attempts per 5 minutes per email address
 const emailResendLimit = new Ratelimit({
   redis,

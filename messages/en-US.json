@@ -470,5 +470,13 @@
   "Password updated successfully": "Password updated successfully",
   "Current password is incorrect": "Current password is incorrect",
   "New password must be different from the current password": "New password must be different from the current password",
-  "This account does not have a password set.": "This account does not have a password set."
+  "This account does not have a password set.": "This account does not have a password set.",
+  "Forgot Password": "Forgot Password",
+  "ForgotPasswordInstructions": "Enter the email address associated with your account and we will send you a reset link.",
+  "Send Reset Link": "Send Reset Link",
+  "If an account exists for that email, a reset link has been sent.": "If an account exists for that email, a reset link has been sent.",
+  "Reset Password": "Reset Password",
+  "ResetPasswordInstructions": "Choose a new password for your account.",
+  "This reset link is invalid or has expired.": "This reset link is invalid or has expired.",
+  "Back to Sign In": "Back to Sign In"
 }

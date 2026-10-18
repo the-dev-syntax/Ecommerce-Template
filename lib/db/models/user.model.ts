@@ -9,6 +9,9 @@ export interface IUser extends Omit<Document, '_id'>, IUserInput {
   createdAt: Date;
   updatedAt: Date;
   browsingHistory?: { product: string; category: string; viewedAt: Date }[];
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
+  passwordChangedAt?: Date;
 }
 
 // 2. Interface for statics
@@ -25,6 +28,9 @@ const UserSchema = new Schema<IUser, IUserModel>({
   emailVerified: { type: Date, default: null },
   verificationToken: { type: String, select: false },
   verificationTokenExpires: { type: Date, select: false },
+  passwordResetToken: { type: String, select: false },
+  passwordResetExpires: { type: Date, select: false },
+  passwordChangedAt: { type: Date },
   browsingHistory: [
     {
       product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },

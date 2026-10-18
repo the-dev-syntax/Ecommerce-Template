@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { useToast } from '@/hooks/use-toast'
 
@@ -44,11 +45,15 @@ export function PasswordForm() {
       })
     }
 
+    // The password change invalidates this JWT on the next session read;
+    // sign out explicitly so the user lands on a clean sign-in page.
+    await signOut({ redirect: false })
     form.reset()
     toast({
       description: res.message,
     })
-    router.push('/account/manage')
+    router.push('/sign-in')
+    router.refresh()
   }
 
   return (
