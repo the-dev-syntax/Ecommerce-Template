@@ -21,8 +21,13 @@ export async function GET(request: NextRequest) {
     listType === 'history'
       ? {
           _id: { $in: productIds },
+          isPublished: true,
         }
-      : { category: { $in: categories }, _id: { $nin: productIds } } // not history
+      : {
+          category: { $in: categories },
+          _id: { $nin: productIds },
+          isPublished: true,
+        } // not history
 
   await connectToDatabase()
 

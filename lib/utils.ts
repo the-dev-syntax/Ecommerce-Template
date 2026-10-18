@@ -21,6 +21,9 @@ export const formatNumberWithDecimal = (num: number): string => {
 }
 
 
+export const escapeRegExp = (text: string): string =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const slugify = (text: string): string => {
   return text
     .toString()

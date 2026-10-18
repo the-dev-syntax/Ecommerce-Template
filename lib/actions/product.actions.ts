@@ -1,7 +1,7 @@
 'use server'
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
-import { formatError } from '../utils'
+import { escapeRegExp, formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
@@ -135,7 +135,7 @@ export async function getAllProducts({
     query && query !== 'all' // all is the default value given.
       ? {
           name: {
-            $regex: query,
+            $regex: escapeRegExp(query),
             $options: 'i',
           },
         }
@@ -199,6 +199,7 @@ export async function getAllProducts({
     ...categoryFilter,
     ...priceFilter,
     ...ratingFilter,
+    ...isPublished,
   })
 
   return {
@@ -282,7 +283,7 @@ export async function getAllProductsForAdmin({
     query && query !== 'all'
       ? {
           name: {
-            $regex: query,
+            $regex: escapeRegExp(query),
             $options: 'i',
           },
         }
@@ -375,7 +376,10 @@ export async function getProductById(productId: string) {
 export async function getAllProductSlugs() {
   await connectToDatabase()
   // const slugs = await Product.find({}, 'slug -_id').lean(); or 
-    const slugs = await Product.find().select({ slug: 1, _id: 0 });
+    const slugs = await Product.find({ isPublished: true }).select({
+      slug: 1,
+      _id: 0,
+    });
 
      if (!slugs) throw new Error('Products not found')
  

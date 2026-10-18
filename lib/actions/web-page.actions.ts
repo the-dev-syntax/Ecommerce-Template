@@ -70,7 +70,10 @@ export async function getAllWebPageSlugs() {
   await connectToDatabase()
 
   // const slugs = await WebPage.find({}, 'slug -_id'); or 
-  const slugs = await WebPage.find().select({ slug: 1, _id: 0 });
+  const slugs = await WebPage.find({ isPublished: true }).select({
+    slug: 1,
+    _id: 0,
+  });
 
   if (!slugs) throw new Error('WebPage not found')
 

@@ -106,6 +106,14 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Browsing-history sync slices incoming items to `MAX_BROWSING_HISTORY`, accepts only valid ObjectId product ids and string categories, and caps category length before writing.
 - Why: server actions and the browsing-history beacon accepted unbounded arrays and strings. A logged-in user could store huge order/review/address values or make the server iterate and query over oversized arrays, bloating the database and wasting CPU.
 
+## P0-12 — Only published content is public, search input is escaped (2026-10-18)
+
+- `getAllProductSlugs` and `getAllWebPageSlugs` now filter `isPublished: true`, so the sitemap no longer advertises draft products or pages.
+- The browsing-history recommendation API (`/api/products/browsing-history`) now filters `isPublished: true` for both history and category results.
+- `getAllProducts` now applies `isPublished` to the count query as well as the results query, so pagination matches the visible products.
+- Product search now escapes user input before building the `$regex` filter in both the storefront and admin product lists. Previously a crafted query could act as an arbitrary regular expression and consume excessive database CPU.
+- Why: unpublished products/pages were reachable through bulk public endpoints and the sitemap, and raw regex input was a denial-of-service vector.
+
 ## Verification
 
 ### P0-1
@@ -169,6 +177,12 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
 
 ### P0-11
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
+- `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=4096`
+
+### P0-12
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (480 keys in en-US, ar, fr)
