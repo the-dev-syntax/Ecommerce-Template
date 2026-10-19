@@ -430,3 +430,138 @@ I used existing translation keys (t('Stripe Checkout'), t('Submitting')) so no m
 
 - **QStash** — `@upstash/qstash` (`package.json:36`) and `QSTASH_URL`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` are installed but unused. Decide between removing them or wiring a signature-verified `/api/qstash/...` endpoint (`Receiver` with the current/next signing keys) plus `Client`/`QSTASH_TOKEN` publishing for background jobs (receipts, cleanup, schedules). Do not repeat the removed unsigned `stripe-worker` pattern.
 
+## Production TODO — Customizable Store for the Saudi Market
+
+Goal: turn this codebase into a white-label storefront that can be configured for any store, with Arabic-first UX, SAR-first pricing, pluggable payments/shipping, strong security and operations, and a default look that is ready to publish in Saudi Arabia.
+
+How to use: **P0** blocks launch, **P1** is required for real store operation, **P2** is scale/polish. Tick an item only after it is implemented, verified in staging, and documented.
+
+Current baseline: credentials/Google auth, product/order/review/user/web-page admin, English/Arabic/French with RTL, settings, Stripe/PayPal/COD, uploads, emails, Redis rate limits, `tokenVersion` revocation, `sid` revocation, security hardening P0-1..P0-17.
+
+### Phase 0 — Decisions and foundation (P0)
+- [ ] Choose the store model: **one store per deployment (white-label)** or **multi-tenant SaaS**. This changes the data model and every query.
+- [ ] Confirm launch payment providers, merchant accounts, and the first shipping carriers.
+- [ ] Confirm ZATCA scope: Phase 1 simplified invoices only, or Phase 2 Fatoora integration.
+- [ ] Confirm launch languages (Arabic + English minimum) and whether the admin UI must be translated.
+- [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash), domains, and monthly budget for email/SMS/monitoring.
+- [ ] Define the MVP launch checklist and target date; move everything else to P1/P2.
+- [ ] Add environment validation with Zod at startup (`lib/env.ts`) so a missing `STRIPE_SECRET_KEY`, `UPSTASH_*`, etc. fails fast.
+- [ ] Add CI (GitHub Actions): `tsc --noEmit`, `lint`, `i18n:check`, unit tests, `build` on every PR.
+- [ ] Add error tracking (Sentry) and uptime/alerting before the first real order.
+
+### Phase 1 — Store configuration and white-label (P0/P1)
+- [ ] Extend `Setting`/create a `StoreProfile` model: brand colors, light/dark logo, favicon, fonts, social links, contact, legal identity (CR/VAT), SEO defaults, and feature flags.
+- [ ] Move every hardcoded brand/currency/contact string out of components into settings or translations.
+- [ ] Theme tokens driven by CSS variables and Tailwind; add an admin color/font picker with live preview and a safe default theme.
+- [ ] Add a first-run setup wizard: store info → currency/tax → shipping → payment → domain → first product → publish.
+- [ ] Add feature flags: reviews, wishlist, browsing history, COD, BNPL, guest checkout, maintenance mode.
+- [ ] Make menus, footer links, legal pages, carousels, and banners editable from `/admin`.
+- [ ] Add per-store email sender identity and editable email templates (receipt, reset, verification, review request).
+- [ ] Acceptance: a new store can be configured and published entirely from the admin without code edits.
+
+### Phase 2 — Currency, pricing, and Saudi tax (P0)
+- [ ] Add a base currency (`SAR`) and remove the hardcoded `USD` fallbacks (`app/[locale]/layout.tsx:106`, `lib/utils.ts:42`, order default).
+- [ ] Define currency rules: code, symbol, locale, decimals, rounding, and whether prices are converted or entered per currency.
+- [ ] Keep order totals in the order currency; never re-convert an existing order when the display currency changes.
+- [ ] Make VAT 15% the Saudi default and add VAT-inclusive/exclusive pricing plus per-region tax rules.
+- [ ] Add seller VAT number, CR number, national address, and Arabic/English legal name to settings.
+- [ ] Add ZATCA-compliant tax invoices: invoice numbering, QR TLV, simplified invoice, credit notes, Arabic + English PDF.
+- [ ] Add a VAT report and invoice export for accounting.
+- [ ] Acceptance: a SAR order produces correct totals and a compliant invoice; currency switching never changes stored totals.
+
+### Phase 3 — Payment gateway abstraction (P0/P1)
+- [ ] Define a `PaymentProvider` interface: `createPayment`, `capture`, `refund`, `void`, `verifyWebhook`, `parseEvent`, `getStatus`, supported currencies/countries, and capabilities (partial refunds, 3DS, wallets).
+- [ ] Move Stripe, PayPal, and COD into adapters behind a provider registry; remove provider-specific branches from `lib/actions/order.actions.ts`.
+- [ ] Store provider credentials in environment/secret manager, not plaintext settings; add an admin screen that shows enabled providers without exposing secrets.
+- [ ] Add one signature-verified webhook dispatcher with replay protection, an event log, and idempotent `fulfillOrder` calls.
+- [ ] Add Saudi launch providers: Mada, Apple Pay, STC Pay, and a BNPL option (Tabby/Tamara) through the chosen PSP (Moyasar/HyperPay/PayTabs/Checkout.com).
+- [ ] Add refunds, partial refunds, cancellations, chargeback handling, and payment reconciliation.
+- [ ] Add a mock/test provider for CI and sandbox end-to-end tests.
+- [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic.
+
+### Phase 4 — Orders, inventory, and shipping (P1)
+- [ ] Add an explicit order state machine (pending payment → paid → processing → shipped → delivered → cancelled/refunded/returned) with immutable status history.
+- [ ] Reserve stock at order creation with an expiry, release it on cancel/timeout, and keep the atomic stock decrement on payment.
+- [ ] Add shipping zones, rates, free-shipping thresholds, pickup, and per-region delivery estimates.
+- [ ] Add carrier adapters and tracking: Aramex, SMSA, Saudi Post, Naqel; printable labels and delivery webhooks.
+- [ ] Add Saudi address fields (region, city, district, national address) and `+966` phone validation.
+- [ ] Add returns/refunds workflow and customer notifications.
+- [ ] Add low-stock alerts and inventory adjustments with an audit trail.
+- [ ] Acceptance: full order lifecycle is operable from admin, tracking is visible to customers, and stock can never go negative.
+
+### Phase 5 — Security and compliance (P0)
+- [ ] Add a full Content-Security-Policy allow-list for Stripe/PayPal/UploadThing/analytics, with nonce/hash support; keep `frame-ancestors`, HSTS, and `nosniff`.
+- [ ] Add CSRF/origin checks for state-changing routes, secure/HttpOnly/SameSite cookies, and verify webhook signatures per provider.
+- [ ] Add RBAC (owner/admin/staff/support) and enforce permissions in every server action and admin page.
+- [ ] Add an audit log for admin actions (actor, action, target, timestamp, IP) and a viewer.
+- [ ] Add TOTP 2FA for admins and a device/session list with per-device revocation (P0-17 is the foundation).
+- [ ] Extend rate limiting to search, reviews, orders, browsing history, and public APIs; add bot protection.
+- [ ] Validate and bound every payload; add file-type/size validation and malware scanning for uploads; prevent SSRF in fetches.
+- [ ] PDPL: consent, privacy policy, data export/delete, retention rules, PII minimization, and encryption in transit/at rest.
+- [ ] Secret rotation, least-privilege database users, dependency scanning, SAST, and a penetration test before launch.
+- [ ] Confirm PCI DSS SAQ A scope by using hosted fields/redirects only; never store card data.
+- [ ] Add MongoDB Atlas backups/PITR, a restore drill, and an incident-response runbook.
+- [ ] Acceptance: no open P0 security findings; security checklist signed off before launch.
+
+### Phase 6 — Efficiency and scale (P1)
+- [ ] Add indexes for product slug/category/tags/isPublished/createdAt, order user+createdAt/status, review product+createdAt, and user email/role.
+- [ ] Cache settings/store config and catalog reads with tag-based revalidation; avoid unnecessary per-request DB reads.
+- [ ] Enforce pagination caps everywhere and use cursor pagination for large order/review lists.
+- [ ] Use QStash for receipts, review requests, low-stock alerts, webhook retries, and scheduled reports (see Backlog).
+- [ ] Add search with Arabic analyzers (Atlas Search or Algolia) and faceted filters.
+- [ ] Optimize images (formats, sizes, CDN) and clean up unused UploadThing files.
+- [ ] Add bundle analysis, code splitting, streaming/Suspense, and Arabic font subsetting.
+- [ ] Add structured logs, slow-query monitoring, metrics, and alerting.
+- [ ] Acceptance: performance budgets met on 4G (LCP < 2.5s, CLS < 0.1, INP < 200ms) with dashboards.
+
+### Phase 7 — Admin control and operations (P1)
+- [ ] Add a roles/permissions UI and staff accounts.
+- [ ] Add a customer timeline and an order timeline with payment, refund, and shipment events.
+- [ ] Add bulk product import/export (CSV/Excel), bulk edits, and inventory adjustments.
+- [ ] Dashboard: sales, AOV, conversion, top products, low stock, abandoned carts, VAT report.
+- [ ] Add maintenance mode, announcements, and feature-flag controls.
+- [ ] Add a notification center for failed payments, refunds, low stock, and new orders.
+- [ ] Document backup/restore and day-to-day operations for a non-technical operator.
+- [ ] Acceptance: an operator can run daily store operations without developer help.
+
+### Phase 8 — Default look and Saudi launch readiness (P0/P1)
+- [ ] Arabic-first RTL audit of every page, including admin, emails, invoices, and error/empty states.
+- [ ] Add an Arabic UI font with Latin fallback and verify Arabic line-height/letter-spacing.
+- [ ] Polish the default theme: home, category, product, cart, checkout, account, auth, maintenance, 404, and emails.
+- [ ] Publish Saudi legal pages in Arabic and English: privacy, terms, returns/refunds, shipping, VAT/CR, contact.
+- [ ] Default to SAR, VAT 15%, Mada/Apple Pay, Saudi shipping, and COD if enabled.
+- [ ] SEO: metadata, hreflang, canonical, sitemap, robots, and Product/Offer/Breadcrumb/Organization structured data.
+- [ ] Accessibility audit to WCAG 2.1 AA: keyboard, focus, contrast, labels, and RTL behavior.
+- [ ] Core Web Vitals budgets and mobile-first QA across common Saudi devices/networks.
+- [ ] Email deliverability: SPF, DKIM, DMARC, Arabic templates, and a reputable transactional provider.
+- [ ] Analytics + consent (GA4 and optional ad pixels), plus conversion tracking for checkout.
+- [ ] Add a web app manifest/PWA shell if mobile installation is required.
+- [ ] Launch checklist: domain/SSL, test order per provider, refund test, tax-invoice test, monitoring, backups, support contacts.
+- [ ] Acceptance: a real SAR test order completes end-to-end and the default theme passes the launch checklist.
+
+### Phase 9 — Testing and release (P0)
+- [ ] Add Vitest/Jest + Testing Library; unit-test validators, pricing, currency conversion, tax, and payment adapters.
+- [ ] Add integration tests for auth, orders, webhooks, and admin permissions.
+- [ ] Add Playwright E2E: sign-up → product → cart → checkout (sandbox provider) → paid order → refund.
+- [ ] Run CI on every PR and require green checks to merge.
+- [ ] Create a staging environment with separate DB/Redis/webhook secrets and seed data.
+- [ ] Load-test catalog and checkout; add post-deploy smoke tests and a rollback plan.
+- [ ] Acceptance: CI is green, staging sign-off is recorded, and rollback is tested.
+
+### Phase 10 — Multi-store/SaaS (P2, only if Phase 0 chooses it)
+- [ ] Add a `Store`/tenant model and scope every query, action, and admin view by `storeId`.
+- [ ] Add per-store domains/subdomains, settings, assets, payment credentials, and email identity.
+- [ ] Add tenant-aware auth/admin roles and strict isolation tests.
+- [ ] Add plans/billing and per-store usage limits if the product is sold as SaaS.
+- [ ] Add per-store data export and deletion.
+- [ ] Acceptance: two stores on one deployment cannot read or modify each other's data.
+
+### Open decisions (answer before Phase 1)
+- [ ] One store per deployment, or multi-tenant SaaS?
+- [ ] Which payment providers and merchant accounts are available at launch?
+- [ ] Which shipping carriers and is COD required?
+- [ ] ZATCA Phase 1 only or Phase 2 integration?
+- [ ] Arabic + English only, or more languages?
+- [ ] Are product variants, multiple warehouses, subscriptions, or digital products required at launch?
+- [ ] What are the launch date, budget, and acceptance criteria?
+
