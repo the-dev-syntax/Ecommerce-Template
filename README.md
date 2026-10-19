@@ -163,14 +163,17 @@ Known gaps (not regressions; left as follow-ups):
 ## P0-16 — Per-user token version for session revocation (2026-10-18)
 
 - Added `tokenVersion` (Number, default `0`) to `lib/db/models/user.model.ts` and to the JWT type in `types/next-auth.d.ts`.
-- `auth.ts:106` reads `tokenVersion` with the fresh user and compares it with the value stored in the JWT. A mismatch returns `null`, which makes Auth.js clear the session cookie. Sessions issued before this field existed adopt the current value on first read; the `passwordChangedAt`/`authTime` check remains as a backstop.
-- The version is incremented when a password is changed (`lib/actions/user.actions.ts:163`), when a password is reset (`lib/actions/user.actions.ts:250`), and when an admin changes a user's role (`lib/actions/user.actions.ts:396`). Account deletion is already covered because the JWT callback returns `null` when the user no longer exists.
-- Why: an expiry blacklist is unbounded and unnecessary — expired tokens already fail `exp`. A monotonic per-user version invalidates every outstanding token with one small write and no new infrastructure, and is cleaner than comparing timestamps. Individual-device revocation can be layered on later with a stable `sid` plus a Redis key whose TTL equals the token lifetime; Auth.js rotates `jti` on every encode, so `jti` itself cannot be used as a stable session id.
+- `auth.ts:120` uses `checkTokenVersion` (`lib/session-revocation.ts:27`) to compare the JWT value with the database. A mismatch returns `null`, which makes Auth.js clear the session cookie. Sessions issued before this field existed adopt the current value on first read; the `passwordChangedAt`/`authTime` check remains as a backstop.
+- The version is incremented when a password is changed (`lib/actions/user.actions.ts:159`), when a password is reset (`lib/actions/user.actions.ts:283`), and when an admin changes a user's role (`lib/actions/user.actions.ts:429`). Account deletion is already covered because the JWT callback returns `null` when the user no longer exists.
+- `updateUserPassword` now uses one guarded `findOneAndUpdate` that checks the old password hash and applies `$inc: { tokenVersion: 1 }` atomically, so concurrent password changes cannot lose a version bump.
+- Added `revokeAllSessions` (`lib/actions/user.actions.ts:188`) and a “Sign out everywhere” control on `/account/manage` (`app/[locale]/(root)/account/manage/revoke-sessions-button.tsx`). It bumps `tokenVersion`, then signs the current device out.
+- Why: an expiry blacklist is unbounded and unnecessary — expired tokens already fail `exp`. A monotonic per-user version invalidates every outstanding token with one small write and no new infrastructure, and is cleaner than comparing timestamps. Individual-device revocation is layered on top with a stable `sid` (P0-17).
 
 ### Verification
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
-- `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
+- In-memory `checkTokenVersion` check (`adopt`/`valid`/`revoked`) — PASS
+- `npm run i18n:check` — PASS (482 keys in en-US, ar, fr)
 - `npm run build` — PASS
 
 ## P0-17 — Per-device revocation with a stable `sid` (2026-10-18)
@@ -422,4 +425,8 @@ I used existing translation keys (t('Stripe Checkout'), t('Submitting')) so no m
 
 
 --------------------------------
+
+## Backlog
+
+- **QStash** — `@upstash/qstash` (`package.json:36`) and `QSTASH_URL`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` are installed but unused. Decide between removing them or wiring a signature-verified `/api/qstash/...` endpoint (`Receiver` with the current/next signing keys) plus `Client`/`QSTASH_TOKEN` publishing for background jobs (receipts, cleanup, schedules). Do not repeat the removed unsigned `stripe-worker` pattern.
 

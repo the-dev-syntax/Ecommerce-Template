@@ -156,14 +156,47 @@ export async function updateUserPassword(values: IChangePassword) {
     if (!isMatch)
       return { success: false, message: 'Current password is incorrect' }
 
-    user.password = await bcrypt.hash(newPassword, 12)
-    user.passwordResetToken = undefined
-    user.passwordResetExpires = undefined
-    user.passwordChangedAt = new Date()
-    user.tokenVersion = (user.tokenVersion ?? 0) + 1
-    await user.save()
+    const newHash = await bcrypt.hash(newPassword, 12)
+
+    // Guard on the old hash and bump the version in one write so concurrent
+    // password changes cannot lose a version increment.
+    const updated = await User.findOneAndUpdate(
+      { _id: user._id, password: user.password },
+      {
+        $set: {
+          password: newHash,
+          passwordChangedAt: new Date(),
+        },
+        $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
+        $inc: { tokenVersion: 1 },
+      }
+    )
+
+    if (!updated)
+      return {
+        success: false,
+        message: 'Password was changed by another request. Please try again.',
+      }
 
     return { success: true, message: 'Password updated successfully' }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// REVOKE ALL SESSIONS - PRIVATE
+export async function revokeAllSessions() {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) throw new Error('User is not authenticated')
+
+    await connectToDatabase()
+    const user = await User.findByIdAndUpdate(session.user.id, {
+      $inc: { tokenVersion: 1 },
+    })
+    if (!user) throw new Error('User not found')
+
+    return { success: true, message: 'Signed out of all devices' }
   } catch (error) {
     return { success: false, message: formatError(error) }
   }

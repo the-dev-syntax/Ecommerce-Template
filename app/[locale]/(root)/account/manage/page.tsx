@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
+import { RevokeSessionsButton } from './revoke-sessions-button'
 
 
 // page title = 'Login & Security'
@@ -75,6 +76,18 @@ export default async function ProfilePage() {
                   {t('Edit')}
                 </Button>
               </Link>
+            </div>
+          </CardContent>
+          <Separator />
+          <CardContent className='p-4 flex justify-between flex-wrap gap-4'>
+            <div>
+              <h3 className='font-bold'>{t('Sessions')}</h3>
+              <p className='text-sm text-muted-foreground'>
+                {t('SignOutEverywhereDescription')}
+              </p>
+            </div>
+            <div>
+              <RevokeSessionsButton />
             </div>
           </CardContent>
         </Card>

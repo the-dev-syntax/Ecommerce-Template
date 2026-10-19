@@ -18,6 +18,20 @@ export function revokedSessionKey(sid: string): string {
   return `${REVOKED_SESSION_PREFIX}${sid}`
 }
 
+export type TokenVersionCheck = 'adopt' | 'valid' | 'revoked'
+
+/**
+ * Compare the version stored in a JWT with the current user document.
+ * `adopt` handles tokens issued before tokenVersion existed.
+ */
+export function checkTokenVersion(
+  tokenVersion: number | undefined,
+  currentVersion: number | undefined
+): TokenVersionCheck {
+  if (tokenVersion === undefined) return 'adopt'
+  return tokenVersion === (currentVersion ?? 0) ? 'valid' : 'revoked'
+}
+
 /**
  * TTL for a revocation entry: exactly the token's remaining lifetime, capped
  * at the session max age and never below one second.
