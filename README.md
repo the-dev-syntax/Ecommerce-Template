@@ -173,6 +173,26 @@ Known gaps (not regressions; left as follow-ups):
 - `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
 - `npm run build` — PASS
 
+## P0-17 — Per-device revocation with a stable `sid` (2026-10-18)
+
+- Added `lib/session-revocation.ts`. A stable `sid` is created once at sign-in (`auth.ts:94`) and preserved across the JWT re-encodes Auth.js performs on every session read. `jti` cannot be used here because Auth.js regenerates it on each encode (`@auth/core/jwt.js`).
+- `revokeSession(sid, exp)` writes `v1:auth:revoked-session:<sid>` to Upstash Redis with a TTL equal to the token's remaining lifetime, capped at the 30-day session max age. Expired entries disappear automatically, so the denylist is bounded and needs no cleanup job.
+- `isSessionRevoked(sid)` runs on every session build in `auth.ts` and in the Edge middleware (`auth.config.ts`), so a revoked device is stopped on the next request, not only when the token expires.
+- The Auth.js `signOut` event now revokes the current `sid` (`auth.ts:168`). A copied cookie from a logged-out device therefore stops working immediately.
+- Redis failures fail open (the `tokenVersion`/`passwordChangedAt` checks remain the hard boundary); the real Upstash host was unreachable during testing and the helper correctly swallowed the error instead of taking auth down.
+- Why: `tokenVersion` revokes every session for a user, but it cannot revoke one device. A `sid` denylist adds per-device logout without a token table, unbounded storage, or DB lookups from the Edge.
+
+Known limits:
+- Sessions issued before this deploy have no `sid`; they are not denylisted (they still expire normally or are invalidated by `tokenVersion`).
+- There is no "list my devices" UI. Revoking another device would need a session registry (`sessions:<userId>:<sid>` plus metadata); this change covers current-device revocation and the enforcement mechanism.
+
+### Verification
+- In-memory round-trip: revoked key found, unrelated key not found, TTL capped at 2,592,000s, past expiry clamped to 1s, Redis errors fail open — PASS
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
+- `npm run build` — PASS
+
 ## Fix — Invalid next-intl keys (2026-10-18)
 
 - Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.

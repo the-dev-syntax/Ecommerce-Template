@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from 'next-auth'
 import { UserRole } from './types';
+import { isSessionRevoked } from './lib/session-revocation'
 
 
 // Notice this is only an object, not a full Auth.js instance, will provide them in auth.ts"the real implementation of auth"
@@ -17,10 +18,10 @@ export default {
         if (protectedPaths.some((p) => p.test(pathname))) return !!auth
         return true
     },
-    async jwt({ token , user}) {
-        // console.log('CONFIG: first : from async jwt config token: aaaaaaaaaaaaaaaaaaaaaaaaaaaa', token);           
-        // console.log('CONFIG: first : from async jwt config user: bbbbbbbbbbbbbbbbbbbbbbbbbbbb', user); // undefined 
-        // console.log("CONFIG: after redis: from async jwt : token cccccccccccccccccccccccccc", token)
+    async jwt({ token }) {
+        // Middleware runs on the Edge, so it cannot read MongoDB. Check the
+        // Redis denylist here so a revoked device is stopped before the page.
+        if (await isSessionRevoked(token.sid)) return null
         return token
     },
     async session({ session, token, trigger }) { // user  only strategy DB  

@@ -8,6 +8,7 @@ declare module "next-auth/jwt" {
     emailVerified?: Date | null;
     authTime?: number;
     tokenVersion?: number;
+    sid?: string;
   }
 }
 

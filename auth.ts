@@ -11,6 +11,12 @@ import { UserSignInSchema } from './lib/validator'
 import { UserRole } from './types'
 import { limitSignInAttempts } from './lib/rate-limit'
 import { normalizeEmail } from './lib/utils'
+import crypto from 'crypto'
+import {
+  isSessionRevoked,
+  revokeSession,
+  SESSION_MAX_AGE_SECONDS,
+} from './lib/session-revocation'
 // import { AuthenticatedUser } from './types/next-auth'
 
 
@@ -25,6 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: 'jwt',
+    maxAge: SESSION_MAX_AGE_SECONDS,
   },
   adapter: MongoDBAdapter(clientPromise),
   providers: [
@@ -82,6 +89,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ...token,
           ...user,
           sub: user.id,
+          // Stable per-device id. Auth.js rotates `jti` on every encode, so
+          // it cannot be used for a revocation denylist.
+          sid: token.sid ?? crypto.randomUUID(),
           // Keep the original sign-in time; Auth.js re-issues the JWT on
           // every session read, so token.iat is not stable.
           authTime: Math.floor(Date.now() / 1000),
@@ -90,6 +100,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       const userId = token.sub as string | undefined
       if (!userId) return token
+
+      // A revoked device/session stops working on its next read.
+      if (await isSessionRevoked(token.sid)) return null
 
       try {
         await connectToDatabase()
@@ -150,6 +163,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         }
       },      
+  },
+  events: {
+    async signOut(message) {
+      if (!('token' in message)) return
+      await revokeSession(message.token?.sid, message.token?.exp)
+    },
   },
 })
 
