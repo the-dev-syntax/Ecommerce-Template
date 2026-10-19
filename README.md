@@ -439,13 +439,17 @@ How to use: **P0** blocks launch, **P1** is required for real store operation, *
 Current baseline: credentials/Google auth, product/order/review/user/web-page admin, English/Arabic/French with RTL, settings, Stripe/PayPal/COD, uploads, emails, Redis rate limits, `tokenVersion` revocation, `sid` revocation, security hardening P0-1..P0-17.
 
 ### Phase 0 — Decisions and foundation (P0)
-- [ ] Choose the store model: **one store per deployment (white-label)** or **multi-tenant SaaS**. This changes the data model and every query.
-- [ ] Confirm launch payment providers, merchant accounts, and the first shipping carriers.
-- [ ] Confirm ZATCA scope: Phase 1 simplified invoices only, or Phase 2 Fatoora integration.
-- [ ] Confirm launch languages (Arabic + English minimum) and whether the admin UI must be translated.
-- [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash), domains, and monthly budget for email/SMS/monitoring.
+- [x] Store model: **one store per deployment (white-label)**. No tenant scoping is needed; each deployment has one store.
+- [x] Launch payments: **Moyasar first** (Mada, Apple Pay, and STC Pay where enabled on the account; BNPL only if enabled). Stripe/PayPal can stay as optional adapters.
+- [x] Shipping: build **provider-agnostic endpoints now**; connect Aramex/SMSA/Saudi Post/Naqel later.
+- [x] ZATCA: **Phase 1 and Phase 2 (Fatoora)** are both in scope.
+- [x] Catalog scope: **physical products with variants only**; no multiple warehouses, subscriptions, or digital products at launch.
+- [ ] Confirm languages: assume **Arabic + English**; decide whether the admin UI and emails must be fully translated.
+- [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash), domains, and monthly budget for email/SMS/monitoring (pending).
 - [ ] Define the MVP launch checklist and target date; move everything else to P1/P2.
-- [ ] Add environment validation with Zod at startup (`lib/env.ts`) so a missing `STRIPE_SECRET_KEY`, `UPSTASH_*`, etc. fails fast.
+- [ ] Add Moyasar test keys to `.env.local` and Vercel: `MOYASAR_PUBLISHABLE_KEY`, `MOYASAR_SECRET_KEY`, `MOYASAR_WEBHOOK_SECRET` (add `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` only if the browser needs the publishable key). Never commit or paste secrets.
+- [ ] Add environment validation with Zod at startup (`lib/env.ts`) so a missing `MOYASAR_SECRET_KEY`, `UPSTASH_*`, etc. fails fast.
+- [ ] Add `.env.example` with variable names only (no values).
 - [ ] Add CI (GitHub Actions): `tsc --noEmit`, `lint`, `i18n:check`, unit tests, `build` on every PR.
 - [ ] Add error tracking (Sentry) and uptime/alerting before the first real order.
 
@@ -458,6 +462,15 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Make menus, footer links, legal pages, carousels, and banners editable from `/admin`.
 - [ ] Add per-store email sender identity and editable email templates (receipt, reset, verification, review request).
 - [ ] Acceptance: a new store can be configured and published entirely from the admin without code edits.
+
+### Phase 1b — Catalog and product variants (P0)
+- [ ] Replace the flat `sizes`/`colors` arrays with a variant model: variant id, SKU, size, color, price override, stock, image, barcode, and weight.
+- [ ] Migrate existing products to a default variant without losing prices, stock, or order history.
+- [ ] Update the admin product editor for variants (add/edit/remove, per-variant stock, bulk stock update).
+- [ ] Update product cards, product page selector, cart, checkout, order items, and reviews to reference the variant id.
+- [ ] Enforce per-variant stock in `buildOrderItems` and `fulfillOrder`; prevent overselling.
+- [ ] Add per-variant image/price display and validation for required options.
+- [ ] Acceptance: a product with multiple size/color variants can be created, sold, refunded, and stock-tracked per variant.
 
 ### Phase 2 — Currency, pricing, and Saudi tax (P0)
 - [ ] Add a base currency (`SAR`) and remove the hardcoded `USD` fallbacks (`app/[locale]/layout.tsx:106`, `lib/utils.ts:42`, order default).
@@ -474,16 +487,17 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Move Stripe, PayPal, and COD into adapters behind a provider registry; remove provider-specific branches from `lib/actions/order.actions.ts`.
 - [ ] Store provider credentials in environment/secret manager, not plaintext settings; add an admin screen that shows enabled providers without exposing secrets.
 - [ ] Add one signature-verified webhook dispatcher with replay protection, an event log, and idempotent `fulfillOrder` calls.
-- [ ] Add Saudi launch providers: Mada, Apple Pay, STC Pay, and a BNPL option (Tabby/Tamara) through the chosen PSP (Moyasar/HyperPay/PayTabs/Checkout.com).
-- [ ] Add refunds, partial refunds, cancellations, chargeback handling, and payment reconciliation.
+- [ ] Implement **Moyasar** as the first adapter: hosted payment page/API, Mada, Apple Pay, STC Pay, and BNPL only if enabled; verify the callback and webhook signature before fulfilling.
+- [ ] Add refunds, partial refunds, cancellations, chargeback handling, and payment reconciliation (Moyasar refund/cancel APIs).
 - [ ] Add a mock/test provider for CI and sandbox end-to-end tests.
-- [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic.
+- [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic; Moyasar test-mode checkout completes and refunds correctly.
 
 ### Phase 4 — Orders, inventory, and shipping (P1)
 - [ ] Add an explicit order state machine (pending payment → paid → processing → shipped → delivered → cancelled/refunded/returned) with immutable status history.
 - [ ] Reserve stock at order creation with an expiry, release it on cancel/timeout, and keep the atomic stock decrement on payment.
 - [ ] Add shipping zones, rates, free-shipping thresholds, pickup, and per-region delivery estimates.
-- [ ] Add carrier adapters and tracking: Aramex, SMSA, Saudi Post, Naqel; printable labels and delivery webhooks.
+- [ ] Build the provider-agnostic shipping API now: rate quote, create shipment, cancel shipment, tracking lookup, and a signed tracking webhook, with a manual/default provider.
+- [ ] Define a `ShippingProvider` interface so Aramex, SMSA, Saudi Post, and Naqel can be added later without changing checkout.
 - [ ] Add Saudi address fields (region, city, district, national address) and `+966` phone validation.
 - [ ] Add returns/refunds workflow and customer notifications.
 - [ ] Add low-stock alerts and inventory adjustments with an audit trail.
@@ -548,20 +562,27 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Load-test catalog and checkout; add post-deploy smoke tests and a rollback plan.
 - [ ] Acceptance: CI is green, staging sign-off is recorded, and rollback is tested.
 
-### Phase 10 — Multi-store/SaaS (P2, only if Phase 0 chooses it)
-- [ ] Add a `Store`/tenant model and scope every query, action, and admin view by `storeId`.
-- [ ] Add per-store domains/subdomains, settings, assets, payment credentials, and email identity.
-- [ ] Add tenant-aware auth/admin roles and strict isolation tests.
-- [ ] Add plans/billing and per-store usage limits if the product is sold as SaaS.
-- [ ] Add per-store data export and deletion.
-- [ ] Acceptance: two stores on one deployment cannot read or modify each other's data.
+### Phase 10 — Multi-store/SaaS (out of scope)
+Not applicable: **one store per deployment (white-label)** was chosen. Revisit only if the product changes to a SaaS/marketplace model; that would require tenant scoping on every query and strict isolation tests.
 
-### Open decisions (answer before Phase 1)
-- [ ] One store per deployment, or multi-tenant SaaS?
-- [ ] Which payment providers and merchant accounts are available at launch?
-- [ ] Which shipping carriers and is COD required?
-- [ ] ZATCA Phase 1 only or Phase 2 integration?
-- [ ] Arabic + English only, or more languages?
-- [ ] Are product variants, multiple warehouses, subscriptions, or digital products required at launch?
-- [ ] What are the launch date, budget, and acceptance criteria?
+### Resolved decisions (2026-10-19)
+- [x] One store per deployment (white-label).
+- [x] Moyasar is the first payment provider; use its test keys until go-live.
+- [x] Shipping: build our provider-agnostic endpoints now; carriers later.
+- [x] ZATCA Phase 1 and Phase 2 (Fatoora) are both required.
+- [x] Physical products with variants; no multiple warehouses, subscriptions, or digital products at launch.
+
+### Open decisions
+- [ ] Confirm languages: Arabic + English assumed; is full admin/email translation required?
+- [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash) and domains.
+- [ ] Confirm launch date, budget, and acceptance criteria.
+- [ ] Add the Moyasar test keys to `.env.local` and Vercel (do not paste them in chat).
+
+### Recommended first implementation slice (P0)
+1. Add `.env.example` + Zod env validation and register `MOYASAR_*`.
+2. Add the `PaymentProvider` interface and the Moyasar adapter with a signature-verified webhook.
+3. Switch the default currency to SAR and remove the hardcoded USD fallbacks.
+4. Extend settings for store identity/branding and add the variant data model.
+5. Then implement ZATCA Phase 1 invoices, followed by Phase 2 Fatoora integration.
+6. Build the shipping provider interface and manual provider endpoints before any carrier integration.
 
