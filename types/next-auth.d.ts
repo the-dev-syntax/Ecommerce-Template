@@ -7,6 +7,7 @@ declare module "next-auth/jwt" {
     role?: UserRole;
     emailVerified?: Date | null;
     authTime?: number;
+    tokenVersion?: number;
   }
 }
 

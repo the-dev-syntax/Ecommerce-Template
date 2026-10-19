@@ -94,11 +94,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       try {
         await connectToDatabase()
         const freshUser = await User.findById(userId)
-          .select('name email role emailVerified passwordChangedAt')
+          .select('name email role emailVerified passwordChangedAt tokenVersion')
           .lean()
 
         // The account was deleted: returning null clears the session cookie.
         if (!freshUser) return null
+
+        // Bump-on-write session revocation. A role change, password change or
+        // reset increments tokenVersion, so every existing token for that
+        // user stops working on its next read.
+        const currentVersion = freshUser.tokenVersion ?? 0
+        if (token.tokenVersion === undefined) {
+          // Sessions issued before tokenVersion existed adopt the current
+          // value; passwordChangedAt below still covers password events.
+          token.tokenVersion = currentVersion
+        } else if (token.tokenVersion !== currentVersion) {
+          return null
+        }
 
         // A password change/reset invalidates tokens issued before it.
         // Tokens issued before this check existed have no `authTime`; they

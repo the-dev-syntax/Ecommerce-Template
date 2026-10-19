@@ -160,6 +160,19 @@ Known gaps (not regressions; left as follow-ups):
 - `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
 - `npm run build` — PASS with `NODE_OPTIONS=--max-old-space-size=6144` after clearing `.next` (4096 hit the Windows heap limit during static generation)
 
+## P0-16 — Per-user token version for session revocation (2026-10-18)
+
+- Added `tokenVersion` (Number, default `0`) to `lib/db/models/user.model.ts` and to the JWT type in `types/next-auth.d.ts`.
+- `auth.ts:106` reads `tokenVersion` with the fresh user and compares it with the value stored in the JWT. A mismatch returns `null`, which makes Auth.js clear the session cookie. Sessions issued before this field existed adopt the current value on first read; the `passwordChangedAt`/`authTime` check remains as a backstop.
+- The version is incremented when a password is changed (`lib/actions/user.actions.ts:163`), when a password is reset (`lib/actions/user.actions.ts:250`), and when an admin changes a user's role (`lib/actions/user.actions.ts:396`). Account deletion is already covered because the JWT callback returns `null` when the user no longer exists.
+- Why: an expiry blacklist is unbounded and unnecessary — expired tokens already fail `exp`. A monotonic per-user version invalidates every outstanding token with one small write and no new infrastructure, and is cleaner than comparing timestamps. Individual-device revocation can be layered on later with a stable `sid` plus a Redis key whose TTL equals the token lifetime; Auth.js rotates `jti` on every encode, so `jti` itself cannot be used as a stable session id.
+
+### Verification
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
+- `npm run build` — PASS
+
 ## Fix — Invalid next-intl keys (2026-10-18)
 
 - Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.

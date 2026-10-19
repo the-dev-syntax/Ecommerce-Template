@@ -12,6 +12,7 @@ export interface IUser extends Omit<Document, '_id'>, IUserInput {
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   passwordChangedAt?: Date;
+  tokenVersion?: number;
 }
 
 // 2. Interface for statics
@@ -31,6 +32,7 @@ const UserSchema = new Schema<IUser, IUserModel>({
   passwordResetToken: { type: String, select: false },
   passwordResetExpires: { type: Date, select: false },
   passwordChangedAt: { type: Date },
+  tokenVersion: { type: Number, default: 0 },
   browsingHistory: [
     {
       product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },

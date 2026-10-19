@@ -160,6 +160,7 @@ export async function updateUserPassword(values: IChangePassword) {
     user.passwordResetToken = undefined
     user.passwordResetExpires = undefined
     user.passwordChangedAt = new Date()
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1
     await user.save()
 
     return { success: true, message: 'Password updated successfully' }
@@ -246,6 +247,7 @@ export async function resetPassword(values: IResetPassword) {
           passwordResetExpires: null,
           passwordChangedAt: new Date(),
         },
+        $inc: { tokenVersion: 1 },
       },
       { new: true }
     )
@@ -391,6 +393,15 @@ export async function updateUser(rawUser: IUserUpdate) {
             name: user.name, 
             email: normalizedEmail, 
             role: user.role, 
+            tokenVersion: {
+              $cond: {
+                if: { $eq: ['$role', user.role] },
+                then: { $ifNull: ['$tokenVersion', 0] },
+                else: {
+                  $add: [{ $ifNull: ['$tokenVersion', 0] }, 1],
+                },
+              },
+            },
             emailVerified: {//1. if Admin form emailVerified= true, update it: (it was Date or null)
               $cond: { //if null to current date, if Date leave it, otherwise (Date or null) make/leave it null.
                 if: { $eq: [user.emailVerified, true] }, 
