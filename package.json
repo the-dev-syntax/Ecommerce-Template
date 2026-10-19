@@ -5,6 +5,7 @@
   "scripts": {
     "email": "email dev",
     "seed": "npx tsx ./lib/db/seed.ts",
+    "migrate:sar": "npx tsx --env-file=.env.local ./scripts/migrate-sar-settings.ts",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",

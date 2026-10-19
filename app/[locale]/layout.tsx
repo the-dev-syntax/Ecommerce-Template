@@ -102,8 +102,12 @@ export default async function AppLayout({
   children: React.ReactNode
 }) {
   const setting = await getSetting()
-  const currencyCookie = (await cookies()).get('currency')
-  const currency = currencyCookie ? currencyCookie.value : 'USD'
+  const currencyCookie = (await cookies()).get('currency')?.value
+  const currency =
+    currencyCookie &&
+    setting.availableCurrencies.some((c) => c.code === currencyCookie)
+      ? currencyCookie
+      : setting.defaultCurrency
 
   const { locale } = await params
   // Ensure that the incoming `locale` is valid

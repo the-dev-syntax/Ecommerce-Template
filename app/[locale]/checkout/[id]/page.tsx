@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import React from 'react'
 import { auth } from '@/auth'
 import { getOrderById } from '@/lib/actions/order.actions'
+import { getMoyasarPublishableKey } from '@/lib/env'
 import PaymentForm from './payment-form'
 
 
@@ -27,7 +28,7 @@ const CheckoutPaymentPage = async (props: { params: Promise<{ id: string }> }) =
       order={order}
       paypalClientId={process.env.PAYPAL_CLIENT_ID || 'sb'}
       isAdmin={session?.user?.role === 'admin' || false}
-     
+      moyasarPublishableKey={getMoyasarPublishableKey()}
     />
   )
 }

@@ -7,6 +7,7 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   createdAt: Date
   updatedAt: Date
   receiptSentAt?: Date
+  moyasarPaymentId?: string
 }
 
 export type OrderWithUser = Omit<IOrder, 'user'> & {
@@ -52,7 +53,7 @@ const orderSchema = new Schema<IOrder>(
     },
     expectedDeliveryDate: { type: Date, required: true },
     paymentMethod: { type: String, required: true },
-    currency: { type: String, required: true, default: 'USD' },
+    currency: { type: String, required: true, default: 'SAR' },
     paymentResult: {
       id: String,
       status: String,
@@ -70,6 +71,7 @@ const orderSchema = new Schema<IOrder>(
     deliveredAt: { type: Date },
     // Stripe Step 1 intent ID — stored on creation, verified on success
     stripePaymentIntentId: { type: String },
+    moyasarPaymentId: { type: String },
     createdAt: { type: Date, default: Date.now },
   },
   {

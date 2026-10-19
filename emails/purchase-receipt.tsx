@@ -98,7 +98,7 @@ import { getSetting } from '@/lib/actions/setting.actions'
                       Price Paid
                     </Text>
                     <Text className='mt-0 mr-4'>
-                      {formatCurrency(order.totalPrice)}
+                      {formatCurrency(order.totalPrice, order.currency)}
                     </Text>
                   </Column>
                 </Row>
@@ -128,7 +128,9 @@ import { getSetting } from '@/lib/actions/setting.actions'
                       </Link>
                     </Column>
                     <Column align='right' className='align-top'>
-                      <Text className='m-0 '>{formatCurrency(item.price)}</Text>
+                      <Text className='m-0 '>
+                        {formatCurrency(item.price, order.currency)}
+                      </Text>
                     </Column>
                   </Row>
                 ))}
@@ -141,7 +143,9 @@ import { getSetting } from '@/lib/actions/setting.actions'
                   <Row key={name} className='py-1'>
                     <Column align='right'>{name}:</Column>
                     <Column align='right' width={70} className='align-top'>
-                      <Text className='m-0'>{formatCurrency(price)}</Text>
+                      <Text className='m-0'>
+                        {formatCurrency(price, order.currency)}
+                      </Text>
                     </Column>
                   </Row>
                 ))}

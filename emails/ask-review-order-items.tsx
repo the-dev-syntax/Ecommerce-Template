@@ -105,7 +105,7 @@ export default async function AskReviewOrderItemsEmail({
                     Price Paid
                   </Text>
                   <Text className='mt-0 mr-4'>
-                    {formatCurrency(order.totalPrice)}
+                    {formatCurrency(order.totalPrice, order.currency)}
                   </Text>
                 </Column>
               </Row>
@@ -153,7 +153,9 @@ export default async function AskReviewOrderItemsEmail({
                 <Row key={name} className='py-1'>
                   <Column align='right'>{name}:</Column>
                   <Column align='right' width={70} className='align-top'>
-                    <Text className='m-0'>{formatCurrency(price)}</Text>
+                    <Text className='m-0'>
+                      {formatCurrency(price, order.currency)}
+                    </Text>
                   </Column>
                 </Row>
               ))}

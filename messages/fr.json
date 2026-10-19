@@ -274,6 +274,8 @@
   "Paid": "Payé",
   "Password": "Mot de passe",
   "Pay Order": "Payer la commande",
+  "Moyasar": "Moyasar",
+  "MoyasarNotConfigured": "Moyasar n'est pas configuré. Ajoutez la clé publique.",
   "PayPal": "PayPal",
   "PayPal Checkout": "PayPal Checkout",
   "Payment Method": "Méthode de paiement",

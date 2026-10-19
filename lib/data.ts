@@ -1151,19 +1151,22 @@ const reviews  = [
         name: locale.name,
       })),
       defaultLanguage: 'en-US',
+      // SAR is the base currency; product prices are stored in SAR and the
+      // other rates convert one SAR into the listed currency.
       availableCurrencies: [
-        { name: 'United States Dollar', code: 'USD', symbol: '$', convertRate: 1 },
-        { name: 'Euro', code: 'EUR', symbol: '€', convertRate: 0.96 },
-        { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 3.67 },
-        { name: 'SAUDI Riyal', code: 'SAR', symbol: 'ريال', convertRate: 3.75 }, // symbol: 'SAR',
+        { name: 'Saudi Riyal', code: 'SAR', symbol: 'ر.س', convertRate: 1 },
+        { name: 'United States Dollar', code: 'USD', symbol: '$', convertRate: 0.2667 },
+        { name: 'Euro', code: 'EUR', symbol: '€', convertRate: 0.245 },
+        { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 0.979 },
       ],
-      defaultCurrency: 'USD',
+      defaultCurrency: 'SAR',
       availablePaymentMethods: [
+        { name: 'Moyasar', commission: 0 },
         { name: 'PayPal', commission: 0 },
         { name: 'Stripe', commission: 0 },
         { name: 'Cash On Delivery', commission: 0 },
       ],
-      defaultPaymentMethod: 'PayPal',
+      defaultPaymentMethod: 'Moyasar',
       availableDeliveryDates: [
         {
           name: 'Tomorrow',

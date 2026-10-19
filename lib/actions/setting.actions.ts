@@ -60,8 +60,23 @@ export const updateSetting = async (newSetting: ISettingInput) => {
 // Server action to update the currency cookie
 export const setCurrencyOnServer = async (newCurrency: string) => {
   'use server'
+
+  const setting = await getSetting()
+  const isAvailable = setting.availableCurrencies.some(
+    (currency) => currency.code === newCurrency
+  )
+
+  if (!isAvailable)
+    return { success: false, message: 'Invalid currency' }
+
   const cookiesStore = await cookies()
-  cookiesStore.set('currency', newCurrency)
+  cookiesStore.set('currency', newCurrency, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  })
 
   return {
     success: true,

@@ -38,15 +38,18 @@ export const slugify = (text: string): string => {
     .slice(0, 80);
 }
 
-// call in these exported fns to formate the prices
-const CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
-  currency: 'USD',
-  style: 'currency',
-  minimumFractionDigits: 2,
-})
-
-export function formatCurrency(amount: number) {
-  return CURRENCY_FORMATTER.format(amount)
+// Format an order amount in its own currency. Defaults are kept for callers
+// that do not have an order currency available.
+export function formatCurrency(
+  amount: number,
+  currency = 'SAR',
+  locale = 'en-US'
+) {
+  return new Intl.NumberFormat(locale, {
+    currency,
+    style: 'currency',
+    minimumFractionDigits: 2,
+  }).format(amount)
 }
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US')

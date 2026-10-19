@@ -22,17 +22,20 @@ import ProductPrice from '@/components/shared/product/product-price'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import StripeForm from './stripe-form'
+import MoyasarForm from './moyasar-form'
 import { useTranslations } from 'next-intl'
 import useCartStore from '@/hooks/use-cart-store'
 
 
 export default function OrderPaymentForm({
   order,
-  paypalClientId, 
+  paypalClientId,
+  moyasarPublishableKey,
 }: {
   order: IOrder
   paypalClientId: string
-  isAdmin: boolean  
+  isAdmin: boolean
+  moyasarPublishableKey: string
 }) {
   const t = useTranslations()
   const router = useRouter()
@@ -177,6 +180,13 @@ export default function OrderPaymentForm({
                 {isCreatingIntent ? t('Submitting') : t('Stripe Checkout')}
               </Button>
             ))}
+
+            {!isPaid && paymentMethod === 'Moyasar' && (
+              <MoyasarForm
+                order={order}
+                publishableKey={moyasarPublishableKey}
+              />
+            )}
 
             {!isPaid && paymentMethod === 'Cash On Delivery' && (
               <Button

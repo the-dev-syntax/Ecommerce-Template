@@ -274,6 +274,8 @@
   "Paid": "مدفوع",
   "Password": "كلمة المرور",
   "Pay Order": "دفع الطلب",
+  "Moyasar": "ميسر",
+  "MoyasarNotConfigured": "ميسر غير مُهيأ. أضف مفتاح النشر.",
   "PayPal": "باى بال",
   "PayPal Checkout": "الدفع بباي بال",
   "Payment Method": "طريقة الدفع",

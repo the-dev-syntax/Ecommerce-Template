@@ -193,8 +193,31 @@ Known limits:
 - In-memory round-trip: revoked key found, unrelated key not found, TTL capped at 2,592,000s, past expiry clamped to 1s, Redis errors fail open — PASS
 - `npx tsc --noEmit` — PASS
 - `npm run lint` — PASS
-- `npm run i18n:check` — PASS (479 keys in en-US, ar, fr)
+- `npm run i18n:check` — PASS (482 keys in en-US, ar, fr)
 - `npm run build` — PASS
+
+## P0-18 — Moyasar provider, env validation, SAR base (2026-10-19)
+
+- Added `.env.example` (names only) and `lib/env.ts` (lazy Zod validation, `getMoyasarConfig`, `isMoyasarConfigured`, `getMoyasarPublishableKey`). `.gitignore` now allows `.env.example`.
+- Added `lib/payments/types.ts`, `lib/payments/index.ts` (provider registry: Moyasar/Stripe/PayPal/COD) and `lib/payments/moyasar.ts` (fetch payment, paid status, halalas conversion, constant-time webhook token check).
+- Added `updateOrderToPaidByMoyasar` in `lib/actions/order.actions.ts`: verifies ownership, payment method, `orderId` metadata, amount and currency, then calls the idempotent `fulfillOrder`.
+- Added `app/api/webhooks/moyasar/route.ts`: verifies `secret_token`, re-fetches the payment with the secret key, validates amount/currency/order, and fulfills idempotently. Requires `MOYASAR_WEBHOOK_SECRET`.
+- Checkout: `moyasar-form.tsx` renders Moyasar's hosted form (Mada/Visa/Mastercard/Amex/UnionPay + STC Pay), `moyasar-payment-success` verifies the `?id=` callback, and `payment-form.tsx` renders it when the order payment method is `Moyasar`.
+- Admin: payment method name inputs now suggest Moyasar/Stripe/PayPal/COD; Moyasar is in the seed defaults. Existing databases must add "Moyasar" in Admin → Settings → Payment Methods (or re-seed).
+- Hardening: the callback page stops loading when `?id=` is missing, the webhook derives the order id from the fetched payment's metadata (and rejects invalid ObjectIds) instead of trusting the webhook body, secret/publishable/webhook config getters are decoupled so the webhook does not require a publishable key, the Moyasar script retries after a CDN failure, and the missing-config message is localized.
+- Currency: SAR is now the base currency (`availableCurrencies` rates are relative to SAR), `defaultCurrency: 'SAR'`, the layout fallback uses the store default instead of hardcoded USD, `formatCurrency` accepts currency/locale, emails use the order currency, and `setCurrencyOnServer` validates the code and sets an HttpOnly/SameSite cookie.
+- Apple Pay is not enabled yet: it needs an Apple Pay merchant validation endpoint/certificate. The current form enables card networks and STC Pay.
+- Setup: add `MOYASAR_WEBHOOK_SECRET` (the dashboard webhook "Secret Token"), create a webhook to `https://<domain>/api/webhooks/moyasar` for `payment_paid` and `payment_captured`, and use test keys until go-live.
+- Existing database: run `npm run migrate:sar` once to make SAR the default, express rates relative to SAR, and add Moyasar to the payment methods. Review product prices afterwards: their numeric values are now interpreted as SAR.
+- Why: Moyasar is the Saudi-first gateway; the provider registry keeps Stripe/PayPal/COD optional, while the webhook + callback both re-verify with the secret key so a forged client payload cannot mark an order paid. SAR as the base currency makes stored prices, checkout totals and invoices consistent.
+
+### Verification
+- Moyasar test API reachable with the configured test secret key (`GET /v1/payments` succeeded)
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (484 keys in en-US, ar, fr)
+- `npm run build` — PASS
+- Live hosted form/webhook not exercised yet: needs a browser checkout and the webhook secret configured in the Moyasar dashboard.
 
 ## Fix — Invalid next-intl keys (2026-10-18)
 
@@ -447,9 +470,10 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Confirm languages: assume **Arabic + English**; decide whether the admin UI and emails must be fully translated.
 - [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash), domains, and monthly budget for email/SMS/monitoring (pending).
 - [ ] Define the MVP launch checklist and target date; move everything else to P1/P2.
-- [ ] Add Moyasar test keys to `.env.local` and Vercel: `MOYASAR_PUBLISHABLE_KEY`, `MOYASAR_SECRET_KEY`, `MOYASAR_WEBHOOK_SECRET` (add `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` only if the browser needs the publishable key). Never commit or paste secrets.
-- [ ] Add environment validation with Zod at startup (`lib/env.ts`) so a missing `MOYASAR_SECRET_KEY`, `UPSTASH_*`, etc. fails fast.
-- [ ] Add `.env.example` with variable names only (no values).
+- [x] Add Moyasar test keys to `.env.local`: `MOYASAR_PUBLISHABLE_KEY`, `MOYASAR_SECRET_KEY` (and `MOYASAR_WEBHOOK_SECRET` once the dashboard webhook exists). Never commit or paste secrets.
+- [ ] Add the same keys to Vercel before deployment.
+- [x] Add environment validation with Zod (`lib/env.ts`) so a missing `MOYASAR_SECRET_KEY`, `UPSTASH_*`, etc. fails fast when used.
+- [x] Add `.env.example` with variable names only (no values).
 - [ ] Add CI (GitHub Actions): `tsc --noEmit`, `lint`, `i18n:check`, unit tests, `build` on every PR.
 - [ ] Add error tracking (Sentry) and uptime/alerting before the first real order.
 
@@ -473,7 +497,7 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Acceptance: a product with multiple size/color variants can be created, sold, refunded, and stock-tracked per variant.
 
 ### Phase 2 — Currency, pricing, and Saudi tax (P0)
-- [ ] Add a base currency (`SAR`) and remove the hardcoded `USD` fallbacks (`app/[locale]/layout.tsx:106`, `lib/utils.ts:42`, order default).
+- [x] Add a base currency (`SAR`) and remove the hardcoded `USD` fallbacks (`app/[locale]/layout.tsx:106`, `lib/utils.ts:42`, order default).
 - [ ] Define currency rules: code, symbol, locale, decimals, rounding, and whether prices are converted or entered per currency.
 - [ ] Keep order totals in the order currency; never re-convert an existing order when the display currency changes.
 - [ ] Make VAT 15% the Saudi default and add VAT-inclusive/exclusive pricing plus per-region tax rules.
@@ -483,11 +507,11 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Acceptance: a SAR order produces correct totals and a compliant invoice; currency switching never changes stored totals.
 
 ### Phase 3 — Payment gateway abstraction (P0/P1)
-- [ ] Define a `PaymentProvider` interface: `createPayment`, `capture`, `refund`, `void`, `verifyWebhook`, `parseEvent`, `getStatus`, supported currencies/countries, and capabilities (partial refunds, 3DS, wallets).
+- [x] Define a `PaymentProvider` definition/registry (id, name, currencies, refund capability, webhook path, configuration check). Adapter methods are added incrementally per provider.
 - [ ] Move Stripe, PayPal, and COD into adapters behind a provider registry; remove provider-specific branches from `lib/actions/order.actions.ts`.
 - [ ] Store provider credentials in environment/secret manager, not plaintext settings; add an admin screen that shows enabled providers without exposing secrets.
 - [ ] Add one signature-verified webhook dispatcher with replay protection, an event log, and idempotent `fulfillOrder` calls.
-- [ ] Implement **Moyasar** as the first adapter: hosted payment page/API, Mada, Apple Pay, STC Pay, and BNPL only if enabled; verify the callback and webhook signature before fulfilling.
+- [x] Implement **Moyasar** core: hosted form, Mada/card networks, STC Pay, callback verification, and secret-token webhook verification before fulfilling. Apple Pay and BNPL remain.
 - [ ] Add refunds, partial refunds, cancellations, chargeback handling, and payment reconciliation (Moyasar refund/cancel APIs).
 - [ ] Add a mock/test provider for CI and sandbox end-to-end tests.
 - [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic; Moyasar test-mode checkout completes and refunds correctly.

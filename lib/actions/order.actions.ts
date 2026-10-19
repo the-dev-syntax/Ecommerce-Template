@@ -26,6 +26,11 @@ import { revalidateAllLocales } from '../utils-serverOnly'
 import { isAdminOrOwner, requireAdmin } from '../access'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
+import {
+  fetchMoyasarPayment,
+  isMoyasarPaid,
+  toMoyasarAmount,
+} from '../payments/moyasar'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -363,6 +368,77 @@ export async function updateOrderToPaidByStripe(
       email:
         paymentIntent.receipt_email ?? order.user?.email ?? '',
       status: paymentIntent.status,
+    })
+
+    await revalidateAllLocales(`/account/orders/${orderId}`)
+    await revalidateAllLocales(`/admin/orders/${orderId}`)
+
+    return { success: true, message: 'Order paid successfully' }
+  } catch (err) {
+    return { success: false, message: formatError(err) }
+  }
+}
+
+// VERIFY & FULFILL MOYASAR PAYMENT - PRIVATE (callback fallback)
+export async function updateOrderToPaidByMoyasar(
+  orderId: string,
+  paymentId: string
+) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) throw new Error('User not authenticated')
+
+    await connectToDatabase()
+
+    const order = await dbOrderWith3UserKeys(orderId)
+    if (!order) throw new Error('Order not found')
+
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
+      throw new Error('Error accessing order')
+
+    if (order.isPaid) {
+      await revalidateAllLocales(`/account/orders/${orderId}`)
+      return { success: true, message: 'Order already paid' }
+    }
+
+    if (order.paymentMethod !== 'Moyasar')
+      throw new Error('Order is not payable by Moyasar')
+
+    if (typeof paymentId !== 'string' || !paymentId.trim())
+      throw new Error('Invalid payment reference')
+
+    const payment = await fetchMoyasarPayment(paymentId)
+
+    if (!isMoyasarPaid(payment.status))
+      return { success: false, message: 'Payment not completed' }
+
+    if (payment.metadata?.orderId !== String(order._id))
+      throw new Error('Payment does not match this order')
+
+    if (payment.amount !== toMoyasarAmount(order.totalPrice))
+      throw new Error('Paid amount does not match order total')
+
+    if (
+      payment.currency.toUpperCase() !==
+      (order.currency || 'SAR').toUpperCase()
+    )
+      throw new Error('Payment currency does not match order')
+
+    if (order.moyasarPaymentId && order.moyasarPaymentId !== payment.id)
+      throw new Error('Payment does not match this order')
+
+    await Order.findByIdAndUpdate(orderId, {
+      moyasarPaymentId: payment.id,
+    })
+
+    await fulfillOrder({
+      orderId,
+      provider: 'Moyasar',
+      paymentId: payment.id,
+      amountPaid: payment.amount / 100,
+      currency: payment.currency,
+      email: order.user?.email ?? '',
+      status: payment.status,
     })
 
     await revalidateAllLocales(`/account/orders/${orderId}`)

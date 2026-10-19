@@ -21,6 +21,13 @@ import React, { useEffect } from 'react'
 import { useFieldArray, UseFormReturn } from 'react-hook-form'
 import { useTranslations } from 'next-intl'
 
+const paymentProviderOptions = [
+  'Moyasar',
+  'Stripe',
+  'PayPal',
+  'Cash On Delivery',
+]
+
 export default function PaymentMethodForm({
   form,
   id,
@@ -62,6 +69,11 @@ export default function PaymentMethodForm({
         <CardTitle>{t('Payment Methods')}</CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
+        <datalist id='payment-provider-options'>
+          {paymentProviderOptions.map((provider) => (
+            <option key={provider} value={provider} />
+          ))}
+        </datalist>
         <div className='space-y-4'>
           {fields.map((field, index) => (
             <div key={field.id} className='flex   gap-2'>
@@ -72,7 +84,11 @@ export default function PaymentMethodForm({
                   <FormItem>
                     {index == 0 && <FormLabel>{t('Name')}</FormLabel>}
                     <FormControl>
-                      <Input {...field} placeholder={t('Name')} />
+                      <Input
+                        {...field}
+                        list='payment-provider-options'
+                        placeholder={t('Name')}
+                      />
                     </FormControl>
                     <FormMessage>
                       {errors.availablePaymentMethods?.[index]?.name?.message}
