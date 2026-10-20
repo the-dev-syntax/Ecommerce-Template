@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# ZATCA keys, CSIDs, and other local secrets
+.secrets/
+
 # vercel
 .vercel
 

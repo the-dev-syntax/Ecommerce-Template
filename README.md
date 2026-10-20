@@ -241,7 +241,7 @@ Known limits:
 ## P0-20 — Saudi seller identity, VAT, and ZATCA Phase 1 invoices (2026-10-20)
 
 - The default market is Saudi (`market: 'SA'`), with a new **Seller and Tax** admin section for Arabic/English legal name, VAT number, CR number, national address, seller email/phone, invoice prefix, and sequence length. All fields are editable and persisted in settings.
-- Seeded seller: **NAKAA ELSEHA MEDICAL PHARMACY / صيدلية نقاء الصحة الطبية**, VAT **1185102259**, VAT rate **15%**.
+- Seeded seller: **NAKAA ELSEHA MEDICAL PHARMACY / صيدلية نقاء الصحة الطبية**, VAT **310161142300003**, VAT rate **15%**.
 - Invoice numbering is atomic and sequential per prefix/year (`NEM-26-000001`, `NEM-26-000002`, ...). A separate counter collection and unique `number`/`orderId+type` indexes prevent duplicates; prefix/sequence length lock after the first invoice so the app cannot create an unauthorized second sequence. Invoice updates/deletes are rejected at the model layer.
 - Added `Invoice`/`InvoiceCounter` models and `lib/invoices/invoice.ts`. An invoice is created once when an order is paid, with a lazy retry from the invoice page; it snapshots seller/buyer/items and stores the ZATCA QR TLV payload.
 - Added `lib/invoices/qr.ts`: tags 1–5 (seller name, VAT number, timestamp in Asia/Riyadh, total incl. VAT, VAT amount), UTF-8 byte lengths, base64 TLV.
@@ -250,7 +250,7 @@ Known limits:
 - Admin/account order pages link to the invoice, and the purchase receipt email links to it. Invoice labels are translated in en/ar/fr.
 - Migration: `npm run migrate:saudi` adds seller/invoice settings to an existing database without overwriting values. Run `npm run migrate:sar` first if not already done.
 - Added `qrcode` and `@types/qrcode`.
-- ZATCA Phase 2 (Fatoora) remains pending ZATCA sandbox credentials/CSID/certificates.
+- ZATCA Phase 2 (Fatoora) is verified at the API level in P0-21; app integration remains.
 
 ### Verification
 - Invoice `NEM-26-000001` created with seller/VAT, buyer, totals; QR TLV decoded to tags 1–5 (Arabic seller name, VAT number, Riyadh timestamp, total, VAT) — PASS
@@ -261,6 +261,26 @@ Known limits:
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (527 keys in en-US, ar, fr)
 - `npm run build` — PASS
+
+## P0-21 — ZATCA Phase 2 (Fatoora) API verification (2026-10-20)
+
+- Correct seller VAT is **310161142300003** (15 digits). The earlier `1185102259` was the CR number.
+- Added `zatca-sdk` (MIT, pure JS) for secp256k1 keys/CSR, invoice signing, compliance/reporting/clearance, and renewal.
+- Generated the EGS private key + CSR and requested a **Compliance CSID** (sandbox).
+- **Compliance Invoice API**: submitted a signed B2C simplified invoice — `XSD_ZATCA_VALID`, status **PASS**, no warnings/errors.
+- Issued a **Production CSID**.
+- **Reporting API**: accepted a B2C simplified invoice (`accepted: true`). One warning `BR-KSA-F-08` because the developer sandbox returns a canned certificate for test CRN `886431145` / VAT `399999999900003`; the real production certificate will use CR `1185102259` / VAT `310161142300003`.
+- **Production CSID Renewal API**: PASS.
+- **Clearance API** was not tested because the launch scope is B2C; it will be added when B2B standard invoices are in scope.
+- Private key, CSR, and CSIDs are stored in `.secrets/zatca-state.json` (gitignored). `ZATCA_*` variable names were added to `.env.example`; real values stay in `.env.local`/the secret manager.
+- Next: integrate Phase 2 into invoice creation — build UBL 2.1 from the stored invoice, sign with the production CSID, report B2C invoices, persist the ICV/PIH chain, store the Phase 2 QR (tags 6–9), report credit notes, add retry/error handling, and onboard with the real production OTP.
+
+### Verification
+- Compliance CSID issued (sandbox) — PASS
+- Compliance Invoice API: signed simplified invoice — PASS
+- Production CSID issued — PASS
+- Reporting API: simplified invoice accepted — PASS (1 sandbox-only warning)
+- Production CSID renewal — PASS
 
 ## Fix — Invalid next-intl keys (2026-10-18)
 
@@ -662,7 +682,7 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 3. Shipping zones/rates and Saudi address/phone fields.
 4. Full ar/en/fr translation of storefront, admin, validation/server messages, and emails.
 5. Security P0 items and audit logging.
-6. ZATCA Phase 2 Fatoora onboarding/integration (needs ZATCA sandbox credentials, CSID, and signing certificates).
+6. ZATCA Phase 2 Fatoora: sandbox API flow verified (Compliance CSID → Compliance Invoice → Production CSID → Reporting → Renewal); app integration and real production onboarding remain.
 7. Staging E2E, legal content, launch rehearsal, and sign-off.
 
 ### A. Release and environments
@@ -689,10 +709,11 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 - [ ] (Client) Confirm BNPL is out of MVP (separate Tabby/Tamara integration required).
 
 ### D. Tax, invoices, legal
-- [x] (Dev) Seller identity (Arabic/English legal name, VAT `1185102259`, CR/national address, contact), VAT 15%, and invoice prefix/sequence in admin settings.
+- [x] (Dev) Seller identity (Arabic/English legal name, VAT `310161142300003`, CR/national address, contact), VAT 15%, and invoice prefix/sequence in admin settings.
 - [ ] (Dev) Confirm VAT inclusive/exclusive pricing and how VAT applies to shipping.
 - [x] (Dev) ZATCA Phase 1 simplified tax invoice: sequential numbering, QR TLV, Arabic/English invoice page, immutable records, and credit notes for refunds.
-- [ ] (Dev) ZATCA Phase 2 Fatoora: onboarding, CSID/certificates, UBL XML generation, signing, clearance/reporting, and retry handling. Blocked on ZATCA sandbox credentials.
+- [x] (Dev) ZATCA Phase 2 sandbox API verification: Compliance CSID, compliance invoice, production CSID, reporting, and renewal.
+- [ ] (Dev) ZATCA Phase 2 app integration: build UBL 2.1 per invoice, sign/report B2C invoices, persist ICV/PIH, Phase 2 QR (tags 6–9), report credit notes, retry/error handling, and real production onboarding.
 - [ ] (Dev) VAT/cash reconciliation report or export for accounting.
 - [ ] (Client) Publish privacy, terms, returns/refunds, shipping, contact, and VAT/CR pages in Arabic and English.
 

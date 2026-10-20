@@ -1108,7 +1108,7 @@ const reviews  = [
       seller: {
         legalNameEn: 'NAKAA ELSEHA MEDICAL PHARMACY',
         legalNameAr: 'صيدلية نقاء الصحة الطبية',
-        vatNumber: '1185102259',
+        vatNumber: '310161142300003',
         crNumber: '',
         nationalAddress: '',
         email: 'contact@EssentialVital.com',
