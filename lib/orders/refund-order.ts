@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { connectToDatabase } from '@/lib/db'
 import Order, { IOrder } from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
+import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import {
   fetchMoyasarPayment,
   isMoyasarRefundable,
@@ -90,6 +91,15 @@ export async function refundMoyasarOrderPayment(
   }
 
   await order.save()
+
+  try {
+    await createInvoiceForOrder(orderId, 'credit_note', { refundedAmount })
+  } catch (error) {
+    console.error(
+      'Credit note creation failed (the invoice page retries):',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
+  }
 
   return { order, refundedAmount, fullyRefunded }
 }
@@ -199,6 +209,17 @@ export async function cancelOrderById(orderId: string, reason?: string) {
     })
   } finally {
     await session.endSession()
+  }
+
+  if (refundedAmount > 0) {
+    try {
+      await createInvoiceForOrder(orderId, 'credit_note', { refundedAmount })
+    } catch (error) {
+      console.error(
+        'Credit note creation failed (the invoice page retries):',
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+    }
   }
 
   const cancelledOrder = await Order.findById(orderId)

@@ -14,6 +14,7 @@ import CurrencyForm from './currency-form'
 import PaymentMethodForm from './payment-method-form'
 import DeliveryDateForm from './delivery-date-form'
 import SiteInfoForm from './site-info-form'
+import SellerForm from './seller-form'
 import CommonForm from './common-form'
 import CarouselForm from './carousel-form'
 
@@ -54,6 +55,7 @@ export default function SettingForm({ setting }: { setting: ISettingInput }) {
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <SiteInfoForm id='setting-site-info' form={form} />
+        <SellerForm id='setting-seller' form={form} />
         <CommonForm id='setting-common' form={form} />
         <CarouselForm id='setting-carousels' form={form} />
 

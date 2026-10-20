@@ -9,6 +9,33 @@ export interface ISetting extends Omit<Document, '_id'>, ISettingInput {
 
 const settingSchema = new Schema<ISetting>(
   {
+    market: {
+      type: String,
+      enum: ['SA', 'US', 'CA'],
+      required: true,
+      default: 'SA',
+    },
+    seller: {
+      legalNameEn: {
+        type: String,
+        required: true,
+        default: 'NAKAA ELSEHA MEDICAL PHARMACY',
+      },
+      legalNameAr: {
+        type: String,
+        required: true,
+        default: 'صيدلية نقاء الصحة الطبية',
+      },
+      vatNumber: { type: String, required: true, default: '1185102259' },
+      crNumber: { type: String, default: '' },
+      nationalAddress: { type: String, default: '' },
+      email: { type: String, default: '' },
+      phone: { type: String, default: '' },
+    },
+    invoice: {
+      prefix: { type: String, required: true, default: 'NEM' },
+      sequenceLength: { type: Number, required: true, default: 6 },
+    },
     common: {
       pageSize: { type: Number, required: true, default: 9 },
       isMaintenanceMode: { type: Boolean, required: true, default: false },

@@ -377,9 +377,37 @@ export const DeliveryDateSchema = z.object({
     .min(0, 'Free shipping min amount must be at least 0'),
 })
 
+export const SellerSchema = z.object({
+  legalNameEn: z.string().min(1, 'English legal name is required'),
+  legalNameAr: z.string().min(1, 'Arabic legal name is required'),
+  vatNumber: z.string().min(1, 'VAT number is required'),
+  crNumber: z.string(),
+  nationalAddress: z.string(),
+  email: z.string(),
+  phone: z.string(),
+})
+
+export const InvoiceSettingsSchema = z.object({
+  prefix: z
+    .string()
+    .min(1, 'Invoice prefix is required')
+    .max(10, 'Invoice prefix is too long')
+    .regex(/^[A-Z0-9-]+$/, 'Use uppercase letters, numbers, or dashes'),
+  sequenceLength: z.coerce
+    .number()
+    .int()
+    .min(4, 'Sequence length must be at least 4')
+    .max(10, 'Sequence length must be at most 10'),
+})
+
+export const MarketSchema = z.enum(['SA', 'US', 'CA']).default('SA')
+
 export const SettingInputSchema = z.object({
   // PROMPT: create fields
   // codeium, based on the mongoose schema for settings
+  market: MarketSchema,
+  seller: SellerSchema,
+  invoice: InvoiceSettingsSchema,
   common: z.object({
     pageSize: z.coerce
       .number()
@@ -441,6 +469,9 @@ export const SettingInputSchema = z.object({
 export const SettingInputSchemaNoDefaults = z.object({
   // PROMPT: create fields
   // codeium, based on the mongoose schema for settings
+  market: z.enum(['SA', 'US', 'CA']),
+  seller: SellerSchema,
+  invoice: InvoiceSettingsSchema,
   common: z.object({
     pageSize: z.coerce
       .number()

@@ -4,6 +4,7 @@ import { sendPurchaseReceipt } from '@/emails'
 import { connectToDatabase } from '@/lib/db'
 import Order, { OrderWithUser } from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
+import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 
 export type FulfillOrderInput = {
   orderId: string
@@ -111,6 +112,15 @@ export async function fulfillOrder({
     })
   } finally {
     await session.endSession()
+  }
+
+  try {
+    await createInvoiceForOrder(orderId)
+  } catch (error) {
+    console.error(
+      'Invoice creation failed (order remains paid; the invoice page retries):',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
   }
 
   await sendReceiptOnce(orderId)

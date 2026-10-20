@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/db'
 import Order from '@/lib/db/models/order.model'
 import { getMoyasarWebhookSecret } from '@/lib/env'
+import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
 import {
   fetchMoyasarPayment,
@@ -89,6 +90,16 @@ export async function POST(req: NextRequest) {
         }
       }
       await order.save()
+      try {
+        await createInvoiceForOrder(orderId, 'credit_note', {
+          refundedAmount,
+        })
+      } catch (error) {
+        console.error(
+          'Moyasar webhook credit note failed:',
+          error instanceof Error ? error.message : 'Unknown error'
+        )
+      }
       return NextResponse.json({ received: true })
     }
 

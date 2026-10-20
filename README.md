@@ -238,6 +238,30 @@ Known limits:
 - `npm run build` — PASS
 - Apple Pay not exercised on a physical Apple device yet.
 
+## P0-20 — Saudi seller identity, VAT, and ZATCA Phase 1 invoices (2026-10-20)
+
+- The default market is Saudi (`market: 'SA'`), with a new **Seller and Tax** admin section for Arabic/English legal name, VAT number, CR number, national address, seller email/phone, invoice prefix, and sequence length. All fields are editable and persisted in settings.
+- Seeded seller: **NAKAA ELSEHA MEDICAL PHARMACY / صيدلية نقاء الصحة الطبية**, VAT **1185102259**, VAT rate **15%**.
+- Invoice numbering is atomic and sequential per prefix/year (`NEM-26-000001`, `NEM-26-000002`, ...). A separate counter collection and unique `number`/`orderId+type` indexes prevent duplicates; prefix/sequence length lock after the first invoice so the app cannot create an unauthorized second sequence. Invoice updates/deletes are rejected at the model layer.
+- Added `Invoice`/`InvoiceCounter` models and `lib/invoices/invoice.ts`. An invoice is created once when an order is paid, with a lazy retry from the invoice page; it snapshots seller/buyer/items and stores the ZATCA QR TLV payload.
+- Added `lib/invoices/qr.ts`: tags 1–5 (seller name, VAT number, timestamp in Asia/Riyadh, total incl. VAT, VAT amount), UTF-8 byte lengths, base64 TLV.
+- Added `/[locale]/invoice/[id]`: printable Arabic/English invoice with seller/buyer details, line items, VAT/total, ZATCA QR, and a credit note section when a refund exists.
+- Refunds/cancellations generate a credit note through the same sequence with `originalInvoiceNumber` and proportional VAT; duplicate creation is prevented.
+- Admin/account order pages link to the invoice, and the purchase receipt email links to it. Invoice labels are translated in en/ar/fr.
+- Migration: `npm run migrate:saudi` adds seller/invoice settings to an existing database without overwriting values. Run `npm run migrate:sar` first if not already done.
+- Added `qrcode` and `@types/qrcode`.
+- ZATCA Phase 2 (Fatoora) remains pending ZATCA sandbox credentials/CSID/certificates.
+
+### Verification
+- Invoice `NEM-26-000001` created with seller/VAT, buyer, totals; QR TLV decoded to tags 1–5 (Arabic seller name, VAT number, Riyadh timestamp, total, VAT) — PASS
+- Credit note `NEM-26-000002` with original invoice reference and proportional VAT — PASS
+- Re-creating an invoice returns the same number (idempotent); direct update rejected with "Invoices are immutable" — PASS
+- `npm run migrate:saudi` — PASS
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (527 keys in en-US, ar, fr)
+- `npm run build` — PASS
+
 ## Fix — Invalid next-intl keys (2026-10-18)
 
 - Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.
@@ -482,19 +506,20 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 
 ### Phase 0 — Decisions and foundation (P0)
 - [x] Store model: **one store per deployment (white-label)**. No tenant scoping is needed; each deployment has one store.
-- [x] Launch payments: **Moyasar first** (Mada, Apple Pay, and STC Pay where enabled on the account; BNPL only if enabled). Stripe/PayPal can stay as optional adapters.
+- [x] Launch payments: **Moyasar first** (Mada, Apple Pay, and STC Pay where enabled on the account). **BNPL is out of MVP.** Stripe/PayPal can stay as optional adapters.
 - [x] Shipping: build **provider-agnostic endpoints now**; connect Aramex/SMSA/Saudi Post/Naqel later.
-- [x] ZATCA: **Phase 1 and Phase 2 (Fatoora)** are both in scope.
-- [x] Catalog scope: **physical products with variants only**; no multiple warehouses, subscriptions, or digital products at launch.
-- [ ] Confirm languages: assume **Arabic + English**; decide whether the admin UI and emails must be fully translated.
-- [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash), domains, and monthly budget for email/SMS/monitoring (pending).
-- [ ] Define the MVP launch checklist and target date; move everything else to P1/P2.
+- [x] ZATCA: **Phase 1 and Phase 2 (Fatoora) are both launch-blocking.**
+- [x] Catalog scope: **physical products with per-variant SKU/stock at launch**; no multiple warehouses, subscriptions, or digital products.
+- [x] Confirm languages: **Arabic + English + French**; the storefront, account area, **admin UI, validation/server messages, and all emails must be fully translated** (no hardcoded English in admin/emails).
+- [x] Confirm hosting: **Vercel + MongoDB Atlas + Upstash**. Domains are confirmed; record the production domain and webhook URL in the launch checklist.
+- [x] Confirm email/SMS/monitoring ownership: **Zoho** for mailboxes, **Resend** for transactional email, **email-only at launch** (OTP/confirmations/communication); **4jawaly SMS is v2**, **monitoring/alerting owned by the client**.
+- [x] Define the MVP launch checklist: see **MVP launch checklist** below. Launch when the legally acceptable version is complete; budget minimized.
 - [x] Add Moyasar test keys to `.env.local`: `MOYASAR_PUBLISHABLE_KEY`, `MOYASAR_SECRET_KEY` (and `MOYASAR_WEBHOOK_SECRET` once the dashboard webhook exists). Never commit or paste secrets.
-- [ ] Add the same keys to Vercel before deployment.
+- [x] Add the same keys to Vercel before deployment.
 - [x] Add environment validation with Zod (`lib/env.ts`) so a missing `MOYASAR_SECRET_KEY`, `UPSTASH_*`, etc. fails fast when used.
 - [x] Add `.env.example` with variable names only (no values).
 - [ ] Add CI (GitHub Actions): `tsc --noEmit`, `lint`, `i18n:check`, unit tests, `build` on every PR.
-- [ ] Add error tracking (Sentry) and uptime/alerting before the first real order.
+- [x] Monitoring/error tracking/uptime: **client-owned** (Sentry/alerting to be configured by the client before launch).
 
 ### Phase 1 — Store configuration and white-label (P0/P1)
 - [ ] Extend `Setting`/create a `StoreProfile` model: brand colors, light/dark logo, favicon, fonts, social links, contact, legal identity (CR/VAT), SEO defaults, and feature flags.
@@ -609,6 +634,99 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 ### Phase 10 — Multi-store/SaaS (out of scope)
 Not applicable: **one store per deployment (white-label)** was chosen. Revisit only if the product changes to a SaaS/marketplace model; that would require tenant scoping on every query and strict isolation tests.
 
+## MVP launch checklist (confirmed — in progress)
+
+**Status: scope confirmed by the client on 2026-10-20. Implementation item 1 (Saudi seller identity, VAT, and ZATCA Phase 1 invoices) is complete; item 2 (per-variant SKU/stock) is next.**
+
+### Confirmed MVP scope
+- One white-label store, SAR-first, Arabic-first RTL with English and French.
+- **Per-variant SKU/stock is required at launch** (size/color variant id, SKU, stock, price override, image, barcode, weight).
+- Cart → checkout → Moyasar (Mada/card, Apple Pay, STC Pay) + COD; full/partial refunds and cancellation.
+- Manual shipping zones/rates and Saudi address/phone validation; carrier integrations post-launch.
+- VAT 15%, seller identity, **ZATCA Phase 1 and Phase 2 (Fatoora) both required at launch**.
+- Storefront, account, checkout, admin, validation messages, and emails fully translated in ar/en/fr.
+- **Email-only at launch** for OTP, order confirmations, and all customer communication. **4jawaly SMS moves to v2.**
+- No BNPL at launch (it needs a separate Tabby/Tamara provider). Monitoring is client-owned.
+- Launch date: **when the legally acceptable version is complete** (no fixed date). Budget: **minimized**.
+
+### Confirmed decisions
+- [x] Per-variant SKU/stock is launch-blocking.
+- [x] ZATCA Phase 1 and Phase 2 (Fatoora) are both launch-blocking.
+- [x] SMS provider will be **4jawaly**, but SMS is deferred to **v2**; launch uses email only for OTP/confirmations/communication.
+- [x] Launch when legally acceptable; keep budget as low as possible.
+- [x] BNPL is out of MVP.
+
+### Recommended implementation order
+1. [x] Seller identity, VAT 15%, and ZATCA Phase 1 invoice foundation (settings, numbering, QR TLV, Arabic/English invoice and credit note).
+2. Per-variant SKU/stock across product admin, catalog, cart, checkout, orders, and fulfillment.
+3. Shipping zones/rates and Saudi address/phone fields.
+4. Full ar/en/fr translation of storefront, admin, validation/server messages, and emails.
+5. Security P0 items and audit logging.
+6. ZATCA Phase 2 Fatoora onboarding/integration (needs ZATCA sandbox credentials, CSID, and signing certificates).
+7. Staging E2E, legal content, launch rehearsal, and sign-off.
+
+### A. Release and environments
+- [ ] (Dev) Commit/push P0-18/P0-19, deploy a preview, and verify sign-in, product, cart, checkout, webhook, refund, and cancel.
+- [ ] (Dev/Client) Add every Production env var in Vercel: Mongo, Auth, Upstash, UploadThing, Zoho/Resend, Moyasar live keys + webhook secret.
+- [ ] (Dev) Merge to main only after preview sign-off; keep the previous deployment for rollback.
+- [ ] (Dev) Production domain/SSL and canonical redirects; record the domain and webhook URL.
+- [ ] (Dev) Atlas backup/PITR with a least-privilege DB user; Upstash production instance.
+- [ ] (Dev) CI runs `tsc`, `lint`, `i18n:check`, and `build` on every PR (unit/E2E can follow).
+- [ ] (Client) Monitoring, uptime checks, and alert recipients configured.
+
+### B. Data, currency, catalog
+- [ ] (Dev) Run `npm run migrate:sar` once; review every product price because numeric values are now SAR.
+- [ ] (Dev/Client) Review shipping/tax settings, currency rates, store info, payment methods, and delivery dates.
+- [ ] (Client) Load the final catalog: ar/en/fr names/descriptions, images, categories, stock, and publish flags.
+- [ ] (Dev) Seed/verify admin/staff accounts and remove demo/test data.
+
+### C. Payments (Moyasar / COD)
+- [x] (Dev) Test keys, production webhook, and live webhook delivery verified.
+- [ ] (Client/Dev) Switch Vercel to live Moyasar keys; ensure the webhook secret matches the dashboard.
+- [ ] (Client) Dashboard webhook: `PAYMENT_PAID`, `PAYMENT_CAPTURED`, `PAYMENT_REFUNDED` → `https://<domain>/api/webhooks/moyasar` (HTTPS).
+- [ ] (Client) Enable Apple Pay, register the production domain/merchant in Moyasar, and test on a physical iPhone.
+- [ ] (Dev) Production smoke: Mada/card, STC Pay, Apple Pay (if enabled), and COD; full refund, partial refund, and cancellation.
+- [ ] (Client) Confirm BNPL is out of MVP (separate Tabby/Tamara integration required).
+
+### D. Tax, invoices, legal
+- [x] (Dev) Seller identity (Arabic/English legal name, VAT `1185102259`, CR/national address, contact), VAT 15%, and invoice prefix/sequence in admin settings.
+- [ ] (Dev) Confirm VAT inclusive/exclusive pricing and how VAT applies to shipping.
+- [x] (Dev) ZATCA Phase 1 simplified tax invoice: sequential numbering, QR TLV, Arabic/English invoice page, immutable records, and credit notes for refunds.
+- [ ] (Dev) ZATCA Phase 2 Fatoora: onboarding, CSID/certificates, UBL XML generation, signing, clearance/reporting, and retry handling. Blocked on ZATCA sandbox credentials.
+- [ ] (Dev) VAT/cash reconciliation report or export for accounting.
+- [ ] (Client) Publish privacy, terms, returns/refunds, shipping, contact, and VAT/CR pages in Arabic and English.
+
+### E. Full translation (confirmed requirement)
+- [ ] (Dev) Translate every storefront, account, checkout, admin, empty/error state, validation message, and server-action message into ar/en/fr.
+- [ ] (Dev) Translate all emails (receipt, verification, reset, review request) and invoice/credit-note content.
+- [ ] (Dev) RTL audit for admin tables/forms, emails, and invoices; Arabic font and line-height.
+- [ ] (Dev) Keep `i18n:check` green and add a test/lint guard against hardcoded English in admin/emails.
+
+### F. Orders, inventory, shipping
+- [ ] (Dev) Per-variant SKU/stock: variant id, SKU, size, color, price override, stock, image, barcode, and weight; migrate existing products and enforce per-variant stock in `buildOrderItems`/`fulfillOrder`.
+- [ ] (Dev) Shipping zones/rates/free-shipping threshold; Saudi region/city/district/national address and +966 validation.
+- [ ] (Dev) Manual shipping provider: create shipment, tracking number, delivered/cancelled status; signed webhook for later carriers.
+- [ ] (Dev) Prevent overselling and negative stock; restock exactly once on cancellation (Moyasar path done).
+- [ ] (Dev) Order status timeline/history and customer notifications (paid, shipped, cancelled, refunded).
+
+### G. Security and compliance (launch gate)
+- [ ] (Dev) CSP allow-list for Moyasar CDN/API, UploadThing, and analytics; keep HSTS/nosniff/frame-ancestors.
+- [ ] (Dev) CSRF/origin checks, RBAC, admin audit log, and admin 2FA.
+- [ ] (Dev) Rate limits on auth/search/orders/reviews/APIs; payload/file validation; SSRF guards.
+- [ ] (Dev) PDPL consent/privacy/delete/export/retention; secret rotation; dependency scan; PCI SAQ A (hosted fields only).
+- [ ] (Dev) Incident-response runbook and a restore drill.
+
+### H. QA and launch day
+- [ ] (Dev/Client) Staging with separate DB/Redis/webhook secrets and seed data.
+- [ ] (Dev) E2E: sign-up → product → cart → checkout → paid order → receipt email → refund/cancel → stock restored.
+- [ ] (Dev/Client) Arabic/English/French RTL and mobile QA; accessibility and Core Web Vitals pass.
+- [ ] (Client) Zoho/Resend SPF/DKIM/DMARC, sender identities, and transactional email tests (OTP, receipt, review, reset). SMS is v2.
+- [ ] (Dev/Client) Launch day: DNS/SSL, live smoke order per enabled method, invoice, refund, monitoring, support contacts, and rollback plan.
+- [ ] (Dev/Client) Sign-off: checklist complete, no open P0 security findings, and launch date recorded.
+
+### Not in MVP (post-launch / v2)
+- BNPL (Tabby/Tamara), carrier APIs (Aramex/SMSA/Saudi Post/Naqel), 4jawaly SMS, advanced analytics/dashboards, PWA shell, multi-warehouse.
+
 ### Resolved decisions (2026-10-19)
 - [x] One store per deployment (white-label).
 - [x] Moyasar is the first payment provider; use its test keys until go-live.
@@ -616,17 +734,18 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 - [x] ZATCA Phase 1 and Phase 2 (Fatoora) are both required.
 - [x] Physical products with variants; no multiple warehouses, subscriptions, or digital products at launch.
 
-### Open decisions
-- [ ] Confirm languages: Arabic + English assumed; is full admin/email translation required?
-- [ ] Confirm hosting (Vercel + MongoDB Atlas + Upstash) and domains.
-- [ ] Confirm launch date, budget, and acceptance criteria.
-- [ ] Add the Moyasar test keys to `.env.local` and Vercel (do not paste them in chat).
+### Resolved decisions (2026-10-20)
+- [x] Languages: Arabic + English + French; storefront, admin UI, server messages, and emails must be fully translated.
+- [x] Hosting: Vercel + MongoDB Atlas + Upstash; domains confirmed.
+- [x] Email: Zoho mailboxes with Resend for transactional email. **Email-only at launch; 4jawaly SMS is deferred to v2.**
+- [x] Monitoring, error tracking, and uptime alerting are owned by the client.
+- [x] Moyasar test keys are in `.env.local` and Vercel; production webhook delivery verified.
+- [x] Per-variant SKU/stock is required at launch.
+- [x] ZATCA Phase 1 and Phase 2 (Fatoora) are both required at launch.
+- [x] Launch date: when the legally acceptable version is complete. Budget: minimized.
+- [x] BNPL is out of MVP.
+- [x] MVP launch checklist confirmed; see the implementation order above.
 
-### Recommended first implementation slice (P0)
-1. Add `.env.example` + Zod env validation and register `MOYASAR_*`.
-2. Add the `PaymentProvider` interface and the Moyasar adapter with a signature-verified webhook.
-3. Switch the default currency to SAR and remove the hardcoded USD fallbacks.
-4. Extend settings for store identity/branding and add the variant data model.
-5. Then implement ZATCA Phase 1 invoices, followed by Phase 2 Fatoora integration.
-6. Build the shipping provider interface and manual provider endpoints before any carrier integration.
+### Open decisions
+None. Execution follows the confirmed implementation order above; only the final launch date remains open by design.
 

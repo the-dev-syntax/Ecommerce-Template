@@ -1104,6 +1104,20 @@ const reviews  = [
 
   const settings: ISettingInput[] = [
       {
+      market: 'SA',
+      seller: {
+        legalNameEn: 'NAKAA ELSEHA MEDICAL PHARMACY',
+        legalNameAr: 'صيدلية نقاء الصحة الطبية',
+        vatNumber: '1185102259',
+        crNumber: '',
+        nationalAddress: '',
+        email: 'contact@EssentialVital.com',
+        phone: '+1 (123) 456-7890',
+      },
+      invoice: {
+        prefix: 'NEM',
+        sequenceLength: 6,
+      },
       common: {
         freeShippingMinPrice: 35,
         isMaintenanceMode: false,

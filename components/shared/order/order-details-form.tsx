@@ -206,6 +206,14 @@ export default function OrderDetailsForm({
                 action={() => deliverOrder(order._id)}
               />
             )}
+            {isPaid && (
+              <Link
+                className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
+                href={`/invoice/${order._id}`}
+              >
+                {t('View Invoice')}
+              </Link>
+            )}
             {isAdmin && <RefundOrderForm order={order} />}
           </CardContent>
         </Card>

@@ -68,6 +68,7 @@ import { getSetting } from '@/lib/actions/setting.actions'
   export default async function PurchaseReceiptEmail({ order }: OrderInformationProps) {
 
     const { site } = await getSetting()
+    const baseUrl = site.url.replace(/\/$/, '')
 
     return (
       <Html>
@@ -149,6 +150,14 @@ import { getSetting } from '@/lib/actions/setting.actions'
                     </Column>
                   </Row>
                 ))}
+              </Section>
+              <Section className='text-center my-4'>
+                <Link
+                  href={`${baseUrl}/invoice/${order._id}`}
+                  className='text-blue-600 underline'
+                >
+                  View your tax invoice
+                </Link>
               </Section>
             </Container>
           </Body>

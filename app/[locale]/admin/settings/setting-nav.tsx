@@ -7,6 +7,7 @@ import {
   Info,
   Languages,
   Package,
+  ReceiptText,
   SettingsIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -52,6 +53,11 @@ export default function SettingNav() {
           { name: 'Site Info', 
             hash: 'setting-site-info', 
             icon: <Info /> },
+          {
+            name: 'Seller and Tax',
+            hash: 'setting-seller',
+            icon: <ReceiptText />,
+          },
           {
             name: 'Common Settings',
             hash: 'setting-common',
