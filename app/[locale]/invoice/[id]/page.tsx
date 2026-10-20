@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { getTranslations } from 'next-intl/server'
 
 import PrintButton from '@/components/shared/invoice/print-button'
+import { Button } from '@/components/ui/button'
 import { getOrderById } from '@/lib/actions/order.actions'
 import {
   getOrCreateCreditNoteForOrder,
@@ -11,22 +13,26 @@ import {
 import { formatCurrency } from '@/lib/utils'
 
 export async function generateMetadata() {
-  const t = await getTranslations()
+  const t = await getTranslations({ locale: 'ar' })
   return { title: t('Tax Invoice') }
 }
 
 export default async function InvoicePage(props: {
   params: Promise<{ locale: string; id: string }>
+  searchParams: Promise<{ lang?: string }>
 }) {
   const { locale, id } = await props.params
-  const t = await getTranslations()
+  const { lang } = await props.searchParams
+  // The printed invoice defaults to Arabic; ?lang=en switches the display.
+  const invoiceLocale = lang === 'en' ? 'en-US' : 'ar'
+  const isRtl = invoiceLocale.startsWith('ar')
+  const t = await getTranslations({ locale: invoiceLocale })
 
   const order = await getOrderById(id)
   if (!order || !order.isPaid) notFound()
 
   const invoice = await getOrCreateInvoiceForOrder(id, 'invoice')
   const creditNote = await getOrCreateCreditNoteForOrder(id)
-  const isRtl = locale.startsWith('ar')
 
   const invoiceQr = await QRCode.toDataURL(invoice.qrPayload, {
     margin: 1,
@@ -37,22 +43,30 @@ export default async function InvoicePage(props: {
     : null
 
   const money = (amount: number) =>
-    formatCurrency(amount, invoice.currency, locale)
+    formatCurrency(amount, invoice.currency, invoiceLocale)
   const date = (value: Date | string) =>
-    new Intl.DateTimeFormat(locale, {
+    new Intl.DateTimeFormat(invoiceLocale, {
       dateStyle: 'medium',
       timeStyle: 'short',
       timeZone: 'Asia/Riyadh',
     }).format(new Date(value))
+  const otherLang = isRtl ? 'en' : 'ar'
 
   return (
     <main
       dir={isRtl ? 'rtl' : 'ltr'}
       className='mx-auto max-w-4xl space-y-8 p-4 print:max-w-none print:p-0'
     >
-      <div className='flex items-center justify-between print:hidden'>
+      <div className='flex flex-wrap items-center justify-between gap-2 print:hidden'>
         <h1 className='h1-bold'>{t('Tax Invoice')}</h1>
-        <PrintButton />
+        <div className='flex gap-2'>
+          <Button variant='outline' asChild>
+            <Link href={`/${locale}/invoice/${id}?lang=${otherLang}`}>
+              {isRtl ? 'English' : 'العربية'}
+            </Link>
+          </Button>
+          <PrintButton label={t('Print Invoice')} />
+        </div>
       </div>
 
       <section className='space-y-6 rounded-lg border p-6 print:border-0'>
