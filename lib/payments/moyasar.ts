@@ -19,7 +19,13 @@ export interface MoyasarPayment {
   id: string
   status: MoyasarPaymentStatus
   amount: number
+  fee?: number
   currency: string
+  refunded?: number
+  refunded_at?: string | null
+  captured?: number
+  captured_at?: string | null
+  voided_at?: string | null
   description?: string | null
   metadata?: Record<string, string> | null
   source?: {
@@ -37,25 +43,81 @@ function authHeader(secretKey: string): string {
   return `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`
 }
 
-export async function fetchMoyasarPayment(id: string): Promise<MoyasarPayment> {
+async function moyasarRequest<T>(
+  path: string,
+  init: RequestInit = {}
+): Promise<T> {
   const secretKey = getMoyasarSecretKey()
-
-  const response = await fetch(
-    `${MOYASAR_API_BASE}/payments/${encodeURIComponent(id)}`,
-    {
-      headers: { Authorization: authHeader(secretKey) },
-      cache: 'no-store',
-    }
-  )
+  const response = await fetch(`${MOYASAR_API_BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: authHeader(secretKey),
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...init.headers,
+    },
+    cache: 'no-store',
+  })
 
   if (!response.ok) {
-    throw new Error(`Moyasar payment lookup failed (${response.status})`)
+    let message = `Moyasar request failed (${response.status})`
+    try {
+      const body = (await response.json()) as {
+        message?: string | null
+        errors?: Record<string, string[]> | null
+      }
+      if (body.message) message = body.message
+      if (body.errors) {
+        const details = Object.entries(body.errors)
+          .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+          .join('; ')
+        if (details) message = `${message} (${details})`
+      }
+    } catch {
+      // Keep the status-based message when the body is not JSON.
+    }
+    throw new Error(message)
   }
 
-  return (await response.json()) as MoyasarPayment
+  return (await response.json()) as T
+}
+
+export async function fetchMoyasarPayment(id: string): Promise<MoyasarPayment> {
+  return moyasarRequest<MoyasarPayment>(
+    `/payments/${encodeURIComponent(id)}`
+  )
+}
+
+/** Refund a captured payment. Omit amount to refund the full remaining amount. */
+export async function refundMoyasarPayment(
+  id: string,
+  amount?: number
+): Promise<MoyasarPayment> {
+  return moyasarRequest<MoyasarPayment>(
+    `/payments/${encodeURIComponent(id)}/refund`,
+    {
+      method: 'POST',
+      body: amount ? JSON.stringify({ amount }) : undefined,
+    }
+  )
+}
+
+/** Void an authorized payment before it is captured. */
+export async function voidMoyasarPayment(id: string): Promise<MoyasarPayment> {
+  return moyasarRequest<MoyasarPayment>(
+    `/payments/${encodeURIComponent(id)}/void`,
+    { method: 'POST' }
+  )
 }
 
 export function isMoyasarPaid(status: string): boolean {
+  return status === 'paid' || status === 'captured'
+}
+
+/**
+ * Moyasar finalises a payment after one refund call (partial or full), so a
+ * second refund is rejected with "Payment is already refunded".
+ */
+export function isMoyasarRefundable(status: string): boolean {
   return status === 'paid' || status === 'captured'
 }
 

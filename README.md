@@ -206,7 +206,7 @@ Known limits:
 - Admin: payment method name inputs now suggest Moyasar/Stripe/PayPal/COD; Moyasar is in the seed defaults. Existing databases must add "Moyasar" in Admin → Settings → Payment Methods (or re-seed).
 - Hardening: the callback page stops loading when `?id=` is missing, the webhook derives the order id from the fetched payment's metadata (and rejects invalid ObjectIds) instead of trusting the webhook body, secret/publishable/webhook config getters are decoupled so the webhook does not require a publishable key, the Moyasar script retries after a CDN failure, and the missing-config message is localized.
 - Currency: SAR is now the base currency (`availableCurrencies` rates are relative to SAR), `defaultCurrency: 'SAR'`, the layout fallback uses the store default instead of hardcoded USD, `formatCurrency` accepts currency/locale, emails use the order currency, and `setCurrencyOnServer` validates the code and sets an HttpOnly/SameSite cookie.
-- Apple Pay is not enabled yet: it needs an Apple Pay merchant validation endpoint/certificate. The current form enables card networks and STC Pay.
+- Apple Pay was enabled later in P0-19. The form then enabled card networks and STC Pay only.
 - Setup: add `MOYASAR_WEBHOOK_SECRET` (the dashboard webhook "Secret Token"), create a webhook to `https://<domain>/api/webhooks/moyasar` for `payment_paid` and `payment_captured`, and use test keys until go-live.
 - Existing database: run `npm run migrate:sar` once to make SAR the default, express rates relative to SAR, and add Moyasar to the payment methods. Review product prices afterwards: their numeric values are now interpreted as SAR.
 - Why: Moyasar is the Saudi-first gateway; the provider registry keeps Stripe/PayPal/COD optional, while the webhook + callback both re-verify with the secret key so a forged client payload cannot mark an order paid. SAR as the base currency makes stored prices, checkout totals and invoices consistent.
@@ -217,7 +217,26 @@ Known limits:
 - `npm run lint` — PASS
 - `npm run i18n:check` — PASS (484 keys in en-US, ar, fr)
 - `npm run build` — PASS
-- Live hosted form/webhook not exercised yet: needs a browser checkout and the webhook secret configured in the Moyasar dashboard.
+- Live webhook later verified in P0-19; a browser-hosted checkout is still pending.
+
+## P0-19 — Refunds, cancellations, Apple Pay (2026-10-20)
+
+- Added `refundMoyasarPayment`/`voidMoyasarPayment` in `lib/payments/moyasar.ts` and core order logic in `lib/orders/refund-order.ts`.
+- The admin order page now supports full/partial refunds, cancellation with an optional reason, refund/cancel badges, refunded totals, and a refundable-amount form. All actions are admin-only and revalidate the affected pages.
+- Cancellation refunds a paid Moyasar payment, voids an authorized one, marks the order cancelled, and restores stock/sales exactly once inside a transaction. Paid COD orders can also be cancelled/restocked; the cash refund is handled manually. Stripe/PayPal refunds remain manual. Delivered, already-cancelled, and partially-refunded orders are guarded.
+- Moyasar finalises a payment after one refund call, so only one full or partial refund is allowed per payment. After a partial refund, further automatic refunds and cancellation are blocked with a clear message; a fully refunded order can still be cancelled/restocked.
+- The webhook now accepts `payment_refunded` (add it to the dashboard webhook) to sync dashboard-issued refunds, and paid/captured events ignore cancelled orders.
+- Apple Pay is enabled in the form (`methods: ['creditcard', 'applepay', 'stcpay']` with Moyasar merchant validation). It only appears on supported Apple devices; Apple Pay and the domain must also be enabled in the Moyasar dashboard.
+- BNPL is not supported by Moyasar's form (card, Apple Pay, Samsung Pay, STC Pay only). Enabling Tabby/Tamara needs a separate provider integration and merchant credentials; it remains open.
+
+### Verification
+- Full refund then cancel: payment `refunded`, order cancelled, stock/sales restored, second cancel idempotent — PASS
+- Partial refund: total updated, payment finalised after one refund; second refund and cancel rejected with clear errors — PASS
+- `npx tsc --noEmit` — PASS
+- `npm run lint` — PASS
+- `npm run i18n:check` — PASS (498 keys in en-US, ar, fr)
+- `npm run build` — PASS
+- Apple Pay not exercised on a physical Apple device yet.
 
 ## Fix — Invalid next-intl keys (2026-10-18)
 
@@ -511,8 +530,9 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Move Stripe, PayPal, and COD into adapters behind a provider registry; remove provider-specific branches from `lib/actions/order.actions.ts`.
 - [ ] Store provider credentials in environment/secret manager, not plaintext settings; add an admin screen that shows enabled providers without exposing secrets.
 - [ ] Add one signature-verified webhook dispatcher with replay protection, an event log, and idempotent `fulfillOrder` calls.
-- [x] Implement **Moyasar** core: hosted form, Mada/card networks, STC Pay, callback verification, and secret-token webhook verification before fulfilling. Apple Pay and BNPL remain.
-- [ ] Add refunds, partial refunds, cancellations, chargeback handling, and payment reconciliation (Moyasar refund/cancel APIs).
+- [x] Implement **Moyasar** core: hosted form, Mada/card networks, Apple Pay (form enabled; dashboard domain setup required), STC Pay, callback verification, and secret-token webhook verification before fulfilling. BNPL remains.
+- [x] Add Moyasar refunds (full or one partial per payment), cancellation/void, admin UI, and refund webhook sync.
+- [ ] Add chargeback handling and payment reconciliation (Moyasar refund/cancel APIs are wired; reconciliation reports remain).
 - [ ] Add a mock/test provider for CI and sandbox end-to-end tests.
 - [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic; Moyasar test-mode checkout completes and refunds correctly.
 

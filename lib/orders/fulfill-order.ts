@@ -68,6 +68,8 @@ export async function fulfillOrder({
         return
       }
 
+      if (order.isCancelled) throw new Error('Order is cancelled')
+
       if (order.paymentMethod !== provider)
         throw new Error('Payment method does not match this order')
 

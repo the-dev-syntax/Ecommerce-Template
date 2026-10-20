@@ -8,6 +8,16 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   updatedAt: Date
   receiptSentAt?: Date
   moyasarPaymentId?: string
+  isCancelled?: boolean
+  cancelledAt?: Date
+  cancelReason?: string
+  refundedAmount?: number
+  refundedAt?: Date
+  refundHistory?: {
+    amount: number
+    provider: string
+    refundedAt: Date
+  }[]
 }
 
 export type OrderWithUser = Omit<IOrder, 'user'> & {
@@ -72,6 +82,19 @@ const orderSchema = new Schema<IOrder>(
     // Stripe Step 1 intent ID — stored on creation, verified on success
     stripePaymentIntentId: { type: String },
     moyasarPaymentId: { type: String },
+    isCancelled: { type: Boolean, default: false },
+    cancelledAt: { type: Date },
+    cancelReason: { type: String },
+    refundedAmount: { type: Number, default: 0 },
+    refundedAt: { type: Date },
+    refundHistory: [
+      {
+        _id: false,
+        amount: { type: Number, required: true },
+        provider: { type: String, required: true },
+        refundedAt: { type: Date, required: true },
+      },
+    ],
     createdAt: { type: Date, default: Date.now },
   },
   {

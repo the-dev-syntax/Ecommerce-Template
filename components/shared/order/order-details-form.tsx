@@ -14,10 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { IOrder } from '@/lib/db/models/order.model'
-import { cn, formatDateTime } from '@/lib/utils'
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 import ProductPrice from '../product/product-price'
 import ActionButton from '../action-button'
+import RefundOrderForm from './refund-order-form'
 import { deliverOrder, updateOrderToPaid } from '@/lib/actions/order.actions'
 import { useTranslations } from 'next-intl'
 
@@ -43,6 +44,10 @@ export default function OrderDetailsForm({
     isDelivered,
     deliveredAt,
     expectedDeliveryDate,
+    isCancelled,
+    cancelledAt,
+    cancelReason,
+    refundedAmount,
   } = order
 
   return (
@@ -80,10 +85,30 @@ export default function OrderDetailsForm({
           <CardContent className='p-4 gap-4'>
             <h2 className='text-xl pb-4'>{t('Payment Method')}</h2>
             <p>{paymentMethod}</p>
-            {isPaid ? (
-              <Badge>Paid at {formatDateTime(paidAt!).dateTime}</Badge>
-            ) : (
-              <Badge variant='destructive'>{t('Not paid')}</Badge>
+            <div className='flex flex-wrap items-center gap-2'>
+              {isCancelled ? (
+                <Badge variant='destructive'>
+                  {t('Cancelled')}
+                  {cancelledAt
+                    ? ` ${formatDateTime(cancelledAt).dateTime}`
+                    : ''}
+                </Badge>
+              ) : isPaid ? (
+                <Badge>Paid at {formatDateTime(paidAt!).dateTime}</Badge>
+              ) : (
+                <Badge variant='destructive'>{t('Not paid')}</Badge>
+              )}
+              {(refundedAmount ?? 0) > 0 && (
+                <Badge variant='secondary'>
+                  {t('Refunded')}:{' '}
+                  {formatCurrency(refundedAmount!, order.currency)}
+                </Badge>
+              )}
+            </div>
+            {cancelReason && (
+              <p className='text-muted-foreground text-sm'>
+                {t('Cancellation reason')}: {cancelReason}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -159,26 +184,29 @@ export default function OrderDetailsForm({
               </div>
             </div>
 
-            {!isPaid && ['Stripe', 'PayPal'].includes(paymentMethod) && (
-              <Link
-                className={cn(buttonVariants(), 'w-full')}
-                href={`/checkout/${order._id}`}
-              >
-                {t('Pay Order')}
-              </Link>
-            )}
+            {!isPaid &&
+              !isCancelled &&
+              ['Stripe', 'PayPal', 'Moyasar'].includes(paymentMethod) && (
+                <Link
+                  className={cn(buttonVariants(), 'w-full')}
+                  href={`/checkout/${order._id}`}
+                >
+                  {t('Pay Order')}
+                </Link>
+              )}
             {isAdmin && !isPaid && paymentMethod === 'Cash On Delivery' && (
               <ActionButton
                 caption={t('Mark as paid')}
                 action={() => updateOrderToPaid(order._id)}
               />
             )}
-            {isAdmin && isPaid && !isDelivered && (
+            {isAdmin && isPaid && !isDelivered && !isCancelled && (
               <ActionButton
                 caption={t('Mark as delivered')}
                 action={() => deliverOrder(order._id)}
               />
             )}
+            {isAdmin && <RefundOrderForm order={order} />}
           </CardContent>
         </Card>
       </div>

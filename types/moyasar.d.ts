@@ -15,6 +15,14 @@ export interface MoyasarFormOptions {
   metadata?: Record<string, string>
   methods?: string[]
   supported_networks?: string[]
+  apple_pay?: {
+    country: string
+    label: string
+    validate_merchant_url: string
+    supported_countries?: string[]
+    merchant_capabilities?: string[]
+    version?: number
+  }
   language?: string
   fixed_width?: boolean
   on_completed?: (payment: MoyasarPaymentResult) => void | Promise<void>

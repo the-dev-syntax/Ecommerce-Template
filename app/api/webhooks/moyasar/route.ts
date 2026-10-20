@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
 
     if (
       event.type !== 'payment_paid' &&
-      event.type !== 'payment_captured'
+      event.type !== 'payment_captured' &&
+      event.type !== 'payment_refunded'
     ) {
       return NextResponse.json({ received: true })
     }
@@ -60,9 +61,6 @@ export async function POST(req: NextRequest) {
     // Never trust the webhook body alone: fetch the payment from Moyasar and
     // take the order reference from the gateway's copy of the metadata.
     const payment = await fetchMoyasarPayment(paymentId)
-    if (!isMoyasarPaid(payment.status)) {
-      return NextResponse.json({ received: true })
-    }
 
     const orderId = payment.metadata?.orderId
     if (!orderId || !mongoose.isValidObjectId(orderId)) {
@@ -73,7 +71,28 @@ export async function POST(req: NextRequest) {
     await connectToDatabase()
 
     const order = await Order.findById(orderId)
-    if (!order || order.isPaid) {
+    if (!order) {
+      return NextResponse.json({ received: true })
+    }
+
+    if (event.type === 'payment_refunded') {
+      // Keep the order in sync when a refund is issued from the dashboard.
+      const refundedAmount = (payment.refunded ?? 0) / 100
+      order.refundedAmount = refundedAmount
+      order.refundedAt = order.refundedAt ?? new Date()
+      if (refundedAmount >= payment.amount / 100) {
+        order.paymentResult = {
+          id: order.paymentResult?.id ?? payment.id,
+          status: 'refunded',
+          email_address: order.paymentResult?.email_address ?? '',
+          pricePaid: order.paymentResult?.pricePaid ?? order.totalPrice.toFixed(2),
+        }
+      }
+      await order.save()
+      return NextResponse.json({ received: true })
+    }
+
+    if (!isMoyasarPaid(payment.status) || order.isPaid || order.isCancelled) {
       return NextResponse.json({ received: true })
     }
 

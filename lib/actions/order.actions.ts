@@ -26,6 +26,7 @@ import { revalidateAllLocales } from '../utils-serverOnly'
 import { isAdminOrOwner, requireAdmin } from '../access'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
+import { cancelOrderById, refundMoyasarOrderPayment } from '../orders/refund-order'
 import {
   fetchMoyasarPayment,
   isMoyasarPaid,
@@ -330,6 +331,8 @@ export async function updateOrderToPaidByStripe(
       return { success: true, message: 'Order already paid' }
     }
 
+    if (order.isCancelled) throw new Error('Order is cancelled')
+
     if (order.paymentMethod !== 'Stripe')
       throw new Error('Order is not payable by Stripe')
 
@@ -401,6 +404,8 @@ export async function updateOrderToPaidByMoyasar(
       return { success: true, message: 'Order already paid' }
     }
 
+    if (order.isCancelled) throw new Error('Order is cancelled')
+
     if (order.paymentMethod !== 'Moyasar')
       throw new Error('Order is not payable by Moyasar')
 
@@ -445,6 +450,52 @@ export async function updateOrderToPaidByMoyasar(
     await revalidateAllLocales(`/admin/orders/${orderId}`)
 
     return { success: true, message: 'Order paid successfully' }
+  } catch (err) {
+    return { success: false, message: formatError(err) }
+  }
+}
+
+// REFUND A MOYASAR ORDER (FULL OR PARTIAL) - ADMIN
+export async function refundMoyasarOrder(orderId: string, amount?: number) {
+  try {
+    requireAdmin(await auth())
+
+    const { refundedAmount, fullyRefunded, order } =
+      await refundMoyasarOrderPayment(orderId, amount)
+
+    await revalidateAllLocales(`/account/orders/${orderId}`)
+    await revalidateAllLocales(`/admin/orders/${orderId}`)
+
+    return {
+      success: true,
+      message: fullyRefunded
+        ? `Order fully refunded (${refundedAmount.toFixed(2)} ${order.currency})`
+        : `Refund processed (${refundedAmount.toFixed(2)} ${order.currency} refunded in total)`,
+    }
+  } catch (err) {
+    return { success: false, message: formatError(err) }
+  }
+}
+
+// CANCEL AN ORDER, REFUNDING A PAID MOYASAR PAYMENT - ADMIN
+export async function cancelOrder(orderId: string, reason?: string) {
+  try {
+    requireAdmin(await auth())
+
+    const result = await cancelOrderById(orderId, reason)
+
+    await revalidateAllLocales(`/account/orders/${orderId}`)
+    await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales('/admin/orders')
+
+    return {
+      success: true,
+      message: result.alreadyCancelled
+        ? 'Order is already cancelled'
+        : result.refundedAmount > 0
+          ? `Order cancelled and ${result.refundedAmount.toFixed(2)} ${result.order.currency} refunded`
+          : 'Order cancelled',
+    }
   } catch (err) {
     return { success: false, message: formatError(err) }
   }
@@ -937,6 +988,7 @@ export async function updateOrderToPaid(orderId: string) {
     if (!order) throw new Error('Order not found')
     if (order.isPaid)
       return { success: true, message: 'Order is already paid' }
+    if (order.isCancelled) throw new Error('Order is cancelled')
 
     await fulfillOrder({
       orderId,
@@ -970,6 +1022,7 @@ export async function deliverOrder(orderId: string) {
     const order = await dbOrderWith3UserKeys(orderId)
 
     if (!order) throw new Error('Order not found')
+    if (order.isCancelled) throw new Error('Cancelled orders cannot be delivered')
     if (!order.isPaid) throw new Error('Order is not paid')
 
     order.isDelivered = true

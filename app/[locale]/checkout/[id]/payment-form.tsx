@@ -49,6 +49,7 @@ export default function OrderPaymentForm({
     paymentMethod,
     expectedDeliveryDate,
     isPaid,
+    isCancelled,
   } = order
   const { toast } = useToast()
   const { clearCart } = useCartStore()
@@ -56,7 +57,7 @@ export default function OrderPaymentForm({
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
 
-  if (isPaid) {
+  if (isPaid || isCancelled) {
     redirect(`/account/orders/${order._id}`)
   }
 

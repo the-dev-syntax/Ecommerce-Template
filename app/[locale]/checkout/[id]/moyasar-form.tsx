@@ -14,6 +14,7 @@ const MOYASAR_CSS_ID = 'moyasar-css'
 const MOYASAR_SCRIPT_URL = 'https://cdn.moyasar.com/moyasar.js'
 const MOYASAR_CSS_URL = 'https://cdn.moyasar.com/moyasar.css'
 const FORM_ELEMENT_ID = 'moyasar-payment-form'
+const APPLE_PAY_LABEL = process.env.NEXT_PUBLIC_APP_NAME || 'Store'
 
 let scriptPromise: Promise<void> | null = null
 
@@ -96,7 +97,7 @@ export default function MoyasarForm({
           publishable_api_key: publishableKey,
           callback_url: `${window.location.origin}${window.location.pathname}/moyasar-payment-success`,
           metadata: { orderId: order._id },
-          methods: ['creditcard', 'stcpay'],
+          methods: ['creditcard', 'applepay', 'stcpay'],
           supported_networks: [
             'mada',
             'visa',
@@ -104,6 +105,14 @@ export default function MoyasarForm({
             'amex',
             'unionpay',
           ],
+          // Apple Pay is shown only on supported Apple devices. The domain and
+          // merchant must also be enabled in the Moyasar dashboard.
+          apple_pay: {
+            country: 'SA',
+            label: APPLE_PAY_LABEL,
+            validate_merchant_url:
+              'https://api.moyasar.com/v1/applepay/initiate',
+          },
           // Moyasar ships English/Arabic; French would need custom
           // translations, so fall back to English for other locales.
           language: locale.startsWith('ar') ? 'ar' : 'en',
