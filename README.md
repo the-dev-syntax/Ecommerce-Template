@@ -282,6 +282,27 @@ Known limits:
 - Reporting API: simplified invoice accepted — PASS (1 sandbox-only warning)
 - Production CSID renewal — PASS
 
+## P0-22 — VAT-inclusive pricing and ZATCA Phase 2 app integration (2026-10-20)
+
+- Prices are **VAT-inclusive by default** (`common.taxInclusive`, editable in admin). **Shipping is not taxable.**
+- Products have a VAT category (`S`, `Z`, `E`, `O`) and an optional exemption reason code; only category `S` includes VAT. The admin product form exposes both fields.
+- Order items snapshot `taxCategory`, `netPrice`, `vatAmount`, and `vatPercent`; orders snapshot `taxInclusive` and `taxRate`. Cart, checkout, order details, invoices, and emails show “VAT (included)”.
+- Invoices store net line amounts, VAT, and the gross total. Credit notes allocate the refund across the original lines/categories, so non-taxable items and shipping are not taxed.
+- Added `ZatcaSubmission` and `ZatcaChainState` models plus `lib/zatca/config.ts`, `lib/zatca/invoice-builder.ts`, and `lib/zatca/service.ts`.
+- ZATCA queue signs and reports B2C invoices and credit notes, persists ICV/PIH, signed XML, invoice hash, Phase 2 QR (tags 6–9), status, warnings, and errors. Reporting failures never block a paid order; submissions stay queued/failed for admin retry.
+- The invoice page renders the Phase 2 QR when available. The admin order page shows ZATCA status, ICV, hash, warnings/errors, and a retry button.
+- Seller settings now include the ZATCA address fields: street, building number, district, city, postal code, country, CR, VAT, and national address.
+- Production switch remains a deployment step: set `ZATCA_ENV=production`, the production `ZATCA_EGS_STATE`, live payment keys, and remove sandbox settings. Sandbox remains active until then.
+- `ZATCA_EGS_STATE` was added to `.env.example`; local EGS state stays in `.secrets/` (gitignored).
+
+### Verification
+- VAT-inclusive order: 115 gross item + 10 non-taxable shipping → invoice net 100 + VAT 15 + shipping 10 = 125; ZATCA accepted.
+- Credit note 5 SAR: net 4.40 + VAT 0.60, original invoice reference; ZATCA accepted.
+- ICV/PIH chain: invoice ICV 1, credit note ICV 2; both accepted.
+- Sandbox warning `BR-KSA-F-08` only, caused by the sandbox canned CRN; production will use CR `1185102259`.
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
+- Production CSID/keys not used yet; production onboarding is deferred to deployment.
+
 ## Fix — Invalid next-intl keys (2026-10-18)
 
 - Removed the unused `This account does not have a password set.` message key. Server-action text is returned as a plain string and is not translated.
@@ -682,7 +703,7 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 3. Shipping zones/rates and Saudi address/phone fields.
 4. Full ar/en/fr translation of storefront, admin, validation/server messages, and emails.
 5. Security P0 items and audit logging.
-6. ZATCA Phase 2 Fatoora: sandbox API flow verified (Compliance CSID → Compliance Invoice → Production CSID → Reporting → Renewal); app integration and real production onboarding remain.
+6. [x] ZATCA Phase 2: sandbox API flow verified and app integration complete (sign/report B2C invoices and credit notes, ICV/PIH, Phase 2 QR, retries). Real production onboarding/key switch remains a deployment step.
 7. Staging E2E, legal content, launch rehearsal, and sign-off.
 
 ### A. Release and environments
@@ -710,10 +731,12 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 
 ### D. Tax, invoices, legal
 - [x] (Dev) Seller identity (Arabic/English legal name, VAT `310161142300003`, CR/national address, contact), VAT 15%, and invoice prefix/sequence in admin settings.
-- [ ] (Dev) Confirm VAT inclusive/exclusive pricing and how VAT applies to shipping.
+- [x] (Dev) VAT-inclusive pricing confirmed; shipping is not taxable; non-taxable products use per-product VAT categories.
 - [x] (Dev) ZATCA Phase 1 simplified tax invoice: sequential numbering, QR TLV, Arabic/English invoice page, immutable records, and credit notes for refunds.
 - [x] (Dev) ZATCA Phase 2 sandbox API verification: Compliance CSID, compliance invoice, production CSID, reporting, and renewal.
-- [ ] (Dev) ZATCA Phase 2 app integration: build UBL 2.1 per invoice, sign/report B2C invoices, persist ICV/PIH, Phase 2 QR (tags 6–9), report credit notes, retry/error handling, and real production onboarding.
+- [x] (Dev) ZATCA Phase 2 app integration: build UBL 2.1 per invoice, sign/report B2C invoices, persist ICV/PIH, Phase 2 QR (tags 6-9), report credit notes, and retry/error handling.
+- [ ] (Client/Dev) Switch ZATCA to production: real OTP/CSID, `ZATCA_ENV=production`, production `ZATCA_EGS_STATE`, live payment keys, and remove sandbox settings.
+- [ ] (Dev) Run `npm run check:production` before deployment; it rejects sandbox ZATCA and test payment keys.
 - [ ] (Dev) VAT/cash reconciliation report or export for accounting.
 - [ ] (Client) Publish privacy, terms, returns/refunds, shipping, contact, and VAT/CR pages in Arabic and English.
 

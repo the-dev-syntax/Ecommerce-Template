@@ -27,6 +27,7 @@ import { isAdminOrOwner, requireAdmin } from '../access'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
 import { cancelOrderById, refundMoyasarOrderPayment } from '../orders/refund-order'
+import { priceOrderItems } from '../tax'
 import {
   fetchMoyasarPayment,
   isMoyasarPaid,
@@ -101,6 +102,8 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       category: product.category,
       image,
       price: round2(product.price),
+      taxCategory: product.taxCategory ?? 'S',
+      exemptionReasonCode: product.exemptionReasonCode ?? '',
       countInStock: product.countInStock,
       quantity,
       size,
@@ -150,7 +153,7 @@ export const createOrderFromCart = async (
     availableDeliveryDates,
     availablePaymentMethods,
     defaultCurrency,
-    common: { taxRate },
+    common: { taxRate, taxInclusive },
   } = await getSetting()
 
   const deliveryDateIndex =
@@ -168,21 +171,26 @@ export const createOrderFromCart = async (
   if (!paymentMethod || !availablePaymentMethods.some((method) => method.name === paymentMethod))
     throw new Error('Invalid payment method')
 
+  const pricedItems = priceOrderItems(items, taxRate, taxInclusive)
   const itemsPrice = round2(
-    items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+    pricedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
   const shippingPrice =
     deliveryDate.freeShippingMinPrice > 0 &&
     itemsPrice >= deliveryDate.freeShippingMinPrice
       ? 0
       : deliveryDate.shippingPrice
-  const taxPrice = round2(itemsPrice * taxRate)
-  const totalPrice = round2(itemsPrice + shippingPrice + taxPrice)
+  const taxPrice = round2(
+    pricedItems.reduce((acc, item) => acc + (item.vatAmount ?? 0), 0)
+  )
+  const totalPrice = round2(
+    itemsPrice + shippingPrice + (taxInclusive ? 0 : taxPrice)
+  )
 
   // Validate the final order shape after all server-side recalculation.
   const order = OrderInputSchema.parse({
     user: userId,
-    items,
+    items: pricedItems,
     shippingAddress: clientSideCart.shippingAddress,
     paymentMethod,
     currency: defaultCurrency.toUpperCase(),
@@ -190,6 +198,8 @@ export const createOrderFromCart = async (
     shippingPrice,
     taxPrice,
     totalPrice,
+    taxInclusive,
+    taxRate,
     expectedDeliveryDate: calculateFutureDate(deliveryDate.daysToDeliver),
   })
 
@@ -590,7 +600,7 @@ export const calcDeliveryDateAndPrice = async ({
 
   const {
     availableDeliveryDates,
-    common: { taxRate },
+    common: { taxRate, taxInclusive },
   } = await getSetting()
 
   const resolvedIndex =
@@ -604,11 +614,12 @@ export const calcDeliveryDateAndPrice = async ({
   const deliveryDate = availableDeliveryDates[resolvedIndex]
   if (!deliveryDate) throw new Error('Delivery date is not available')
 
+  const pricedItems = priceOrderItems(items, taxRate, taxInclusive)
   const itemsPrice = round2(
-    items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+    pricedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
 
-  const hasItems = items.length > 0
+  const hasItems = pricedItems.length > 0
 
   const shippingPrice = !hasItems
     ? 0
@@ -623,20 +634,26 @@ export const calcDeliveryDateAndPrice = async ({
     ? 0
     : !shippingAddress
       ? undefined
-      : round2(itemsPrice * taxRate)
+      : round2(
+          pricedItems.reduce((acc, item) => acc + (item.vatAmount ?? 0), 0)
+        )
 
   const totalPrice = round2(
-    itemsPrice + (shippingPrice ?? 0) + (taxPrice ?? 0)
+    itemsPrice +
+      (shippingPrice ?? 0) +
+      (taxInclusive ? 0 : (taxPrice ?? 0))
   )
 
   return {
     availableDeliveryDates,
     deliveryDateIndex: resolvedIndex,
-    items,
+    items: pricedItems,
     itemsPrice,
     shippingPrice,
     taxPrice,
     totalPrice,
+    taxInclusive,
+    taxRate,
   }
 }
 

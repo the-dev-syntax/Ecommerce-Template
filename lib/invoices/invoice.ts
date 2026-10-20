@@ -84,16 +84,46 @@ export async function createInvoiceForOrder(
   const typedOrder = order as unknown as OrderWithUser
   const { seller, invoice: invoiceSettings } = await getInvoiceSettings()
   const issuedAt = new Date()
+  const taxInclusive = typedOrder.taxInclusive ?? true
+  const taxRate = typedOrder.taxRate ?? 0.15
 
-  let items = typedOrder.items.map((item) => ({
-    name: item.name,
-    quantity: item.quantity,
-    unitPrice: item.price,
-    lineTotal: round2(item.price * item.quantity),
-  }))
-  let itemsPrice = typedOrder.itemsPrice
-  let shippingPrice = typedOrder.shippingPrice
-  let vatAmount = typedOrder.taxPrice
+  let items = typedOrder.items.map((item) => {
+    const taxCategory = item.taxCategory ?? 'S'
+    const vatPercent =
+      item.vatPercent ??
+      (taxCategory === 'S' ? round2(taxRate * 100) : 0)
+    const unitPrice =
+      item.netPrice ??
+      (taxInclusive && taxCategory === 'S'
+        ? round2(item.price / (1 + taxRate))
+        : round2(item.price))
+    const lineTotal = round2(unitPrice * item.quantity)
+    const vatAmount =
+      item.vatAmount ??
+      (taxCategory === 'S'
+        ? taxInclusive
+          ? round2(item.price * item.quantity - lineTotal)
+          : round2(lineTotal * taxRate)
+        : 0)
+
+    return {
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice,
+      lineTotal,
+      taxCategory,
+      exemptionReasonCode: item.exemptionReasonCode ?? '',
+      vatPercent,
+      vatAmount,
+    }
+  })
+  let itemsPrice = round2(
+    items.reduce((acc, item) => acc + item.lineTotal, 0)
+  )
+  let shippingPrice = round2(typedOrder.shippingPrice)
+  let vatAmount = round2(
+    items.reduce((acc, item) => acc + item.vatAmount, 0)
+  )
   let total = typedOrder.totalPrice
   let originalInvoiceNumber: string | undefined
   let refundedAmount: number | undefined
@@ -101,24 +131,77 @@ export async function createInvoiceForOrder(
   if (type === 'credit_note') {
     const original = await createInvoiceForOrder(orderId, 'invoice')
     originalInvoiceNumber = original.number
-    refundedAmount = round2(options.refundedAmount ?? typedOrder.refundedAmount ?? 0)
+    const refund = round2(
+      options.refundedAmount ?? typedOrder.refundedAmount ?? 0
+    )
+    refundedAmount = refund
 
-    if (refundedAmount <= 0)
+    if (refund <= 0)
       throw new Error('A credit note requires a refunded amount')
 
-    const ratio = original.total > 0 ? refundedAmount / original.total : 0
-    vatAmount = round2(original.vatAmount * ratio)
-    itemsPrice = round2(refundedAmount - vatAmount)
-    shippingPrice = 0
-    total = refundedAmount
-    items = [
-      {
-        name: 'Refund',
-        quantity: 1,
-        unitPrice: itemsPrice,
-        lineTotal: itemsPrice,
-      },
+    const originalLines = [
+      ...original.items.map((item) => ({
+        name: item.name,
+        lineTotal: item.lineTotal,
+        vatAmount: item.vatAmount,
+        taxCategory: item.taxCategory,
+        exemptionReasonCode: item.exemptionReasonCode ?? '',
+        vatPercent: item.vatPercent,
+      })),
+      ...(original.shippingPrice > 0
+        ? [
+            {
+              name: 'Shipping',
+              lineTotal: original.shippingPrice,
+              vatAmount: 0,
+              taxCategory: 'O' as const,
+              exemptionReasonCode: '',
+              vatPercent: 0,
+            },
+          ]
+        : []),
     ]
+
+    if (original.total <= 0) throw new Error('Original invoice has no total')
+
+    const shares = originalLines.map((line) =>
+      round2((refund * (line.lineTotal + line.vatAmount)) / original.total)
+    )
+    const allocated = shares.reduce((sum, share) => sum + share, 0)
+    shares[shares.length - 1] = round2(
+      shares[shares.length - 1] + (refund - allocated)
+    )
+
+    items = originalLines.map((line, index) => {
+      const grossShare = shares[index]
+      const lineVat =
+        line.taxCategory === 'S' && line.lineTotal + line.vatAmount > 0
+          ? round2(
+              (grossShare * line.vatAmount) / (line.lineTotal + line.vatAmount)
+            )
+          : 0
+      const net = round2(grossShare - lineVat)
+
+      return {
+        name: `Refund - ${line.name}`,
+        quantity: 1,
+        unitPrice: net,
+        lineTotal: net,
+        taxCategory: line.taxCategory,
+        exemptionReasonCode: line.exemptionReasonCode,
+        vatPercent: line.vatPercent,
+        vatAmount: lineVat,
+      }
+    })
+
+    vatAmount = round2(
+      items.reduce((sum, item) => sum + item.vatAmount, 0)
+    )
+    itemsPrice = round2(
+      items.reduce((sum, item) => sum + item.lineTotal, 0)
+    )
+    shippingPrice = 0
+    total = refund
   }
 
   const sellerName = seller.legalNameAr || seller.legalNameEn

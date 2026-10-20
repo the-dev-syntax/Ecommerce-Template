@@ -94,6 +94,22 @@ export default function CommonForm({
             )}
           />
         </div>
+        <FormField
+          control={control}
+          name='common.taxInclusive'
+          render={({ field }) => (
+            <FormItem className='flex items-center gap-2'>
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel>{t('Prices include VAT')}</FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField
             control={control}

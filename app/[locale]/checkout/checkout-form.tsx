@@ -81,6 +81,7 @@ const CheckoutForm = () => {
       shippingPrice,
       taxPrice,
       totalPrice,
+      taxInclusive = true,
       shippingAddress,
       deliveryDateIndex,
       paymentMethod = defaultPaymentMethod,
@@ -266,7 +267,7 @@ const CheckoutForm = () => {
               </span>
             </div>
             <div className='flex justify-between'>
-              <span> {t('Tax')}:</span>
+              <span>{taxInclusive ? t('VAT (included)') : t('VAT')}:</span>
               <span>
                 {taxPrice === undefined ? (
                   '--'
@@ -275,6 +276,11 @@ const CheckoutForm = () => {
                 )}
               </span>
             </div>
+            {taxInclusive && (
+              <p className='text-muted-foreground text-end text-xs'>
+                {t('VAT is included in the displayed prices')}
+              </p>
+            )}
             <div className='flex justify-between  pt-4 font-bold text-lg'>
               <span> {t('Order Total')}:</span>
               <span>

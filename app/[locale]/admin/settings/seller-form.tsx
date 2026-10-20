@@ -139,6 +139,90 @@ export default function SellerForm({
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField
             control={control}
+            name='seller.street'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Street')}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name='seller.buildingNumber'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Building Number')}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={control}
+            name='seller.citySubdivision'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('District')}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name='seller.city'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('City')}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name='seller.postalCode'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Postal Code')}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name='seller.country'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Country')}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={control}
             name='seller.email'
             render={({ field }) => (
               <FormItem className='w-full'>

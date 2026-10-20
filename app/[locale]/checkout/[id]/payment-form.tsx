@@ -46,6 +46,7 @@ export default function OrderPaymentForm({
     taxPrice,
     shippingPrice,
     totalPrice,
+    taxInclusive = true,
     paymentMethod,
     expectedDeliveryDate,
     isPaid,
@@ -136,7 +137,7 @@ export default function OrderPaymentForm({
               </span>
             </div>
             <div className='flex justify-between'>
-              <span> {t('Tax')}:</span>
+              <span>{taxInclusive ? t('VAT (included)') : t('VAT')}:</span>
               <span>
                 {taxPrice === undefined ? (
                   '--'

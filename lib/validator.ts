@@ -41,6 +41,8 @@ export const ProductInputSchema = z.object({
   brand: z.string().min(1, 'Brand is required'),
   description: z.string().min(1, 'Description is required'),
   isPublished: z.boolean(),
+  taxCategory: z.enum(['S', 'Z', 'E', 'O']).optional(),
+  exemptionReasonCode: z.string().max(10).optional(),
   price: Price('Price'),
   listPrice: Price('List price'),
   countInStock: z.coerce
@@ -100,6 +102,11 @@ export const OrderItemSchema = z.object({
     .min(1, 'Image is required')
     .max(2048, 'Image URL is too long'),
   price: Price('Price'),
+  taxCategory: z.enum(['S', 'Z', 'E', 'O']).optional(),
+  exemptionReasonCode: z.string().max(10).optional(),
+  netPrice: z.number().optional(),
+  vatAmount: z.number().optional(),
+  vatPercent: z.number().optional(),
   size: z.string().max(50, 'Size is too long').optional(),
   color: z.string().max(50, 'Color is too long').optional(),
 })
@@ -154,6 +161,8 @@ export const OrderInputSchema = z.object({
   shippingPrice: Price('Shipping price'),
   taxPrice: Price('Tax price'),
   totalPrice: Price('Total price'),
+  taxInclusive: z.boolean().default(true),
+  taxRate: z.coerce.number().min(0).max(1).default(0.15),
   expectedDeliveryDate: z
     .date()
     .refine(
@@ -178,6 +187,8 @@ export const CartSchema = z.object({
   taxPrice: z.optional(z.number()),
   shippingPrice: z.optional(z.number()),
   totalPrice: z.number(),
+  taxInclusive: z.optional(z.boolean()),
+  taxRate: z.optional(z.number()),
   paymentMethod: z.optional(z.string()),
   shippingAddress: z.optional(ShippingAddressSchema),
   deliveryDateIndex: z.optional(z.number()),
@@ -299,6 +310,8 @@ export const ProductInputFormSchema = z.object({
   brand: z.string().min(1, 'Brand is required'),
   description: z.string().min(1, 'Description is required'),
   isPublished: z.boolean(),
+  taxCategory: z.enum(['S', 'Z', 'E', 'O']).optional(),
+  exemptionReasonCode: z.string().max(10).optional(),
   price: Price('Price'),
   listPrice: Price('List price'),
   countInStock: z.coerce
@@ -383,6 +396,12 @@ export const SellerSchema = z.object({
   vatNumber: z.string().min(1, 'VAT number is required'),
   crNumber: z.string(),
   nationalAddress: z.string(),
+  street: z.string().min(1, 'Street is required'),
+  buildingNumber: z.string().min(1, 'Building number is required'),
+  citySubdivision: z.string().min(1, 'District is required'),
+  city: z.string().min(1, 'City is required'),
+  postalCode: z.string().min(1, 'Postal code is required'),
+  country: z.string().min(2),
   email: z.string(),
   phone: z.string(),
 })
@@ -423,6 +442,7 @@ export const SettingInputSchema = z.object({
       .min(0, 'Tax rate must be at least 0')
       .max(1, 'Tax rate must be at most 1 (e.g. 0.15 = 15%)')
       .default(0.15),
+    taxInclusive: z.boolean().default(true),
     defaultTheme: z
       .string()
       .min(1, 'Default theme is required')
@@ -486,6 +506,7 @@ export const SettingInputSchemaNoDefaults = z.object({
       .number()
       .min(0, 'Tax rate must be at least 0')
       .max(1, 'Tax rate must be at most 1 (e.g. 0.15 = 15%)'),
+    taxInclusive: z.boolean(),
     defaultTheme: z
       .string()
       .min(1, 'Default theme is required')

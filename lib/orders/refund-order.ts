@@ -4,6 +4,7 @@ import { connectToDatabase } from '@/lib/db'
 import Order, { IOrder } from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
+import { queueZatcaForInvoice } from '@/lib/zatca/service'
 import {
   fetchMoyasarPayment,
   isMoyasarRefundable,
@@ -93,7 +94,10 @@ export async function refundMoyasarOrderPayment(
   await order.save()
 
   try {
-    await createInvoiceForOrder(orderId, 'credit_note', { refundedAmount })
+    const creditNote = await createInvoiceForOrder(orderId, 'credit_note', {
+      refundedAmount,
+    })
+    await queueZatcaForInvoice(String(creditNote._id))
   } catch (error) {
     console.error(
       'Credit note creation failed (the invoice page retries):',
@@ -213,7 +217,10 @@ export async function cancelOrderById(orderId: string, reason?: string) {
 
   if (refundedAmount > 0) {
     try {
-      await createInvoiceForOrder(orderId, 'credit_note', { refundedAmount })
+      const creditNote = await createInvoiceForOrder(orderId, 'credit_note', {
+        refundedAmount,
+      })
+      await queueZatcaForInvoice(String(creditNote._id))
     } catch (error) {
       console.error(
         'Credit note creation failed (the invoice page retries):',

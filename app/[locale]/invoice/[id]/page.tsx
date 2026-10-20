@@ -10,6 +10,7 @@ import {
   getOrCreateCreditNoteForOrder,
   getOrCreateInvoiceForOrder,
 } from '@/lib/invoices/invoice'
+import { getZatcaSubmission } from '@/lib/zatca/service'
 import { formatCurrency } from '@/lib/utils'
 
 export async function generateMetadata() {
@@ -33,13 +34,20 @@ export default async function InvoicePage(props: {
 
   const invoice = await getOrCreateInvoiceForOrder(id, 'invoice')
   const creditNote = await getOrCreateCreditNoteForOrder(id)
+  const invoiceSubmission = await getZatcaSubmission(invoice._id)
+  const creditSubmission = creditNote
+    ? await getZatcaSubmission(creditNote._id)
+    : null
 
-  const invoiceQr = await QRCode.toDataURL(invoice.qrPayload, {
-    margin: 1,
-    width: 220,
-  })
+  const invoiceQr = await QRCode.toDataURL(
+    invoiceSubmission?.qrPayload ?? invoice.qrPayload,
+    { margin: 1, width: 220 }
+  )
   const creditQr = creditNote
-    ? await QRCode.toDataURL(creditNote.qrPayload, { margin: 1, width: 220 })
+    ? await QRCode.toDataURL(
+        creditSubmission?.qrPayload ?? creditNote.qrPayload,
+        { margin: 1, width: 220 }
+      )
     : null
 
   const money = (amount: number) =>
@@ -91,6 +99,20 @@ export default async function InvoicePage(props: {
             )}
             {invoice.seller.nationalAddress && (
               <p className='text-sm'>{invoice.seller.nationalAddress}</p>
+            )}
+            {(invoice.seller.street || invoice.seller.city) && (
+              <p className='text-sm'>
+                {[
+                  invoice.seller.street,
+                  invoice.seller.buildingNumber,
+                  invoice.seller.citySubdivision,
+                  invoice.seller.city,
+                  invoice.seller.postalCode,
+                  invoice.seller.country,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+              </p>
             )}
             <p className='text-sm'>
               {invoice.seller.email} {invoice.seller.phone}
@@ -190,7 +212,7 @@ export default async function InvoicePage(props: {
           <div className='flex items-start justify-between gap-4'>
             <div className='space-y-1 text-sm'>
               <div className='flex justify-between gap-8'>
-                <span>{t('Refunded Amount')}</span>
+                <span>{t('Subtotal')}</span>
                 <span>{money(creditNote.itemsPrice)}</span>
               </div>
               <div className='flex justify-between gap-8'>

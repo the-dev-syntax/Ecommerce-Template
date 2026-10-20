@@ -26,6 +26,8 @@ const defaultValues: IProductInputForm = {
     avgRating: 0,
     numSales: 0,
     isPublished: false,
+    taxCategory: 'S',
+    exemptionReasonCode: '',
     tags: [],
     sizes: [],
     colors: [],
@@ -52,7 +54,12 @@ export const UpdateProductForm = ({
   
     useEffect(() => {
         if (product) {
-        reset(product);
+        reset({
+          ...defaultValues,
+          ...product,
+          taxCategory: product.taxCategory ?? 'S',
+          exemptionReasonCode: product.exemptionReasonCode ?? '',
+        });
         }
     }, [product, reset]);
 

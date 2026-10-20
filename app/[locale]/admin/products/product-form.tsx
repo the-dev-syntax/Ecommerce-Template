@@ -18,6 +18,13 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import ImageUploader from '@/components/shared/upload/image-uploader'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { slugify } from '@/lib/utils'
 import { IProductInputForm } from '@/types'
 import { useTranslations } from 'next-intl'
@@ -37,6 +44,7 @@ interface ProductFormUIProps {
   // const { toast } = useToast()
  
   const images = form.watch('images')
+  const taxCategory = form.watch('taxCategory') ?? 'S'
   
   const t = useTranslations()
 //   console.log(form.formState.errors)
@@ -143,7 +151,7 @@ interface ProductFormUIProps {
             name='price'
             render={({ field }) => (
               <FormItem className='w-full'>
-                <FormLabel>{t('Net Price')}</FormLabel>
+                <FormLabel>{t('Price (VAT included)')}</FormLabel>
                 <FormControl>
                   <Input placeholder={t('Enter product price')} {...field} />
                 </FormControl>
@@ -168,6 +176,57 @@ interface ProductFormUIProps {
               </FormItem>
             )}
           />
+        </div>
+
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
+            name='taxCategory'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('VAT Category')}</FormLabel>
+                <FormControl>
+                  <Select
+                    value={field.value ?? 'S'}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('Select a VAT category')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='S'>{t('Taxable (15%)')}</SelectItem>
+                      <SelectItem value='Z'>{t('Zero-rated')}</SelectItem>
+                      <SelectItem value='E'>{t('Exempt')}</SelectItem>
+                      <SelectItem value='O'>{t('Out of scope')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormDescription>
+                  {t('Only taxable products include VAT')}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {taxCategory !== 'S' && (
+            <FormField
+              control={form.control}
+              name='exemptionReasonCode'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel>{t('Exemption Reason Code')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t('Enter exemption reason code')}
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         <div className='flex flex-col gap-5 md:flex-row'>

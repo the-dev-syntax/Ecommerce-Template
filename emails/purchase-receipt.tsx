@@ -137,7 +137,10 @@ import { getSetting } from '@/lib/actions/setting.actions'
                 ))}
                 {[
                   { name: 'Items', price: order.itemsPrice },
-                  { name: 'Tax', price: order.taxPrice },
+                  {
+                    name: order.taxInclusive === false ? 'VAT' : 'VAT (included)',
+                    price: order.taxPrice,
+                  },
                   { name: 'Shipping', price: order.shippingPrice },
                   { name: 'Total', price: order.totalPrice },
                 ].map(({ name, price }) => (

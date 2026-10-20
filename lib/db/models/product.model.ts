@@ -81,6 +81,13 @@ const productSchema = new Schema<IProduct>(
       required: true,
       default: false,
     },
+    taxCategory: {
+      type: String,
+      enum: ['S', 'Z', 'E', 'O'],
+      required: true,
+      default: 'S',
+    },
+    exemptionReasonCode: { type: String, default: '' },
     reviews: [
       {
         type: Schema.Types.ObjectId,

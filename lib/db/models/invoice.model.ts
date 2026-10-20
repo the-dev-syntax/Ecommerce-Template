@@ -8,6 +8,12 @@ export interface IInvoiceSellerSnapshot {
   vatNumber: string
   crNumber?: string
   nationalAddress?: string
+  street?: string
+  buildingNumber?: string
+  citySubdivision?: string
+  city?: string
+  postalCode?: string
+  country?: string
   email?: string
   phone?: string
 }
@@ -24,6 +30,10 @@ export interface IInvoiceItemSnapshot {
   quantity: number
   unitPrice: number
   lineTotal: number
+  taxCategory: 'S' | 'Z' | 'E' | 'O'
+  exemptionReasonCode?: string
+  vatPercent: number
+  vatAmount: number
 }
 
 export interface IInvoice extends Omit<Document, '_id'> {
@@ -64,6 +74,12 @@ const invoiceSchema = new Schema<IInvoice>(
       vatNumber: { type: String, required: true },
       crNumber: { type: String, default: '' },
       nationalAddress: { type: String, default: '' },
+      street: { type: String, default: '' },
+      buildingNumber: { type: String, default: '' },
+      citySubdivision: { type: String, default: '' },
+      city: { type: String, default: '' },
+      postalCode: { type: String, default: '' },
+      country: { type: String, default: 'SA' },
       email: { type: String, default: '' },
       phone: { type: String, default: '' },
     },
@@ -80,6 +96,15 @@ const invoiceSchema = new Schema<IInvoice>(
         quantity: { type: Number, required: true },
         unitPrice: { type: Number, required: true },
         lineTotal: { type: Number, required: true },
+        taxCategory: {
+          type: String,
+          enum: ['S', 'Z', 'E', 'O'],
+          required: true,
+          default: 'S',
+        },
+        exemptionReasonCode: { type: String, default: '' },
+        vatPercent: { type: Number, required: true, default: 0 },
+        vatAmount: { type: Number, required: true, default: 0 },
       },
     ],
     itemsPrice: { type: Number, required: true },

@@ -5,6 +5,7 @@ import { connectToDatabase } from '@/lib/db'
 import Order, { OrderWithUser } from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
+import { queueZatcaForInvoice } from '@/lib/zatca/service'
 
 export type FulfillOrderInput = {
   orderId: string
@@ -115,10 +116,11 @@ export async function fulfillOrder({
   }
 
   try {
-    await createInvoiceForOrder(orderId)
+    const invoice = await createInvoiceForOrder(orderId)
+    await queueZatcaForInvoice(String(invoice._id))
   } catch (error) {
     console.error(
-      'Invoice creation failed (order remains paid; the invoice page retries):',
+      'Invoice/ZATCA creation failed (order remains paid; the invoice page retries):',
       error instanceof Error ? error.message : 'Unknown error'
     )
   }

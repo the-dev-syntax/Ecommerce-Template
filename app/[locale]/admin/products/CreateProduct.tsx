@@ -24,6 +24,8 @@ const defaultValues: IProductInputForm = {
         avgRating: 0,
         numSales: 0,
         isPublished: false,
+        taxCategory: 'S',
+        exemptionReasonCode: '',
         tags: [],
         sizes: [],
         colors: [],

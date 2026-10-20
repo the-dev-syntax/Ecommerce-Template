@@ -6,6 +6,7 @@ import Order from '@/lib/db/models/order.model'
 import { getMoyasarWebhookSecret } from '@/lib/env'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
+import { queueZatcaForInvoice } from '@/lib/zatca/service'
 import {
   fetchMoyasarPayment,
   isMoyasarPaid,
@@ -91,9 +92,10 @@ export async function POST(req: NextRequest) {
       }
       await order.save()
       try {
-        await createInvoiceForOrder(orderId, 'credit_note', {
+        const creditNote = await createInvoiceForOrder(orderId, 'credit_note', {
           refundedAmount,
         })
+        await queueZatcaForInvoice(String(creditNote._id))
       } catch (error) {
         console.error(
           'Moyasar webhook credit note failed:',

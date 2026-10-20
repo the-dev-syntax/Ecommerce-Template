@@ -34,6 +34,26 @@ async function main() {
     ...(setting.invoice ?? {}),
   }
 
+  // The old 10-digit value was the CR, not the 15-digit VAT number.
+  if (setting.seller.vatNumber === '1185102259') {
+    setting.seller.vatNumber = defaults.seller.vatNumber
+  }
+  for (const field of [
+    'crNumber',
+    'nationalAddress',
+    'street',
+    'buildingNumber',
+    'citySubdivision',
+    'city',
+    'postalCode',
+    'country',
+  ] as const) {
+    if (!setting.seller[field]) {
+      setting.seller[field] = defaults.seller[field]
+    }
+  }
+  setting.common.taxInclusive = setting.common.taxInclusive ?? true
+
   await setting.save()
 
   console.log('Settings migrated to the Saudi market defaults.')

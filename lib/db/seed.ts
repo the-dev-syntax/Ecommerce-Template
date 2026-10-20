@@ -10,6 +10,7 @@ import { IOrderInput, OrderItem, ShippingAddress } from '@/types'
 import { calculateFutureDate, calculatePastDate, generateId, round2 } from '../utils'
 import WebPage from './models/web-page.model'
 import Setting from './models/setting.model'
+import { priceOrderItems } from '../tax'
 
 // calling this function give you access to the .env file
 loadEnvConfig(cwd())
@@ -150,10 +151,6 @@ const generateOrder = async (
 
   const order = {
     user: users[i % users.length],
-    items: items.map((item) => ({
-      ...item,
-      product: item.product,
-    })),
     shippingAddress: data.users[i % users.length].address,
     paymentMethod: data.users[i % users.length].paymentMethod,
     currency: data.settings[0].defaultCurrency,
@@ -181,10 +178,14 @@ export const calcDeliveryDateAndPriceForSeed = ({
   shippingAddress?: ShippingAddress
 }) => {
 
-  const { availableDeliveryDates, common: { taxRate } } = data.settings[0]
+  const {
+    availableDeliveryDates,
+    common: { taxRate, taxInclusive },
+  } = data.settings[0]
 
+  const pricedItems = priceOrderItems(items, taxRate, taxInclusive)
   const itemsPrice = round2(
-    items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+    pricedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
 
   const deliveryDate =
@@ -196,11 +197,13 @@ export const calcDeliveryDateAndPriceForSeed = ({
 
   const shippingPrice = deliveryDate.shippingPrice
 
-  const taxPrice = round2(itemsPrice * taxRate)
+  const taxPrice = round2(
+    pricedItems.reduce((acc, item) => acc + (item.vatAmount ?? 0), 0)
+  )
   const totalPrice = round2(
     itemsPrice +
       (shippingPrice ? round2(shippingPrice) : 0) +
-      (taxPrice ? round2(taxPrice) : 0)
+      (taxInclusive ? 0 : taxPrice)
   )
   return {
     availableDeliveryDates,
@@ -208,10 +211,13 @@ export const calcDeliveryDateAndPriceForSeed = ({
       deliveryDateIndex === undefined
         ? availableDeliveryDates.length - 1
         : deliveryDateIndex,
+    items: pricedItems,
     itemsPrice,
     shippingPrice,
     taxPrice,
     totalPrice,
+    taxInclusive,
+    taxRate,
   }
 }
 
