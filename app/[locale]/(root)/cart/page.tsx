@@ -97,6 +97,11 @@ export default function CartPage() {
                             <span className='font-bold'>{t('Size')}: </span>{' '}
                             {item.size}
                           </p>
+                          {item.returnPolicy === 'final_sale' && (
+                            <p className='text-destructive text-xs'>
+                              {t('Final sale items cannot be returned or refunded')}
+                            </p>
+                          )}
                         </div>
                         <div className='flex gap-2 items-center'>
                           <Select

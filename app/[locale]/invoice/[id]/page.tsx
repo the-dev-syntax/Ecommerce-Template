@@ -7,6 +7,7 @@ import PrintButton from '@/components/shared/invoice/print-button'
 import { Button } from '@/components/ui/button'
 import { getOrderById } from '@/lib/actions/order.actions'
 import {
+  getCreditNotesForOrder,
   getOrCreateCreditNoteForOrder,
   getOrCreateInvoiceForOrder,
 } from '@/lib/invoices/invoice'
@@ -33,7 +34,12 @@ export default async function InvoicePage(props: {
   if (!order || !order.isPaid) notFound()
 
   const invoice = await getOrCreateInvoiceForOrder(id, 'invoice')
-  const creditNote = await getOrCreateCreditNoteForOrder(id)
+  let creditNotes = await getCreditNotesForOrder(id)
+  if (creditNotes.length === 0) {
+    const legacyCreditNote = await getOrCreateCreditNoteForOrder(id)
+    if (legacyCreditNote) creditNotes = [legacyCreditNote]
+  }
+
   let invoiceSubmission = await getZatcaSubmission(invoice._id)
   if (!invoiceSubmission) {
     // Fulfillment creates the invoice and queues ZATCA together. If that step
@@ -42,24 +48,26 @@ export default async function InvoicePage(props: {
     await queueZatcaForInvoice(invoice._id)
     invoiceSubmission = await getZatcaSubmission(invoice._id)
   }
-  let creditSubmission = creditNote
-    ? await getZatcaSubmission(creditNote._id)
-    : null
-  if (creditNote && !creditSubmission) {
-    await queueZatcaForInvoice(creditNote._id)
-    creditSubmission = await getZatcaSubmission(creditNote._id)
-  }
+
+  const creditEntries = await Promise.all(
+    creditNotes.map(async (creditNote) => {
+      let submission = await getZatcaSubmission(creditNote._id)
+      if (!submission) {
+        await queueZatcaForInvoice(creditNote._id)
+        submission = await getZatcaSubmission(creditNote._id)
+      }
+      const qr = await QRCode.toDataURL(
+        submission?.qrPayload ?? creditNote.qrPayload,
+        { margin: 1, width: 220 }
+      )
+      return { creditNote, qr }
+    })
+  )
 
   const invoiceQr = await QRCode.toDataURL(
     invoiceSubmission?.qrPayload ?? invoice.qrPayload,
     { margin: 1, width: 220 }
   )
-  const creditQr = creditNote
-    ? await QRCode.toDataURL(
-        creditSubmission?.qrPayload ?? creditNote.qrPayload,
-        { margin: 1, width: 220 }
-      )
-    : null
 
   const money = (amount: number) =>
     formatCurrency(amount, invoice.currency, invoiceLocale)
@@ -211,11 +219,22 @@ export default async function InvoicePage(props: {
         <p className='text-xs text-muted-foreground'>{t('QrCodeNote')}</p>
       </section>
 
-      {creditNote && creditQr && (
-        <section className='space-y-4 rounded-lg border p-6 print:border-0'>
+      {creditEntries.map(({ creditNote, qr }) => (
+        <section
+          key={creditNote._id}
+          className='space-y-4 rounded-lg border p-6 print:border-0'
+        >
           <header className='flex flex-col justify-between gap-4 border-b pb-4 md:flex-row'>
             <div>
               <h2 className='text-xl font-bold'>{t('Credit Note')}</h2>
+              {creditNote.creditNoteReason &&
+                creditNote.creditNoteReason !== 'legacy' && (
+                  <p className='text-sm'>
+                    {creditNote.creditNoteReason === 'cancellation'
+                      ? t('Cancellation')
+                      : t('Return')}
+                  </p>
+                )}
               <p className='text-sm'>
                 {t('Original Invoice')}: {creditNote.originalInvoiceNumber}
               </p>
@@ -242,8 +261,11 @@ export default async function InvoicePage(props: {
                 </tr>
               </thead>
               <tbody>
-                {creditNote.items.map((item, index) => (
-                  <tr key={`${item.name}-${index}`} className='border-b'>
+                {creditNote.items.map((item, itemIndex) => (
+                  <tr
+                    key={`${item.name}-${itemIndex}`}
+                    className='border-b'
+                  >
                     <td className='p-2'>{item.name}</td>
                     <td className='p-2 text-end'>{item.quantity}</td>
                     <td className='p-2 text-end'>{money(item.unitPrice)}</td>
@@ -267,6 +289,12 @@ export default async function InvoicePage(props: {
                 <span>{t('Subtotal (excl VAT)')}</span>
                 <span>{money(creditNote.itemsPrice)}</span>
               </div>
+              {creditNote.shippingPrice > 0 && (
+                <div className='flex justify-between gap-8'>
+                  <span>{t('Shipping')}</span>
+                  <span>{money(creditNote.shippingPrice)}</span>
+                </div>
+              )}
               <div className='flex justify-between gap-8'>
                 <span>{t('VAT')}</span>
                 <span>{money(creditNote.vatAmount)}</span>
@@ -280,10 +308,10 @@ export default async function InvoicePage(props: {
               )}
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={creditQr} alt={t('QR Code')} width={140} height={140} />
+            <img src={qr} alt={t('QR Code')} width={140} height={140} />
           </div>
         </section>
-      )}
+      ))}
 
       <p className='text-center text-xs text-muted-foreground'>
         {t('InvoiceFooter')}

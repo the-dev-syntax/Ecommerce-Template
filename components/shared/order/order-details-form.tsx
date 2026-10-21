@@ -121,6 +121,7 @@ export default function OrderDetailsForm({
                 <TableRow>
                   <TableHead>{t('Item')}</TableHead>
                   <TableHead>{t('Quantity')}</TableHead>
+                  <TableHead>{t('Return policy')}</TableHead>
                   <TableHead>{t('Price')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -143,6 +144,26 @@ export default function OrderDetailsForm({
                     </TableCell>
                     <TableCell>
                       <span className='px-2'>{item.quantity}</span>
+                      {(item.refundedQuantity ?? 0) > 0 && (
+                        <span className='text-muted-foreground block px-2 text-xs'>
+                          {t('Refunded quantity')}: {item.refundedQuantity}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          item.returnPolicy === 'final_sale'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
+                      >
+                        {item.returnPolicy === 'final_sale'
+                          ? t('Final sale')
+                          : item.returnPolicy === 'refund_only'
+                            ? t('Refund only')
+                            : t('Return and refund')}
+                      </Badge>
                     </TableCell>
                     <TableCell className='text-right'>${item.price}</TableCell>
                   </TableRow>

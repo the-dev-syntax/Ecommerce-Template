@@ -232,6 +232,43 @@ interface ProductFormUIProps {
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField
             control={form.control}
+            name='returnPolicy'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Return policy')}</FormLabel>
+                <FormControl>
+                  <Select
+                    value={field.value ?? 'return_and_refund'}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('Select a return policy')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='return_and_refund'>
+                        {t('Return and refund')}
+                      </SelectItem>
+                      <SelectItem value='refund_only'>
+                        {t('Refund only')}
+                      </SelectItem>
+                      <SelectItem value='final_sale'>
+                        {t('Final sale')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormDescription>
+                  {t('Final sale items cannot be returned or refunded')}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
             name='images'
             render={() => (
               <FormItem className='w-full'>

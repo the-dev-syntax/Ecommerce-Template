@@ -26,6 +26,7 @@ export interface IInvoiceBuyerSnapshot {
 }
 
 export interface IInvoiceItemSnapshot {
+  clientId?: string
   name: string
   quantity: number
   unitPrice: number
@@ -35,6 +36,8 @@ export interface IInvoiceItemSnapshot {
   vatPercent: number
   vatAmount: number
 }
+
+export type CreditNoteReason = 'return' | 'cancellation' | 'legacy'
 
 export interface IInvoice extends Omit<Document, '_id'> {
   _id: string
@@ -52,6 +55,8 @@ export interface IInvoice extends Omit<Document, '_id'> {
   total: number
   refundedAmount?: number
   originalInvoiceNumber?: string
+  creditNoteEventId?: string
+  creditNoteReason?: CreditNoteReason
   qrPayload: string
   notes?: string
   createdAt: Date
@@ -92,6 +97,7 @@ const invoiceSchema = new Schema<IInvoice>(
     items: [
       {
         _id: false,
+        clientId: { type: String, default: '' },
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
         unitPrice: { type: Number, required: true },
@@ -113,6 +119,11 @@ const invoiceSchema = new Schema<IInvoice>(
     total: { type: Number, required: true },
     refundedAmount: { type: Number },
     originalInvoiceNumber: { type: String },
+    creditNoteEventId: { type: String },
+    creditNoteReason: {
+      type: String,
+      enum: ['return', 'cancellation', 'legacy'],
+    },
     qrPayload: { type: String, required: true },
     notes: { type: String },
     createdAt: { type: Date, default: Date.now },
@@ -120,9 +131,21 @@ const invoiceSchema = new Schema<IInvoice>(
   { versionKey: false }
 )
 
-// One tax invoice and one credit note per order. This is the idempotency guard
-// and also prevents duplicate numbering under concurrent webhook deliveries.
-invoiceSchema.index({ orderId: 1, type: 1 }, { unique: true })
+// One tax invoice per order. Credit notes are one per return/cancellation
+// event, guarded by their event id, because an order can be refunded more than
+// once (the first refund is automatic, later refunds are recorded manually).
+invoiceSchema.index(
+  { orderId: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { type: 'invoice' },
+    name: 'orderid_1_type_1_invoice_unique',
+  }
+)
+invoiceSchema.index(
+  { creditNoteEventId: 1 },
+  { unique: true, sparse: true, name: 'creditNoteEventId_1' }
+)
 invoiceSchema.index({ issuedAt: -1 })
 
 // ZATCA records must be append-only. Block every update/delete path used by the

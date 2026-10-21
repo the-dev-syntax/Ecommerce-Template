@@ -26,7 +26,9 @@ import { revalidateAllLocales } from '../utils-serverOnly'
 import { isAdminOrOwner, requireAdmin } from '../access'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
-import { cancelOrderById, refundMoyasarOrderPayment } from '../orders/refund-order'
+import { cancelOrderById, processOrderReturn } from '../orders/refund-order'
+import { OrderReturnInputSchema } from '../validator'
+import type { IOrderReturnInput } from '@/types'
 import { priceOrderItems } from '../tax'
 import {
   fetchMoyasarPayment,
@@ -104,6 +106,9 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       price: round2(product.price),
       taxCategory: product.taxCategory ?? 'S',
       exemptionReasonCode: product.exemptionReasonCode ?? '',
+      returnPolicy: product.returnPolicy ?? 'return_and_refund',
+      refundedQuantity: 0,
+      restockedQuantity: 0,
       countInStock: product.countInStock,
       quantity,
       size,
@@ -465,22 +470,33 @@ export async function updateOrderToPaidByMoyasar(
   }
 }
 
-// REFUND A MOYASAR ORDER (FULL OR PARTIAL) - ADMIN
-export async function refundMoyasarOrder(orderId: string, amount?: number) {
+// PROCESS AN ITEM-LEVEL RETURN/REFUND - ADMIN
+export async function refundOrderItems(input: IOrderReturnInput) {
   try {
-    requireAdmin(await auth())
+    const session = await auth()
+    requireAdmin(session)
 
-    const { refundedAmount, fullyRefunded, order } =
-      await refundMoyasarOrderPayment(orderId, amount)
+    const parsed = OrderReturnInputSchema.parse(input)
+    const result = await processOrderReturn({
+      ...parsed,
+      createdBy: session?.user?.id,
+    })
 
-    await revalidateAllLocales(`/account/orders/${orderId}`)
-    await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales(`/account/orders/${parsed.orderId}`)
+    await revalidateAllLocales(`/admin/orders/${parsed.orderId}`)
+    await revalidateAllLocales(`/invoice/${parsed.orderId}`)
+    await revalidateAllLocales('/admin/orders')
 
     return {
       success: true,
-      message: fullyRefunded
-        ? `Order fully refunded (${refundedAmount.toFixed(2)} ${order.currency})`
-        : `Refund processed (${refundedAmount.toFixed(2)} ${order.currency} refunded in total)`,
+      message: result.fullyRefunded
+        ? `Order fully refunded (${result.refundedAmount.toFixed(2)} ${result.order.currency})`
+        : `Refund processed via ${result.provider} (${result.refundAmount.toFixed(2)} ${result.order.currency})`,
+      data: {
+        provider: result.provider,
+        refundAmount: result.refundAmount,
+        refundedAmount: result.refundedAmount,
+      },
     }
   } catch (err) {
     return { success: false, message: formatError(err) }
@@ -488,14 +504,23 @@ export async function refundMoyasarOrder(orderId: string, amount?: number) {
 }
 
 // CANCEL AN ORDER, REFUNDING A PAID MOYASAR PAYMENT - ADMIN
-export async function cancelOrder(orderId: string, reason?: string) {
+export async function cancelOrder(
+  orderId: string,
+  reason?: string,
+  manualReference?: string
+) {
   try {
-    requireAdmin(await auth())
+    const session = await auth()
+    requireAdmin(session)
 
-    const result = await cancelOrderById(orderId, reason)
+    const result = await cancelOrderById(orderId, reason, {
+      manualReference,
+      createdBy: session?.user?.id,
+    })
 
     await revalidateAllLocales(`/account/orders/${orderId}`)
     await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales(`/invoice/${orderId}`)
     await revalidateAllLocales('/admin/orders')
 
     return {

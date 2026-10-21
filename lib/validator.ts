@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import { formatNumberWithDecimal } from './utils'
 
+import {
+  REFUND_REASONS,
+  RETURN_POLICIES,
+} from './returns/policy'
+
 
 const MongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, { message: 'Invalid MongoDB ID' })
 
@@ -43,6 +48,7 @@ export const ProductInputSchema = z.object({
   isPublished: z.boolean(),
   taxCategory: z.enum(['S', 'Z', 'E', 'O']).optional(),
   exemptionReasonCode: z.string().max(10).optional(),
+  returnPolicy: z.enum(RETURN_POLICIES).optional(),
   price: Price('Price'),
   listPrice: Price('List price'),
   countInStock: z.coerce
@@ -104,9 +110,12 @@ export const OrderItemSchema = z.object({
   price: Price('Price'),
   taxCategory: z.enum(['S', 'Z', 'E', 'O']).optional(),
   exemptionReasonCode: z.string().max(10).optional(),
+  returnPolicy: z.enum(RETURN_POLICIES).optional(),
   netPrice: z.number().optional(),
   vatAmount: z.number().optional(),
   vatPercent: z.number().optional(),
+  refundedQuantity: z.coerce.number().int().nonnegative().optional(),
+  restockedQuantity: z.coerce.number().int().nonnegative().optional(),
   size: z.string().max(50, 'Size is too long').optional(),
   color: z.string().max(50, 'Color is too long').optional(),
 })
@@ -193,6 +202,34 @@ export const CartSchema = z.object({
   shippingAddress: z.optional(ShippingAddressSchema),
   deliveryDateIndex: z.optional(z.number()),
   expectedDeliveryDate: z.optional(z.date()),
+})
+
+// Return/refund selection submitted by an admin.
+export const OrderReturnSelectionSchema = z.object({
+  clientId: z.string().min(1, 'Item id is required').max(100),
+  quantity: z.coerce.number().int().positive('Quantity must be at least 1'),
+})
+
+export const OrderReturnInputSchema = z.object({
+  orderId: MongoId,
+  selections: z
+    .array(OrderReturnSelectionSchema)
+    .min(1, 'Select at least one item')
+    .max(50, 'Too many selected items'),
+  reason: z.enum(REFUND_REASONS),
+  policyOverrideReason: z
+    .string()
+    .max(500, 'Override reason is too long')
+    .optional(),
+  manualReference: z
+    .string()
+    .max(200, 'Refund reference is too long')
+    .optional(),
+  idempotencyKey: z
+    .string()
+    .min(8, 'Invalid request key')
+    .max(100, 'Invalid request key'),
+  forceManual: z.boolean().optional(),
 })
 
 // USER
@@ -312,6 +349,7 @@ export const ProductInputFormSchema = z.object({
   isPublished: z.boolean(),
   taxCategory: z.enum(['S', 'Z', 'E', 'O']).optional(),
   exemptionReasonCode: z.string().max(10).optional(),
+  returnPolicy: z.enum(RETURN_POLICIES).optional(),
   price: Price('Price'),
   listPrice: Price('List price'),
   countInStock: z.coerce

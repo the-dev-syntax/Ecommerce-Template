@@ -3,10 +3,13 @@ import { connectToDatabase } from '@/lib/db'
 import {
   InvoiceCounter,
   IInvoice,
+  IInvoiceItemSnapshot,
+  CreditNoteReason,
   InvoiceType,
 } from '@/lib/db/models/invoice.model'
 import Invoice from '@/lib/db/models/invoice.model'
 import Order, { OrderWithUser } from '@/lib/db/models/order.model'
+import '@/lib/db/models/user.model'
 import Setting from '@/lib/db/models/setting.model'
 import { withSettingDefaults } from '@/lib/settings-defaults'
 import { round2 } from '@/lib/utils'
@@ -58,22 +61,36 @@ function buyerAddress(order: OrderWithUser) {
     .join(', ')
 }
 
+export interface CreditNoteOptions {
+  refundedAmount?: number
+  notes?: string
+  eventId?: string
+  reason?: CreditNoteReason
+  lines?: IInvoiceItemSnapshot[]
+  shippingPrice?: number
+}
+
 /**
  * Create (or return) the immutable tax invoice / credit note for an order.
- * The unique orderId+type index and the atomic counter are the guards against
- * duplicate documents and duplicate numbers under concurrent webhooks.
+ * The unique invoice index, the unique credit-note event id and the atomic
+ * counter are the guards against duplicate documents and duplicate numbers.
  */
 export async function createInvoiceForOrder(
   orderId: string,
   type: InvoiceType = 'invoice',
-  options: { refundedAmount?: number; notes?: string } = {}
+  options: CreditNoteOptions = {}
 ): Promise<IInvoice> {
   await connectToDatabase()
 
-  const existing = await Invoice.findOne({
-    orderId: String(orderId),
-    type,
-  }).lean()
+  const existing =
+    type === 'credit_note' && options.eventId
+      ? await Invoice.findOne({
+          creditNoteEventId: options.eventId,
+        }).lean()
+      : await Invoice.findOne({
+          orderId: String(orderId),
+          type,
+        }).lean()
   if (existing) return JSON.parse(JSON.stringify(existing)) as IInvoice
 
   const order = await Order.findById(orderId).populate<{
@@ -115,6 +132,7 @@ export async function createInvoiceForOrder(
         : 0)
 
     return {
+      clientId: item.clientId,
       name: item.name,
       quantity: item.quantity,
       unitPrice,
@@ -144,48 +162,85 @@ export async function createInvoiceForOrder(
     )
     refundedAmount = refund
 
-    if (refund <= 0)
-      throw new Error('A credit note requires a refunded amount')
-
-    const originalLines = [
-      ...original.items.map((item) => ({
+    if (options.lines && options.lines.length > 0) {
+      items = options.lines.map((item) => ({
+        clientId: item.clientId ?? '',
         name: item.name,
-        lineTotal: item.lineTotal,
-        vatAmount: item.vatAmount,
+        quantity: item.quantity,
+        unitPrice: round2(item.unitPrice),
+        lineTotal: round2(item.lineTotal),
         taxCategory: item.taxCategory,
         exemptionReasonCode: item.exemptionReasonCode ?? '',
         vatPercent: item.vatPercent,
-      })),
-      ...(original.shippingPrice > 0
-        ? [
-            {
-              name: 'Shipping',
-              lineTotal: original.shippingPrice,
-              vatAmount: 0,
-              taxCategory: 'O' as const,
-              exemptionReasonCode: '',
-              vatPercent: 0,
-            },
-          ]
-        : []),
-    ]
+        vatAmount: round2(item.vatAmount),
+      }))
+      itemsPrice = round2(
+        items.reduce((sum, item) => sum + item.lineTotal, 0)
+      )
+      vatAmount = round2(
+        items.reduce((sum, item) => sum + item.vatAmount, 0)
+      )
+      shippingPrice = round2(options.shippingPrice ?? 0)
+      total = round2(itemsPrice + vatAmount + shippingPrice)
+      refundedAmount = total
 
-    if (original.total <= 0) throw new Error('Original invoice has no total')
+      if (total <= 0) {
+        throw new Error('A credit note requires a refunded amount')
+      }
+      if (
+        options.refundedAmount !== undefined &&
+        Math.abs(round2(options.refundedAmount) - total) >= 0.01
+      ) {
+        throw new Error('Credit note total does not match the refunded amount')
+      }
+    } else {
+      if (refund <= 0)
+        throw new Error('A credit note requires a refunded amount')
 
-    const creditTotal = Math.min(refund, original.total)
-    items = allocateRefundToLines(originalLines, creditTotal, original.total)
-    if (items.length === 0) {
-      throw new Error('Refund allocation produced no invoice lines')
+      const originalLines = [
+        ...original.items.map((item) => ({
+          name: item.name,
+          lineTotal: item.lineTotal,
+          vatAmount: item.vatAmount,
+          taxCategory: item.taxCategory,
+          exemptionReasonCode: item.exemptionReasonCode ?? '',
+          vatPercent: item.vatPercent,
+        })),
+        ...(original.shippingPrice > 0
+          ? [
+              {
+                name: 'Shipping',
+                lineTotal: original.shippingPrice,
+                vatAmount: 0,
+                taxCategory: 'O' as const,
+                exemptionReasonCode: '',
+                vatPercent: 0,
+              },
+            ]
+          : []),
+      ]
+
+      if (original.total <= 0) throw new Error('Original invoice has no total')
+
+      const creditTotal = Math.min(refund, original.total)
+      items = allocateRefundToLines(
+        originalLines,
+        creditTotal,
+        original.total
+      ).map((item) => ({ clientId: '', ...item }))
+      if (items.length === 0) {
+        throw new Error('Refund allocation produced no invoice lines')
+      }
+
+      vatAmount = round2(
+        items.reduce((sum, item) => sum + item.vatAmount, 0)
+      )
+      itemsPrice = round2(
+        items.reduce((sum, item) => sum + item.lineTotal, 0)
+      )
+      shippingPrice = 0
+      total = creditTotal
     }
-
-    vatAmount = round2(
-      items.reduce((sum, item) => sum + item.vatAmount, 0)
-    )
-    itemsPrice = round2(
-      items.reduce((sum, item) => sum + item.lineTotal, 0)
-    )
-    shippingPrice = 0
-    total = creditTotal
   }
 
   // Legacy orders can have per-line VAT rounding that differs by a cent from
@@ -210,6 +265,12 @@ export async function createInvoiceForOrder(
   }
 
   const sellerName = seller.legalNameAr || seller.legalNameEn
+  const creditNoteEventId =
+    type === 'credit_note'
+      ? options.eventId ?? `legacy:${String(orderId)}`
+      : undefined
+  const creditNoteReason =
+    type === 'credit_note' ? options.reason ?? 'legacy' : undefined
   const qrPayload = buildZatcaQrPayload({
     sellerName,
     vatNumber: seller.vatNumber,
@@ -245,6 +306,8 @@ export async function createInvoiceForOrder(
         total,
         refundedAmount,
         originalInvoiceNumber,
+        creditNoteEventId,
+        creditNoteReason,
         qrPayload,
         notes: options.notes,
       })
@@ -253,10 +316,15 @@ export async function createInvoiceForOrder(
       const mongoError = error as { code?: number }
       if (mongoError.code !== 11000) throw error
 
-      const duplicate = await Invoice.findOne({
-        orderId: String(orderId),
-        type,
-      }).lean()
+      const duplicate =
+        type === 'credit_note' && creditNoteEventId
+          ? await Invoice.findOne({
+              creditNoteEventId,
+            }).lean()
+          : await Invoice.findOne({
+              orderId: String(orderId),
+              type,
+            }).lean()
       if (duplicate) return JSON.parse(JSON.stringify(duplicate)) as IInvoice
 
       // A number collision (for example after a manual counter reset) is
@@ -285,6 +353,19 @@ export async function getOrCreateInvoiceForOrder(
   return createInvoiceForOrder(orderId, type)
 }
 
+export async function getCreditNotesForOrder(
+  orderId: string
+): Promise<IInvoice[]> {
+  await connectToDatabase()
+  const invoices = await Invoice.find({
+    orderId: String(orderId),
+    type: 'credit_note',
+  })
+    .sort({ issuedAt: 1 })
+    .lean()
+  return JSON.parse(JSON.stringify(invoices)) as IInvoice[]
+}
+
 export async function getOrCreateCreditNoteForOrder(
   orderId: string
 ): Promise<IInvoice | null> {
@@ -301,5 +382,7 @@ export async function getOrCreateCreditNoteForOrder(
   return createInvoiceForOrder(orderId, 'credit_note', {
     refundedAmount: refunded,
     notes: order.cancelReason,
+    eventId: `legacy:${String(orderId)}`,
+    reason: 'legacy',
   })
 }

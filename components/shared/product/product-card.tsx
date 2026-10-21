@@ -95,6 +95,7 @@ const ProductCard = ({
           price: round2(product.price),
           quantity: 1,
           image: product.images[0],
+          returnPolicy: product.returnPolicy ?? 'return_and_refund',
         }}
       />
     </div>

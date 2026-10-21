@@ -1,6 +1,8 @@
 import { IOrderInput } from '@/types'
 import { Document, Model, model, models, Schema } from 'mongoose'
 
+import { RETURN_POLICIES } from '@/lib/returns/policy'
+
 // omit = replace _id of document with _id of mongoose type
 export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   _id: string
@@ -13,10 +15,14 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   cancelReason?: string
   refundedAmount?: number
   refundedAt?: Date
+  shippingRefunded?: boolean
   refundHistory?: {
     amount: number
     provider: string
     refundedAt: Date
+    reason?: string
+    returnId?: string
+    reference?: string
   }[]
 }
 
@@ -53,6 +59,14 @@ const orderSchema = new Schema<IOrder>(
           default: 'S',
         },
         exemptionReasonCode: { type: String, default: '' },
+        returnPolicy: {
+          type: String,
+          enum: RETURN_POLICIES,
+          required: true,
+          default: 'return_and_refund',
+        },
+        refundedQuantity: { type: Number, default: 0 },
+        restockedQuantity: { type: Number, default: 0 },
         netPrice: { type: Number },
         vatAmount: { type: Number, default: 0 },
         vatPercent: { type: Number, default: 0 },
@@ -99,12 +113,16 @@ const orderSchema = new Schema<IOrder>(
     cancelReason: { type: String },
     refundedAmount: { type: Number, default: 0 },
     refundedAt: { type: Date },
+    shippingRefunded: { type: Boolean, default: false },
     refundHistory: [
       {
         _id: false,
         amount: { type: Number, required: true },
         provider: { type: String, required: true },
         refundedAt: { type: Date, required: true },
+        reason: { type: String },
+        returnId: { type: String },
+        reference: { type: String },
       },
     ],
     createdAt: { type: Date, default: Date.now },

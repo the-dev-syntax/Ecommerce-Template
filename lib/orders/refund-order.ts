@@ -2,8 +2,19 @@ import mongoose from 'mongoose'
 
 import { connectToDatabase } from '@/lib/db'
 import Order, { IOrder } from '@/lib/db/models/order.model'
+import OrderReturn, {
+  type RefundProvider,
+} from '@/lib/db/models/order-return.model'
 import Product from '@/lib/db/models/product.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
+import {
+  calculateCancellationLines,
+  calculateReturnLines,
+  getShippingRefundAmount,
+  toCreditNoteLines,
+  type ReturnSelection,
+} from '@/lib/returns/calculations'
+import type { RefundReason } from '@/lib/returns/policy'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
 import {
   fetchMoyasarPayment,
@@ -22,80 +33,294 @@ function getMoyasarPaymentId(order: IOrder): string {
 function assertMoyasarOrder(order: IOrder) {
   if (order.paymentMethod !== 'Moyasar')
     throw new Error(
-      'Automatic refunds are only supported for Moyasar orders. Refund this order manually.'
+      'Automatic refunds are only supported for Moyasar orders. Record a manual refund instead.'
     )
 }
 
+export interface ProcessOrderReturnInput {
+  orderId: string
+  selections: ReturnSelection[]
+  reason: RefundReason
+  policyOverrideReason?: string
+  manualReference?: string
+  idempotencyKey: string
+  forceManual?: boolean
+  createdBy?: string
+}
+
+export interface ProcessOrderReturnResult {
+  order: IOrder
+  returnId: string
+  refundAmount: number
+  refundedAmount: number
+  provider: RefundProvider
+  fullyRefunded: boolean
+}
+
 /**
- * Refund a paid Moyasar order, fully or partially. The refundable amount is
- * read from Moyasar before every call so a partial refund can never overdraw.
+ * Item-level return/refund.
+ *
+ * - Only delivered, paid orders are eligible (pre-delivery orders are cancelled).
+ * - Prices and VAT come from the order snapshots, never from the browser.
+ * - Shipping is excluded for change-of-mind returns and included for
+ *   defective/wrong-item returns.
+ * - A final-sale item requires a defective/wrong-item override reason.
+ * - Only return_and_refund quantities are restocked.
+ * - Moyasar allows one refund call per payment. The first refund is automatic;
+ *   later refunds on the same payment are recorded manually.
  */
-export async function refundMoyasarOrderPayment(
-  orderId: string,
-  amount?: number
-) {
+export async function processOrderReturn(
+  input: ProcessOrderReturnInput
+): Promise<ProcessOrderReturnResult> {
   await connectToDatabase()
 
-  const order = await Order.findById(orderId)
+  const order = await Order.findById(input.orderId)
   if (!order) throw new Error('Order not found')
   if (!order.isPaid) throw new Error('Order is not paid')
   if (order.isCancelled) throw new Error('Cancelled orders cannot be refunded')
-  assertMoyasarOrder(order)
-
-  if (amount !== undefined) {
-    if (typeof amount !== 'number' || !Number.isFinite(amount))
-      throw new Error('Invalid refund amount')
+  if (!order.isDelivered) {
+    throw new Error(
+      'Returns can only be processed after delivery. Cancel the order instead.'
+    )
+  }
+  if (!input.idempotencyKey?.trim()) {
+    throw new Error('A refund request key is required')
   }
 
-  const paymentId = getMoyasarPaymentId(order)
-  const payment = await fetchMoyasarPayment(paymentId)
-
-  if (!isMoyasarRefundable(payment.status))
-    throw new Error(`Payment cannot be refunded (status: ${payment.status})`)
-
-  const remainingHalalas = payment.amount - (payment.refunded ?? 0)
-  if (remainingHalalas <= 0) throw new Error('Payment is already fully refunded')
-
-  const requestedHalalas =
-    amount === undefined ? remainingHalalas : Math.round(round2(amount) * 100)
-
-  if (requestedHalalas < 1)
-    throw new Error('Refund amount must be at least 0.01')
-  if (requestedHalalas > remainingHalalas)
-    throw new Error('Refund amount exceeds the refundable amount')
-
-  const updatedPayment =
-    requestedHalalas === remainingHalalas
-      ? await refundMoyasarPayment(paymentId)
-      : await refundMoyasarPayment(paymentId, requestedHalalas)
-
-  const refundedAmount =
-    (updatedPayment.refunded ?? (payment.refunded ?? 0) + requestedHalalas) / 100
-  const fullyRefunded = refundedAmount >= payment.amount / 100
-  const now = new Date()
-
-  order.refundedAmount = refundedAmount
-  order.refundedAt = now
-  order.refundHistory = order.refundHistory ?? []
-  order.refundHistory.push({
-    amount: requestedHalalas / 100,
-    provider: 'Moyasar',
-    refundedAt: now,
-  })
-  order.paymentResult = {
-    id: order.paymentResult?.id ?? payment.id,
-    status: fullyRefunded
-      ? 'refunded'
-      : order.paymentResult?.status ?? payment.status,
-    email_address: order.paymentResult?.email_address ?? '',
-    pricePaid: order.paymentResult?.pricePaid ?? order.totalPrice.toFixed(2),
+  const existingReturn = await OrderReturn.findOne({
+    orderId: String(order._id),
+    idempotencyKey: input.idempotencyKey,
+  }).lean()
+  if (existingReturn) {
+    throw new Error('This refund request was already processed')
   }
 
-  await order.save()
+  const taxInclusive = order.taxInclusive ?? true
+  const taxRate = order.taxRate ?? 0.15
+  const calculationOptions = { taxInclusive, taxRate }
+  const lines = calculateReturnLines(
+    order.items,
+    input.selections,
+    input.reason,
+    calculationOptions
+  )
+
+  const overrideReason = input.policyOverrideReason?.trim()
+  const needsOverride = lines.some(
+    (line) => line.returnPolicy === 'final_sale'
+  )
+  if (needsOverride && !overrideReason) {
+    throw new Error(
+      'A reason is required when refunding a final-sale item'
+    )
+  }
+  if (overrideReason && overrideReason.length > 500) {
+    throw new Error('Override reason is too long')
+  }
+
+  const shippingAmount = getShippingRefundAmount(
+    order.shippingPrice,
+    input.reason,
+    order.shippingRefunded ?? false
+  )
+  const itemsRefund = round2(
+    lines.reduce((sum, line) => sum + line.grossAmount, 0)
+  )
+  const refundAmount = round2(itemsRefund + shippingAmount)
+  if (refundAmount <= 0) throw new Error('Refund amount must be at least 0.01')
+
+  const previousRefunded = round2(order.refundedAmount ?? 0)
+  const isMoyasar = order.paymentMethod === 'Moyasar'
+  const canAutoRefund =
+    isMoyasar && previousRefunded <= 0 && !input.forceManual
+  const provider: RefundProvider = canAutoRefund ? 'Moyasar' : 'Manual'
+
+  let refundedAmount = previousRefunded
+  let refundReference = input.manualReference?.trim()
+  let fullyRefunded = false
+  let paymentStatus: string | undefined
+
+  if (provider === 'Moyasar') {
+    assertMoyasarOrder(order)
+    const paymentId = getMoyasarPaymentId(order)
+    const payment = await fetchMoyasarPayment(paymentId)
+    if (!isMoyasarRefundable(payment.status)) {
+      throw new Error(`Payment cannot be refunded (status: ${payment.status})`)
+    }
+
+    const remainingHalalas = payment.amount - (payment.refunded ?? 0)
+    const requestedHalalas = Math.round(refundAmount * 100)
+    if (requestedHalalas < 1) {
+      throw new Error('Refund amount must be at least 0.01')
+    }
+    if (requestedHalalas > remainingHalalas) {
+      throw new Error('Refund amount exceeds the remaining payment')
+    }
+
+    const updatedPayment =
+      requestedHalalas === remainingHalalas
+        ? await refundMoyasarPayment(paymentId)
+        : await refundMoyasarPayment(paymentId, requestedHalalas)
+
+    refundReference = updatedPayment.id
+    refundedAmount = round2(
+      (updatedPayment.refunded ??
+        (payment.refunded ?? 0) + requestedHalalas) / 100
+    )
+    paymentStatus =
+      refundedAmount >= payment.amount / 100 ? 'refunded' : payment.status
+  } else {
+    refundedAmount = round2(previousRefunded + refundAmount)
+    refundReference = refundReference || 'manual'
+  }
+
+  if (refundedAmount > round2(order.totalPrice) + 0.01) {
+    throw new Error('Refund exceeds the order total')
+  }
+  fullyRefunded = refundedAmount >= round2(order.totalPrice) - 0.01
+
+  const refundedAt = new Date()
+  const session = await mongoose.connection.startSession()
+  let returnId = ''
 
   try {
-    const creditNote = await createInvoiceForOrder(orderId, 'credit_note', {
-      refundedAmount,
+    await session.withTransaction(async () => {
+      const fresh = await Order.findById(input.orderId).session(session)
+      if (!fresh) throw new Error('Order not found')
+      if (!fresh.isPaid) throw new Error('Order is not paid')
+      if (fresh.isCancelled) throw new Error('Order is cancelled')
+
+      // Revalidate against concurrent returns before writing counters.
+      const freshLines = calculateReturnLines(
+        fresh.items,
+        input.selections,
+        input.reason,
+        calculationOptions
+      )
+      const freshShipping = getShippingRefundAmount(
+        fresh.shippingPrice,
+        input.reason,
+        fresh.shippingRefunded ?? false
+      )
+      const freshRefund = round2(
+        freshLines.reduce((sum, line) => sum + line.grossAmount, 0) +
+          freshShipping
+      )
+      if (Math.abs(freshRefund - refundAmount) >= 0.01) {
+        throw new Error('The order changed while the refund was processed')
+      }
+
+      const [createdReturn] = await OrderReturn.create(
+        [
+          {
+            orderId: String(fresh._id),
+            kind: 'return',
+            idempotencyKey: input.idempotencyKey,
+            items: freshLines.map((line) => ({
+              clientId: line.clientId,
+              product: line.product,
+              name: line.name,
+              quantity: line.quantity,
+              returnPolicy: line.returnPolicy,
+              netAmount: line.netAmount,
+              vatAmount: line.vatAmount,
+              grossAmount: line.grossAmount,
+              restocked: line.returnPolicy === 'return_and_refund',
+            })),
+            reason: input.reason,
+            policyOverrideReason: overrideReason ?? '',
+            shippingRefunded: freshShipping > 0,
+            shippingAmount: freshShipping,
+            refundAmount,
+            refundProvider: provider,
+            refundReference: refundReference ?? '',
+            refundedAt,
+            createdBy: input.createdBy ?? '',
+            notes: overrideReason,
+          },
+        ],
+        { session }
+      )
+      returnId = String(createdReturn._id)
+
+      for (const line of freshLines) {
+        const restock = line.returnPolicy === 'return_and_refund'
+        await Order.updateOne(
+          { _id: fresh._id, 'items.clientId': line.clientId },
+          {
+            $inc: {
+              'items.$.refundedQuantity': line.quantity,
+              ...(restock
+                ? { 'items.$.restockedQuantity': line.quantity }
+                : {}),
+            },
+          },
+          { session }
+        )
+
+        if (restock) {
+          await Product.updateOne(
+            { _id: line.product },
+            {
+              $inc: {
+                countInStock: line.quantity,
+                numSales: -line.quantity,
+              },
+            },
+            { session }
+          )
+        }
+      }
+
+      const paymentUpdate =
+        provider === 'Moyasar'
+          ? {
+              paymentResult: {
+                id: order.paymentResult?.id,
+                status: paymentStatus ?? order.paymentResult?.status,
+                email_address: order.paymentResult?.email_address ?? '',
+                pricePaid:
+                  order.paymentResult?.pricePaid ??
+                  order.totalPrice.toFixed(2),
+              },
+            }
+          : {}
+
+      await Order.updateOne(
+        { _id: fresh._id },
+        {
+          $set: {
+            refundedAmount,
+            refundedAt,
+            ...(freshShipping > 0 ? { shippingRefunded: true } : {}),
+            ...paymentUpdate,
+          },
+          $push: {
+            refundHistory: {
+              amount: refundAmount,
+              provider,
+              refundedAt,
+              reason: input.reason,
+              returnId,
+              reference: refundReference ?? '',
+            },
+          },
+        },
+        { session }
+      )
+    })
+  } finally {
+    await session.endSession()
+  }
+
+  try {
+    const creditNote = await createInvoiceForOrder(input.orderId, 'credit_note', {
+      eventId: returnId,
+      reason: 'return',
+      lines: toCreditNoteLines(lines),
+      shippingPrice: shippingAmount,
+      refundedAmount: refundAmount,
+      notes: overrideReason,
     })
     await queueZatcaForInvoice(String(creditNote._id))
   } catch (error) {
@@ -105,15 +330,30 @@ export async function refundMoyasarOrderPayment(
     )
   }
 
-  return { order, refundedAmount, fullyRefunded }
+  const updatedOrder = (await Order.findById(input.orderId)) ?? order
+  return {
+    order: updatedOrder,
+    returnId,
+    refundAmount,
+    refundedAmount,
+    provider,
+    fullyRefunded,
+  }
 }
 
 /**
- * Cancel an unpaid order, or cancel + refund a paid Moyasar order. Paid orders
- * are only cancelled after the gateway confirms the refund, and stock/sales are
- * restored exactly once inside a transaction.
+ * Cancel an unpaid order, or cancel + refund a paid order. Paid orders are
+ * only cancelled after the gateway confirms the refund (or the admin records a
+ * manual refund), and stock/sales are restored exactly once in a transaction.
+ *
+ * Cancellation is a seller-side path: every item and the shipping are refunded
+ * regardless of the product return policy.
  */
-export async function cancelOrderById(orderId: string, reason?: string) {
+export async function cancelOrderById(
+  orderId: string,
+  reason?: string,
+  options: { manualReference?: string; createdBy?: string } = {}
+) {
   await connectToDatabase()
 
   if (reason && reason.trim().length > 500)
@@ -131,39 +371,51 @@ export async function cancelOrderById(orderId: string, reason?: string) {
     throw new Error('Delivered orders cannot be cancelled')
 
   const wasPaid = order.isPaid
-  let refundedAmount = order.refundedAmount ?? 0
+  const previousRefunded = round2(order.refundedAmount ?? 0)
+  const remaining = round2(order.totalPrice - previousRefunded)
+  let refundedAmount = previousRefunded
   let refundedAt: Date | undefined
+  let provider: RefundProvider = 'Manual'
+  let paymentStatus: string | undefined
 
-  if (wasPaid && order.paymentMethod === 'Cash On Delivery') {
-    // Cash is returned outside the system; still cancel and restock.
-    refundedAmount = order.refundedAmount ?? 0
-  } else if (wasPaid) {
-    assertMoyasarOrder(order)
+  if (wasPaid && remaining > 0) {
+    if (order.paymentMethod === 'Moyasar' && previousRefunded <= 0) {
+      assertMoyasarOrder(order)
+      const paymentId = getMoyasarPaymentId(order)
+      let payment = await fetchMoyasarPayment(paymentId)
 
-    const paymentId = getMoyasarPaymentId(order)
-    let payment = await fetchMoyasarPayment(paymentId)
-
-    if (payment.status === 'authorized') {
-      payment = await voidMoyasarPayment(paymentId)
-    } else if (isMoyasarRefundable(payment.status)) {
-      const remainingHalalas = payment.amount - (payment.refunded ?? 0)
-      if (remainingHalalas > 0) {
-        payment = await refundMoyasarPayment(paymentId)
+      if (payment.status === 'authorized') {
+        payment = await voidMoyasarPayment(paymentId)
+        refundedAmount = previousRefunded
+      } else if (isMoyasarRefundable(payment.status)) {
+        const remainingHalalas = payment.amount - (payment.refunded ?? 0)
+        if (remainingHalalas > 0) {
+          payment = await refundMoyasarPayment(paymentId)
+        }
+        refundedAmount = round2((payment.refunded ?? 0) / 100)
+        refundedAt = new Date()
+        provider = 'Moyasar'
+        paymentStatus =
+          refundedAmount >= payment.amount / 100 ? 'refunded' : payment.status
+      } else if (payment.status === 'refunded') {
+        const remainingHalalas = payment.amount - (payment.refunded ?? 0)
+        if (remainingHalalas > 0)
+          throw new Error(
+            'This payment was partially refunded. Record the remaining cancellation refund manually.'
+          )
+      } else {
+        throw new Error(`Payment cannot be cancelled (status: ${payment.status})`)
       }
-    } else if (payment.status === 'refunded') {
-      const remainingHalalas = payment.amount - (payment.refunded ?? 0)
-      if (remainingHalalas > 0)
-        throw new Error(
-          'This payment was partially refunded. Moyasar allows only one refund per payment, so the remaining amount cannot be refunded automatically.'
-        )
     } else {
-      throw new Error(`Payment cannot be cancelled (status: ${payment.status})`)
+      // COD, Stripe, PayPal, or a second refund on a Moyasar payment: record the
+      // refund as manual. The money is returned outside the gateway.
+      refundedAmount = round2(order.totalPrice)
+      refundedAt = new Date()
+      provider = 'Manual'
     }
-
-    refundedAmount = (payment.refunded ?? 0) / 100
-    refundedAt = new Date()
   }
 
+  const now = refundedAt ?? new Date()
   const session = await mongoose.connection.startSession()
   let alreadyCancelled = false
 
@@ -194,22 +446,57 @@ export async function cancelOrderById(orderId: string, reason?: string) {
         }
         const previouslyRefunded = fresh.refundedAmount ?? 0
         if (refundedAmount > previouslyRefunded) {
-          fresh.refundHistory = fresh.refundHistory ?? []
-          fresh.refundHistory.push({
-            amount: refundedAmount - previouslyRefunded,
-            provider: 'Moyasar',
-            refundedAt: refundedAt ?? new Date(),
-          })
+          await Order.updateOne(
+            { _id: fresh._id },
+            {
+              $set: {
+                refundedAmount,
+                refundedAt: now,
+                shippingRefunded: true,
+                ...(provider === 'Moyasar'
+                  ? {
+                      paymentResult: {
+                        id:
+                          fresh.paymentResult?.id ??
+                          fresh.moyasarPaymentId,
+                        status:
+                          paymentStatus ??
+                          fresh.paymentResult?.status,
+                        email_address:
+                          fresh.paymentResult?.email_address ?? '',
+                        pricePaid:
+                          fresh.paymentResult?.pricePaid ??
+                          fresh.totalPrice.toFixed(2),
+                      },
+                    }
+                  : {}),
+              },
+              $push: {
+                refundHistory: {
+                  amount: refundedAmount - previouslyRefunded,
+                  provider,
+                  refundedAt: now,
+                  reason: 'cancellation',
+                  reference: options.manualReference?.trim() || 'manual',
+                },
+              },
+            },
+            { session }
+          )
         }
-        fresh.refundedAmount = refundedAmount
-        if (refundedAt) fresh.refundedAt = refundedAt
       }
 
-      fresh.isCancelled = true
-      fresh.cancelledAt = new Date()
-      fresh.cancelReason = reason?.trim() || undefined
-
-      await fresh.save({ session })
+      await Order.updateOne(
+        { _id: fresh._id },
+        {
+          $set: {
+            isCancelled: true,
+            cancelledAt: new Date(),
+            cancelReason: reason?.trim() || undefined,
+          },
+        },
+        { session }
+      )
     })
   } finally {
     await session.endSession()
@@ -217,10 +504,35 @@ export async function cancelOrderById(orderId: string, reason?: string) {
 
   if (refundedAmount > 0) {
     try {
-      const creditNote = await createInvoiceForOrder(orderId, 'credit_note', {
-        refundedAmount,
-      })
-      await queueZatcaForInvoice(String(creditNote._id))
+      const cancellationOrder = await Order.findById(orderId).lean()
+      if (cancellationOrder) {
+        const lines = calculateCancellationLines(cancellationOrder.items, {
+          taxInclusive: cancellationOrder.taxInclusive ?? true,
+          taxRate: cancellationOrder.taxRate ?? 0.15,
+        })
+        const shippingStillRefundable =
+          !(order.shippingRefunded ?? false) && order.shippingPrice > 0
+        const shippingAmount = shippingStillRefundable
+          ? round2(order.shippingPrice)
+          : 0
+
+        const creditNote = await createInvoiceForOrder(
+          orderId,
+          'credit_note',
+          {
+            eventId: `cancel:${String(orderId)}`,
+            reason: 'cancellation',
+            lines: toCreditNoteLines(lines),
+            shippingPrice: shippingAmount,
+            refundedAmount: round2(
+              lines.reduce((sum, line) => sum + line.grossAmount, 0) +
+                shippingAmount
+            ),
+            notes: reason?.trim() || undefined,
+          }
+        )
+        await queueZatcaForInvoice(String(creditNote._id))
+      }
     } catch (error) {
       console.error(
         'Credit note creation failed (the invoice page retries):',

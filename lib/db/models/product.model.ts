@@ -1,6 +1,8 @@
 import { Document, Model, model, models, Schema } from 'mongoose'
 import { IProductInput } from '@/types'
 
+import { RETURN_POLICIES } from '@/lib/returns/policy'
+
 // createdAt: Date and updatedAt: Date, will be added by Mongoose anyway, but defining it here so  TypeScript would complain if you tried to access those properties on a product document.
 export interface IProduct extends Omit<Document, '_id'>, IProductInput {
   _id: string
@@ -88,6 +90,12 @@ const productSchema = new Schema<IProduct>(
       default: 'S',
     },
     exemptionReasonCode: { type: String, default: '' },
+    returnPolicy: {
+      type: String,
+      enum: RETURN_POLICIES,
+      required: true,
+      default: 'return_and_refund',
+    },
     reviews: [
       {
         type: Schema.Types.ObjectId,

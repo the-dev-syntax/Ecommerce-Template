@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 
 import { getProductBySlug, getRelatedProductsByCategory } from '@/lib/actions/product.actions'
 import { generateId, round2 } from '@/lib/utils'
@@ -60,6 +61,7 @@ export default async function ProductDetails(props: {
   const session = await auth()
 
   const t = await getTranslations()
+  const returnPolicy = product.returnPolicy ?? 'return_and_refund'
   
   //used in order: AddToBrowsingHistory, ProductGallery, Rating, Separator, ProductPrice, SelectVariant, Separator, Card, addToCart
   return (
@@ -96,6 +98,23 @@ export default async function ProductDetails(props: {
                   />
                 </div>
               </div>
+              <Badge
+                variant={
+                  returnPolicy === 'final_sale' ? 'destructive' : 'secondary'
+                }
+                className='w-fit'
+              >
+                {returnPolicy === 'final_sale'
+                  ? t('Final sale')
+                  : returnPolicy === 'refund_only'
+                    ? t('Refund only')
+                    : t('Return and refund')}
+              </Badge>
+              {returnPolicy === 'final_sale' && (
+                <p className='text-destructive text-sm'>
+                  {t('Final sale items cannot be returned or refunded')}
+                </p>
+              )}
             </div>
             <div>
               <SelectVariant
@@ -140,6 +159,7 @@ export default async function ProductDetails(props: {
                           price: round2(product.price),
                           quantity: 1,
                           image: product.images[0],
+                          returnPolicy,
                           size: size || product.sizes[0],
                           color: color || product.colors[0],
                         }}

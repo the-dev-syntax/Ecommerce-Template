@@ -28,6 +28,7 @@ const defaultValues: IProductInputForm = {
     isPublished: false,
     taxCategory: 'S',
     exemptionReasonCode: '',
+    returnPolicy: 'return_and_refund',
     tags: [],
     sizes: [],
     colors: [],
@@ -59,6 +60,7 @@ export const UpdateProductForm = ({
           ...product,
           taxCategory: product.taxCategory ?? 'S',
           exemptionReasonCode: product.exemptionReasonCode ?? '',
+          returnPolicy: product.returnPolicy ?? 'return_and_refund',
         });
         }
     }, [product, reset]);

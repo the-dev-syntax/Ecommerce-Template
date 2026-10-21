@@ -3,6 +3,8 @@ import {
   CartSchema,
   OrderInputSchema,
   OrderItemSchema,
+  OrderReturnInputSchema,
+  OrderReturnSelectionSchema,
   ProductInputSchema,
   ShippingAddressSchema,
   UserInputSchema,
@@ -80,8 +82,15 @@ export type IOrderList = Omit<IOrderInput, 'user'> & {
    createdAt: Date 
   }
 export type OrderItem = z.infer<typeof OrderItemSchema>
+export type IOrderReturnInput = z.infer<typeof OrderReturnInputSchema>
+export type IOrderReturnSelection = z.infer<typeof OrderReturnSelectionSchema>
 export type Cart = z.infer<typeof CartSchema>
 export type ShippingAddress = z.infer<typeof ShippingAddressSchema>
+
+export type {
+  RefundReason,
+  ReturnPolicy,
+} from '@/lib/returns/policy'
 
 // user
 export type IUserInput = z.infer<typeof UserInputSchema>

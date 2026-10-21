@@ -303,6 +303,41 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-24 — Item-level returns/refunds and non-refundable shipping (2026-10-21)
+
+- Products now have a `returnPolicy`: `return_and_refund`, `refund_only`, or `final_sale`. `final_sale` blocks voluntary returns and refunds.
+- Each order item snapshots the product policy plus `refundedQuantity` and `restockedQuantity`, so historical orders keep their policy and cannot be refunded twice.
+- Added an `OrderReturn` record per refund event with the selected items/quantities, reason, policy override, shipping amount, provider/reference, and restock status.
+- Shipping rules:
+  - change-of-mind return: shipping is not refunded;
+  - defective or wrong item: shipping is refunded;
+  - pre-delivery cancellation/seller fault: all items and shipping are refunded and all items are restocked.
+
+- Cancellation ignores product policies (seller-side path). Returns require a delivered, paid order.
+
+- Credit notes now contain only the selected return lines. Cancellation credit notes include all items and shipping. Multiple credit notes per order are supported; the old `{ orderId, type }` singleton index is replaced by one tax invoice per order plus one credit note per event.
+
+- Moyasar finalises a payment after one refund call: the first return is automatic, later returns on the same payment are recorded as manual refunds. COD, Stripe and PayPal refunds are recorded manually through the same item-level flow.
+ Customers cannot initiate returns/refunds.
+      “First return is automatic” means:
+      The admin reviews and selects the items/quantities.
+      The admin clicks Process refund.
+      For the first refund on a Moyasar payment, the app calls Moyasar automatically and refunds the customer.
+
+- Admin UI: select per-item quantities, see policy badges and remaining quantities, choose a reason, enter an override reason for final-sale items, and preview items/VAT/shipping/total. Product pages, cart, order details and invoices show the policy and return state.
+
+- Final-sale overrides for defective/wrong items are recorded but never restocked. `refund_only` items are refunded without restocking.
+
+- Migration: `npm run migrate:returns` backfills product policies, order-item snapshots/counters, legacy credit-note event ids, and rebuilds invoice indexes. Run on the dev database: 24 products, 209 orders, indexes rebuilt.
+
+### Verification
+- `npm test` — PASS (29 tests: tax, credit notes, QR, ZATCA UBL, return policy/calculations).
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (588 keys), `npm run build` — PASS.
+- Manual item returns on a seeded Stripe order: two credit notes (25.07 and 27.35, no shipping) with correct net/VAT, restock-once counters, and ZATCA sandbox acceptance.
+- Defective return: shipping refunded once (12.90) and included in the credit note.
+- Stripe cancellation: full invoice + shipping credit note (515.32), all items restocked, ZATCA accepted.
+- Sandbox submissions accepted (credit notes ICV 1–4).
+
 ## P0-23 — ZATCA onboarding/verification tooling and tax hardening (2026-10-21)
 
 - Added `npm run zatca:onboard`: generates the EGS key/CSR, exchanges the OTP for a compliance CSID, runs the declared simplified/standard compliance checks, issues the production CSID, and writes `.secrets/zatca-state.json` (mode `0600`). It prints the base64 `ZATCA_EGS_STATE` value for the deployment environment and refuses to overwrite an existing state without `--force`.
@@ -773,6 +808,7 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 - [x] (Dev) ZATCA Phase 2 sandbox API verification: Compliance CSID, compliance invoice, production CSID, reporting, and renewal.
 - [x] (Dev) ZATCA Phase 2 app integration: build UBL 2.1 per invoice, sign/report B2C invoices, persist ICV/PIH, Phase 2 QR (tags 6-9), report credit notes, and retry/error handling.
 - [x] (Dev) ZATCA onboarding/verification scripts (`zatca:onboard`, `zatca:verify`), certificate-aware production env guard, and unit tests for tax, credit notes, QR and UBL.
+- [x] (Dev) Item-level returns/refunds with product return policies, non-refundable shipping, final-sale overrides, multiple credit notes, manual refund recording and `migrate:returns`.
 - [ ] (Client/Dev) Switch ZATCA to production: real OTP/CSID, `ZATCA_ENV=production`, production `ZATCA_EGS_STATE`, live payment keys, and remove sandbox settings.
 - [ ] (Dev) Run `npm run check:production` before deployment; it rejects sandbox ZATCA/test payment keys, missing production CSIDs and expired certificates.
 - [ ] (Dev) VAT/cash reconciliation report or export for accounting.
