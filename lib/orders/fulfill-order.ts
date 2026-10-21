@@ -6,6 +6,7 @@ import Order, { OrderWithUser } from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
 import StockReservation from '@/lib/db/models/stock-reservation.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
+import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
 
 export type FulfillOrderInput = {
@@ -16,6 +17,8 @@ export type FulfillOrderInput = {
   currency: string
   email?: string
   status?: string
+  actorId?: string
+  actorEmail?: string
 }
 
 async function sendReceiptOnce(orderId: string) {
@@ -55,14 +58,30 @@ export async function fulfillOrder({
   currency,
   email = '',
   status = 'COMPLETED',
+  actorId,
+  actorEmail,
 }: FulfillOrderInput) {
   await connectToDatabase()
 
   const session = await mongoose.connection.startSession()
   let alreadyPaid = false
+  const stockAudit = new Map<
+    string,
+    {
+      product: string
+      productName: string
+      variantId?: string
+      sku?: string
+      variantLabel?: string
+      previousStock: number
+      newStock: number
+      quantityChange: number
+    }
+  >()
 
   try {
     await session.withTransaction(async () => {
+      stockAudit.clear()
       const order = await Order.findById(orderId).session(session)
       if (!order) throw new Error('Order not found')
 
@@ -87,7 +106,8 @@ export async function fulfillOrder({
         orderId: String(order._id),
       }).session(session)
       const holdsStock =
-        reservation != null && reservation.status !== 'released'
+        reservation != null &&
+        (reservation.status === 'held' || reservation.status === 'committed')
 
       for (const item of order.items) {
         if (holdsStock) {
@@ -135,6 +155,25 @@ export async function fulfillOrder({
             )
 
         if (!product) throw new Error(`Not enough stock for ${item.name}`)
+
+        const variant = item.variantId
+          ? product.variants?.find((entry) => entry.id === item.variantId)
+          : undefined
+        const newStock = variant ? variant.countInStock : product.countInStock
+        stockAudit.set(
+          `${String(product._id)}:${item.variantId ?? ''}:${item.clientId}`,
+          {
+          product: String(product._id),
+          productName: product.name,
+          variantId: variant?.id,
+          sku: variant?.sku,
+          variantLabel: variant
+            ? [variant.size, variant.color].filter(Boolean).join(' / ')
+            : '',
+          previousStock: newStock + item.quantity,
+          newStock,
+          quantityChange: -item.quantity,
+        })
       }
 
       if (holdsStock) {
@@ -147,7 +186,13 @@ export async function fulfillOrder({
       order.status = 'paid'
       order.statusHistory = [
         ...(order.statusHistory ?? []),
-        { status: 'paid', at: new Date(), note: `Paid via ${provider}` },
+        {
+          status: 'paid',
+          at: new Date(),
+          note: `Paid via ${provider}`,
+          actorId,
+          actorEmail,
+        },
       ]
       order.paymentResult = {
         id: paymentId,
@@ -160,6 +205,15 @@ export async function fulfillOrder({
     })
   } finally {
     await session.endSession()
+  }
+
+  for (const entry of stockAudit.values()) {
+    await recordInventoryAdjustment({
+      ...entry,
+      source: 'order_fulfilled',
+      reason: 'Payment fulfilled without an active reservation',
+      orderId,
+    })
   }
 
   try {

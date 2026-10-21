@@ -309,6 +309,12 @@ export async function deleteUser(id:string) {
   try {
     await connectToDatabase()
 
+    if (id === session.user.id)
+      return {
+        success: false,
+        message: 'You cannot delete your own account.',
+      }
+
     const target = await User.findById(id).select('role')
     if (!target) throw new Error('User not found')
 
@@ -435,13 +441,13 @@ export async function updateUser(rawUser: IUserUpdate) {
                 },
               },
             },
-            emailVerified: {//1. if Admin form emailVerified= true, update it: (it was Date or null)
-              $cond: { //if null to current date, if Date leave it, otherwise (Date or null) make/leave it null.
-                if: { $eq: [user.emailVerified, true] }, 
-                then: { $ifNull: ['$emailVerified', new Date()] },
-                else: null
-              }
-            }
+            emailVerified: {
+              $cond: [
+                { $ne: [user.emailVerified, null] },
+                { $ifNull: ['$emailVerified', new Date()] },
+                null,
+              ],
+            },
           }
         }
       ],

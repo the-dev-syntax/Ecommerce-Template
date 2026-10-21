@@ -10,8 +10,8 @@ export interface IStockReservation extends Omit<Document, '_id'> {
   _id: string
   orderId: string
   items: IStockReservationItem[]
-  status: 'held' | 'committed' | 'released'
-  expiresAt: Date
+  status: 'held' | 'releasing' | 'committed' | 'released'
+  expiresAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -29,12 +29,12 @@ const stockReservationSchema = new Schema<IStockReservation>(
     ],
     status: {
       type: String,
-      enum: ['held', 'committed', 'released'],
+      enum: ['held', 'releasing', 'committed', 'released'],
       required: true,
       default: 'held',
       index: true,
     },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, index: true },
   },
   { timestamps: true }
 )

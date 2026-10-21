@@ -1,9 +1,12 @@
 'use server'
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
+import Order from '@/lib/db/models/order.model'
+import StockReservation from '@/lib/db/models/stock-reservation.model'
 import { clampLimit, clampPage, escapeRegExp, formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { normalizeProductVariants } from '../product-variants'
+import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
 import { auth } from '@/auth'
@@ -215,7 +218,7 @@ export async function getAllProducts({
 
 // GET ALL TAGS
 export async function getAllTags() {
-
+  await connectToDatabase()
   const tags = await Product.aggregate([
     { $unwind: '$tags' },
     { $group: { _id: null, uniqueTags: { $addToSet: '$tags' } } },
@@ -242,6 +245,24 @@ export async function deleteProduct(id: string) {
         throw new Error('Admin permission required')
   try {
     await connectToDatabase()
+
+    const openOrder = await Order.exists({
+      'items.product': id,
+      isPaid: { $ne: true },
+      isCancelled: { $ne: true },
+    })
+    if (openOrder)
+      throw new Error(
+        'Product is part of an open order. Cancel or fulfil the order first.'
+      )
+    const heldStock = await StockReservation.exists({
+      status: 'held',
+      'items.product': id,
+    })
+    if (heldStock)
+      throw new Error(
+        'Product has stock held by an open order. Release it first.'
+      )
 
     const res = await Product.findByIdAndDelete(id)
     if (!res) throw new Error('Product not found')
@@ -315,10 +336,10 @@ export async function getAllProductsForAdmin({
   })
   return {
     products: JSON.parse(JSON.stringify(products)) as IProduct[],
-    totalPages: Math.ceil(countProducts / pageSize),
+    totalPages: Math.ceil(countProducts / limit),
     totalProducts: countProducts,
-    from: pageSize * (safePage - 1) + 1,
-    to: pageSize * (safePage - 1) + products.length,
+    from: limit * (safePage - 1) + 1,
+    to: limit * (safePage - 1) + products.length,
   }
 }
 
@@ -349,18 +370,171 @@ export async function createProduct(data: IProductInput) {
 // UPDATE PRODUCT - ADMIN
 export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
   const session = await auth()
-  if (session?.user.role !== "admin")
+  if (session?.user.role !== 'admin')
     throw new Error('Admin permission required')
   try {
     await connectToDatabase()
 
     const product = ProductUpdateSchema.parse(data)
-    await Product.findByIdAndUpdate(
-      product._id,
-      normalizeProductVariants(product)
+    const existing = await Product.findById(product._id)
+    if (!existing) throw new Error('Product not found')
+
+    const before = new Map(
+      (existing.variants ?? []).map((variant) => [variant.id, variant])
     )
- 
+    const normalized = normalizeProductVariants(product)
+    const submittedVariants = normalized.variants ?? []
+    const update = {
+      name: normalized.name,
+      slug: normalized.slug,
+      category: normalized.category,
+      images: normalized.images,
+      brand: normalized.brand,
+      description: normalized.description,
+      price: normalized.price,
+      listPrice: normalized.listPrice,
+      lowStockThreshold: normalized.lowStockThreshold ?? 5,
+      tags: normalized.tags,
+      sizes: normalized.sizes,
+      colors: normalized.colors,
+      isPublished: normalized.isPublished,
+      taxCategory: normalized.taxCategory,
+      exemptionReasonCode: normalized.exemptionReasonCode,
+      returnPolicy: normalized.returnPolicy,
+    }
+
+    const submittedIds = new Set(submittedVariants.map((variant) => variant.id))
+    const removedVariantIds = [...before.keys()].filter(
+      (variantId) => !submittedIds.has(variantId)
+    )
+    if (removedVariantIds.length > 0) {
+      const activeHold = await StockReservation.exists({
+        status: 'held',
+        'items.product': String(existing._id),
+        'items.variantId': { $in: removedVariantIds },
+      })
+      if (activeHold)
+        throw new Error(
+          'A variant with an active stock hold cannot be removed. Release or fulfil the order first.'
+        )
+    }
+
+    // Preserve the live stock of every existing variant inside the database
+    // write itself. A stale product form can change metadata, but it can never
+    // restore stock that a reservation/return already consumed.
+    await Product.updateOne({ _id: product._id }, [
+      {
+        $set: {
+          ...update,
+          updatedAt: new Date(),
+          variants: {
+            $map: {
+              input: { $literal: submittedVariants },
+              as: 'variant',
+              in: {
+                $mergeObjects: [
+                  '$$variant',
+                  {
+                    countInStock: {
+                      $let: {
+                        vars: {
+                          current: {
+                            $first: {
+                              $filter: {
+                                input: { $ifNull: ['$variants', []] },
+                                as: 'existing',
+                                cond: {
+                                  $eq: ['$$existing.id', '$$variant.id'],
+                                },
+                              },
+                            },
+                          },
+                        },
+                        in: {
+                          $ifNull: [
+                            '$$current.countInStock',
+                            {
+                              $cond: [
+                                {
+                                  $eq: [
+                                    {
+                                      $size: {
+                                        $ifNull: ['$variants', []],
+                                      },
+                                    },
+                                    0,
+                                  ],
+                                },
+                                '$countInStock',
+                                '$$variant.countInStock',
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $set: {
+          countInStock: { $sum: '$variants.countInStock' },
+        },
+      },
+    ])
+
+    const updated = await Product.findById(product._id)
+    if (!updated) throw new Error('Product not found after update')
+    const after = new Map(
+      (updated.variants ?? []).map((variant) => [variant.id, variant])
+    )
+
+    for (const [variantId, variant] of after) {
+      if (before.has(variantId)) continue
+      const previousStock = before.size === 0 ? existing.countInStock : 0
+      if (previousStock === variant.countInStock) continue
+      await recordInventoryAdjustment({
+        product: String(existing._id),
+        productName: existing.name,
+        variantId,
+        sku: variant.sku,
+        variantLabel: [variant.size, variant.color].filter(Boolean).join(' / '),
+        previousStock,
+        newStock: variant.countInStock,
+        quantityChange: variant.countInStock - previousStock,
+        source: 'product_update',
+        reason:
+          before.size === 0
+            ? 'legacy stock migrated to default variant'
+            : 'variant created',
+        actorId: session?.user?.id,
+        actorEmail: session?.user?.email ?? '',
+      })
+    }
+    for (const [variantId, variant] of before) {
+      if (after.has(variantId)) continue
+      await recordInventoryAdjustment({
+        product: String(existing._id),
+        productName: existing.name,
+        variantId,
+        sku: variant.sku,
+        variantLabel: [variant.size, variant.color].filter(Boolean).join(' / '),
+        previousStock: variant.countInStock,
+        newStock: 0,
+        quantityChange: -variant.countInStock,
+        source: 'product_update',
+        reason: 'variant removed',
+        actorId: session?.user?.id,
+        actorEmail: session?.user?.email ?? '',
+      })
+    }
+
     await revalidateAllLocales(`/admin/products`)
+    await revalidateAllLocales(`/admin/inventory`)
 
     return {
       success: true,

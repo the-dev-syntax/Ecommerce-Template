@@ -202,6 +202,16 @@ export default function OverviewReport({
                   {t('products')}
                 </Link>
               </div>
+              {(data.lowStockCount ?? 0) > 0 && (
+                <div>
+                  <Link
+                    className='text-destructive text-xs font-medium'
+                    href='/admin/inventory'
+                  >
+                    {t('Low stock alerts')}: {data.lowStockCount}
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

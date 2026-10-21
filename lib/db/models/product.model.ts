@@ -48,6 +48,12 @@ const productSchema = new Schema<IProduct>(
       type: Number,
       required: true,
     },
+    lowStockThreshold: {
+      type: Number,
+      required: true,
+      default: 5,
+      min: 0,
+    },
     tags: { type: [String], default: ['new arrival'] },
     colors: { type: [String], default: ['White', 'Red', 'Black'] },
     sizes: { type: [String], default: ['60'] },

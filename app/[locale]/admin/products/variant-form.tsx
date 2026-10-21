@@ -20,8 +20,10 @@ import { IProductInputForm } from '@/types'
 
 export default function VariantForm({
   form,
+  isEdit = false,
 }: {
   form: UseFormReturn<IProductInputForm>
+  isEdit?: boolean
 }) {
   const t = useTranslations()
   const { control } = form
@@ -154,8 +156,13 @@ export default function VariantForm({
                   <FormItem>
                     <FormLabel>{t('Count In Stock')}</FormLabel>
                     <FormControl>
-                      <Input type='number' step='1' {...f} />
+                      <Input type='number' step='1' {...f} disabled={isEdit} />
                     </FormControl>
+                    {isEdit && (
+                      <FormDescription>
+                        {t('Use Inventory to adjust existing stock')}
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

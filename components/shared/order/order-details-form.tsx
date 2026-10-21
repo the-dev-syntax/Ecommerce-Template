@@ -234,6 +234,7 @@ export default function OrderDetailsForm({
                 <li key={`${entry.status}-${index}`}>
                   {formatDateTime(entry.at).dateTime} — {entry.status}
                   {entry.note ? ` (${entry.note})` : ''}
+                  {entry.actorEmail ? ` · ${entry.actorEmail}` : ''}
                 </li>
               ))}
             </ul>
@@ -265,6 +266,19 @@ export default function OrderDetailsForm({
                 <ProductPrice price={shippingPrice} plain convert={false} currencyCode={order.currency} />
               </div>
             </div>
+            {(order.codFee ?? 0) > 0 && (
+              <div className='flex justify-between'>
+                <div>{t('COD fee')}</div>
+                <div>
+                  <ProductPrice
+                    price={order.codFee ?? 0}
+                    plain
+                    convert={false}
+                    currencyCode={order.currency}
+                  />
+                </div>
+              </div>
+            )}
             <div className='flex justify-between'>
               <div>{t('Total')}</div>
               <div>
@@ -291,7 +305,7 @@ export default function OrderDetailsForm({
             )}
             {isAdmin && isPaid && !isDelivered && !isCancelled && (
               <>
-                <ShipOrderForm orderId={order._id} />
+                {!order.isPickup && <ShipOrderForm orderId={order._id} />}
                 <ActionButton
                   caption={t('Mark as delivered')}
                   action={() => deliverOrder(order._id)}

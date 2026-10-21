@@ -141,8 +141,13 @@ interface ProductFormUIProps {
               <FormItem className='w-full'>
                 <FormLabel>{t('List Price')}</FormLabel>
                 <FormControl>
-                  <Input placeholder={t('Enter product list price')} {...field} />
+                  <Input placeholder={t('Enter product list price')} {...field} disabled={type === 'Update'} />
                 </FormControl>
+                {type === 'Update' && (
+                  <FormDescription>
+                    {t('Edit the default variant price instead')}
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -154,8 +159,13 @@ interface ProductFormUIProps {
               <FormItem className='w-full'>
                 <FormLabel>{t('Price (VAT included)')}</FormLabel>
                 <FormControl>
-                  <Input placeholder={t('Enter product price')} {...field} />
+                  <Input placeholder={t('Enter product price')} {...field} disabled={type === 'Update'} />
                 </FormControl>
+                {type === 'Update' && (
+                  <FormDescription>
+                    {t('Edit the default variant price instead')}
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -171,10 +181,32 @@ interface ProductFormUIProps {
                     type='number'
                     placeholder={t('Enter product count in stock')}
                     {...field}
+                    disabled={type === 'Update'}
                   />
                 </FormControl>
                 <FormDescription>
-                  {t('Calculated from variants')}
+                  {t('Calculated from variants; use Inventory to adjust stock')}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='lowStockThreshold'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Low stock threshold')}</FormLabel>
+                <FormControl>
+                  <Input
+                    type='number'
+                    min={0}
+                    placeholder={t('Enter low stock threshold')}
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {t('Alert when available stock reaches this number')}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -182,7 +214,7 @@ interface ProductFormUIProps {
           />
         </div>
 
-        <VariantForm form={form} />
+        <VariantForm form={form} isEdit={type === 'Update'} />
 
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField

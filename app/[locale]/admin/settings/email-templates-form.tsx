@@ -125,7 +125,7 @@ export default function EmailTemplatesForm({
         title={t('Email verification')}
       />
       <p className='text-muted-foreground text-xs'>
-        {t('Use {token}, {name}, {siteName} and {orderNumber} in subjects.')}
+        {t('Use {token}, {name}, {siteName} and {orderNumber} in subjects')}
       </p>
     </div>
   )

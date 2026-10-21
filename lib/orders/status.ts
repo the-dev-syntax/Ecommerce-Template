@@ -19,7 +19,11 @@ export function deriveOrderStatus(order: IOrder): OrderStatus {
       if (order.isCancelled) return 'cancelled'
       if (order.isPaid) return order.isDelivered ? 'delivered' : 'paid'
     }
-    if (order.status === 'paid' && order.isDelivered) return 'delivered'
+    if (
+      (order.status === 'paid' || order.status === 'shipped') &&
+      order.isDelivered
+    )
+      return 'delivered'
     return order.status
   }
   if (order.isCancelled) return 'cancelled'

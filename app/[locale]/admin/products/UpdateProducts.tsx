@@ -22,6 +22,7 @@ const defaultValues: IProductInputForm = {
     price: 99.99,
     listPrice: 0,
     countInStock: 15,
+    lowStockThreshold: 5,
     numReviews: 0,
     avgRating: 0,
     numSales: 0,
@@ -62,6 +63,7 @@ export const UpdateProductForm = ({
           taxCategory: product.taxCategory ?? 'S',
           exemptionReasonCode: product.exemptionReasonCode ?? '',
           returnPolicy: product.returnPolicy ?? 'return_and_refund',
+          lowStockThreshold: product.lowStockThreshold ?? 5,
           variants: product.variants ?? [],
         });
         }
@@ -74,7 +76,10 @@ export const UpdateProductForm = ({
             return
           }
 
-          const res = await updateProduct({ ...values, _id: productId })
+          const res = await updateProduct({
+            ...values,
+            _id: productId,
+          })
           if (!res.success) {
             toast({
               variant: 'destructive',

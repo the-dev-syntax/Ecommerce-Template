@@ -11,12 +11,16 @@ import {
 } from '../utils'
 import { connectToDatabase } from '../db'
 import { auth } from '@/auth'
-import { OrderInputSchema } from '../validator'
+import {
+  OrderInputSchema,
+  OrderReturnInputSchema,
+  ShippingAddressSchema,
+} from '../validator'
 import Order, { IOrder } from '../db/models/order.model'
 
 import { paypal } from '../paypal'
 import { getPaymentAdapter } from '../payments/adapters'
-import { sendAskReviewOrderItems } from '@/emails'
+import { sendAskReviewOrderItems, sendOrderShippedEmail } from '@/emails'
 import { DateRange } from 'react-day-picker'
 import Product from '../db/models/product.model'
 import User from '../db/models/user.model'
@@ -28,9 +32,9 @@ import { fulfillOrder } from '../orders/fulfill-order'
 import { cancelOrderById, processOrderReturn } from '../orders/refund-order'
 import {
   releaseExpiredReservations,
+  releaseStockReservation,
   reserveStockForOrder,
 } from '../orders/stock-reservations'
-import { OrderReturnInputSchema } from '../validator'
 import type { IOrderReturnInput } from '@/types'
 import { priceOrderItems } from '../tax'
 import {
@@ -45,6 +49,7 @@ import {
 } from '../payments/stripe'
 import { getShippingProvider } from '../shipping'
 import { getShippingRates } from '../shipping/rates'
+import { getLowStockCount } from './inventory.actions'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -95,11 +100,32 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       throw new Error(`Invalid quantity for ${product.name}`)
 
     const variantId = item.variantId?.trim()
-    const variant = variantId
+    let variant = variantId
       ? product.variants?.find((candidate) => candidate.id === variantId)
       : undefined
     if (variantId && !variant)
       throw new Error(`Variant is no longer available: ${product.name}`)
+
+    // Older persisted carts may have size/color but no variant id. Resolve the
+    // matching/default variant instead of trusting the product-level price.
+    if (!variant && !variantId && (product.variants?.length ?? 0) > 0) {
+      const requestedSize = item.size?.trim()
+      const requestedColor = item.color?.trim()
+      const matched =
+        requestedSize || requestedColor
+          ? product.variants?.find(
+              (candidate) =>
+                (!requestedSize || candidate.size === requestedSize) &&
+                (!requestedColor || candidate.color === requestedColor)
+            )
+          : undefined
+      variant =
+        matched ??
+        product.variants?.find((candidate) => candidate.isDefault) ??
+        product.variants?.[0]
+    }
+    if (!variant && (product.variants?.length ?? 0) > 0)
+      throw new Error(`Choose an available variant for ${product.name}`)
 
     const availableStock = variant
       ? variant.countInStock
@@ -118,7 +144,7 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       throw new Error(`Invalid color for ${product.name}`)
 
     return {
-      clientId: item.clientId || generateId(),
+      clientId: generateId(),
       product: product._id.toString(),
       name: product.name,
       slug: product.slug,
@@ -180,6 +206,9 @@ export const createOrderFromCart = async (
 
   // Ignore every price/stock field sent by the browser.
   const items = await buildOrderItems(clientSideCart.items)
+  const shippingAddress = clientSideCart.shippingAddress
+    ? ShippingAddressSchema.parse(clientSideCart.shippingAddress)
+    : undefined
 
   const {
     availableDeliveryDates: settingDeliveryDates,
@@ -211,11 +240,11 @@ export const createOrderFromCart = async (
   ]
     .filter(Boolean)
     .join(', ')
-  const shippingQuotes = clientSideCart.shippingAddress
+  const shippingQuotes = shippingAddress
     ? await getShippingRates({
-        country: clientSideCart.shippingAddress.country,
-        region: clientSideCart.shippingAddress.province,
-        city: clientSideCart.shippingAddress.city,
+        country: shippingAddress.country,
+        region: shippingAddress.province,
+        city: shippingAddress.city,
         items: pricedItems,
         itemsPrice,
         pickupLocation,
@@ -271,7 +300,7 @@ export const createOrderFromCart = async (
   const order = OrderInputSchema.parse({
     user: userId,
     items: pricedItems,
-    shippingAddress: clientSideCart.shippingAddress,
+    shippingAddress,
     paymentMethod,
     currency: orderCurrency.toUpperCase(),
     itemsPrice,
@@ -290,7 +319,7 @@ export const createOrderFromCart = async (
     pickupLocation: selectedQuote?.pickupLocation,
     codFee,
     expectedDeliveryDate: calculateFutureDate(
-      selectedQuote ? selectedQuote.etaMaxDays : deliveryDate.daysToDeliver
+      Math.max(1, selectedQuote ? selectedQuote.etaMaxDays : deliveryDate.daysToDeliver)
     ),
   })
 
@@ -303,7 +332,11 @@ export const createOrderFromCart = async (
   })
   try {
     await releaseExpiredReservations()
-    await reserveStockForOrder(created)
+    await reserveStockForOrder({
+      ...created.toObject(),
+      _id: String(created._id),
+      paymentMethod: created.paymentMethod,
+    })
   } catch (error) {
     await Order.deleteOne({ _id: created._id })
     throw new Error(
@@ -326,7 +359,7 @@ export async function getOrderById(orderId: string): Promise<IOrder | null> {
   const order = await dbOrderWith3UserKeys(orderId)
    if (!order) throw new Error('Order not found')
 
-  if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id)) return null
+  if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id)) return null
 
   return JSON.parse(JSON.stringify(order))
 }
@@ -341,9 +374,10 @@ export async function createPayPalOrder(orderId: string) {
 
     const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
-    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
     if (order.isPaid) throw new Error('Order is already paid')
+    if (order.isCancelled) throw new Error('Order is cancelled')
     if (!isPaymentProvider(order.paymentMethod, 'paypal'))
       throw new Error('Order is not payable by PayPal')
     if (order.totalPrice <= 0) throw new Error('Order total is invalid')
@@ -387,7 +421,7 @@ export async function approvePayPalOrder(
     const order = await dbOrderWith3UserKeys(orderId)
 
     if (!order) throw new Error('Order not found')
-    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
     if (order.isPaid) {
       return {
@@ -448,7 +482,7 @@ export async function updateOrderToPaidByStripe(
     const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
 
-    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
 
     if (order.isPaid) {
@@ -498,6 +532,7 @@ export async function updateOrderToPaidByStripe(
 
     await revalidateAllLocales(`/account/orders/${orderId}`)
     await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales('/admin/orders')
 
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
@@ -519,7 +554,7 @@ export async function updateOrderToPaidByMoyasar(
     const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
 
-    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
 
     if (order.isPaid) {
@@ -571,6 +606,7 @@ export async function updateOrderToPaidByMoyasar(
 
     await revalidateAllLocales(`/account/orders/${orderId}`)
     await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales('/admin/orders')
 
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
@@ -588,6 +624,7 @@ export async function refundOrderItems(input: IOrderReturnInput) {
     const result = await processOrderReturn({
       ...parsed,
       createdBy: session?.user?.id,
+      createdByEmail: session?.user?.email ?? '',
     })
 
     await revalidateAllLocales(`/account/orders/${parsed.orderId}`)
@@ -624,6 +661,7 @@ export async function cancelOrder(
     const result = await cancelOrderById(orderId, reason, {
       manualReference,
       createdBy: session?.user?.id,
+      createdByEmail: session?.user?.email ?? '',
     })
 
     await revalidateAllLocales(`/account/orders/${orderId}`)
@@ -653,11 +691,12 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
     const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
 
-    if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
+    if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       return { error: 'Error accessing order' }
 
     if (!isPaymentProvider(order.paymentMethod, 'stripe') || order.isPaid)
       return { error: 'Not payable via Stripe' }
+    if (order.isCancelled) return { error: 'Order is cancelled' }
     if (order.totalPrice <= 0) return { error: 'Order total is invalid' }
 
     const currency = (order.currency || 'USD').toLowerCase()
@@ -727,6 +766,9 @@ export const calcDeliveryDateAndPrice = async ({
   // An empty cart is valid while the customer is removing items.
   const items =
     clientItems.length === 0 ? [] : await buildOrderItems(clientItems)
+  const parsedShippingAddress = shippingAddress
+    ? ShippingAddressSchema.parse(shippingAddress)
+    : undefined
 
   const {
     availableDeliveryDates: settingDeliveryDates,
@@ -747,11 +789,11 @@ export const calcDeliveryDateAndPrice = async ({
   ]
     .filter(Boolean)
     .join(', ')
-  const shippingQuotes = shippingAddress
+  const shippingQuotes = parsedShippingAddress
     ? await getShippingRates({
-        country: shippingAddress.country,
-        region: shippingAddress.province,
-        city: shippingAddress.city,
+        country: parsedShippingAddress.country,
+        region: parsedShippingAddress.province,
+        city: parsedShippingAddress.city,
         items: pricedItems,
         itemsPrice,
         pickupLocation,
@@ -962,11 +1004,13 @@ export async function getOrderSummary(date: DateRange) {
     .populate('user', 'name')
     .sort({ createdAt: 'desc' })
     .limit(pageSize)
+  const lowStockCount = await getLowStockCount()
   return {
     ordersCount,
     productsCount,
     usersCount,
     totalSales,
+    lowStockCount,
     monthlySales: JSON.parse(JSON.stringify(monthlySales)),
     salesChartData: JSON.parse(JSON.stringify(await getSalesChartData(date))),
     topSalesCategories: JSON.parse(JSON.stringify(topSalesCategories)),
@@ -1131,6 +1175,15 @@ export async function deleteOrder(id: string) {
           'Paid orders cannot be deleted. Keep them for accounting and order history.',
       }
     }
+
+    try {
+      await releaseStockReservation(id, true)
+    } catch (error) {
+      console.error(
+        'Order deleted, but releasing its stock failed:',
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+    }
    
    await revalidateAllLocales(`/admin/orders`)
 
@@ -1178,7 +1231,8 @@ export async function getAllOrders({
 // UPDATE ORDER TO PAID - ADMIN (manual / COD collection)
 export async function updateOrderToPaid(orderId: string) {
   try {
-    requireAdmin(await auth())
+    const session = await auth()
+    requireAdmin(session)
 
     await connectToDatabase()
 
@@ -1187,19 +1241,26 @@ export async function updateOrderToPaid(orderId: string) {
     if (order.isPaid)
       return { success: true, message: 'Order is already paid' }
     if (order.isCancelled) throw new Error('Order is cancelled')
+    if (order.paymentMethod !== 'Cash On Delivery')
+      throw new Error(
+        'Only cash-on-delivery orders can be marked paid manually'
+      )
 
     await fulfillOrder({
       orderId,
       provider: order.paymentMethod,
-      paymentId: order.paymentResult?.id || `manual-${Date.now()}`,
+      paymentId: order.paymentResult?.id || `manual-cod-${Date.now()}`,
       amountPaid: order.totalPrice,
       currency: order.currency || 'USD',
       email: order.user?.email ?? '',
       status: 'COMPLETED',
+      actorId: session?.user?.id,
+      actorEmail: session?.user?.email ?? '',
     })
 
     await revalidateAllLocales(`/account/orders/${orderId}`)
     await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales('/admin/orders')
 
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
@@ -1221,6 +1282,17 @@ export async function shipOrder(
     const tracking = trackingNumber?.trim()
     if (!tracking || tracking.length > 100)
       throw new Error('A valid tracking number is required')
+    const trackingLink = trackingUrl?.trim()
+    if (trackingLink) {
+      let parsed: URL
+      try {
+        parsed = new URL(trackingLink)
+      } catch {
+        throw new Error('Tracking URL must be a valid URL')
+      }
+      if (!['http:', 'https:'].includes(parsed.protocol))
+        throw new Error('Tracking URL must use http or https')
+    }
 
     await connectToDatabase()
     const order = await dbOrderWith3UserKeys(orderId)
@@ -1228,13 +1300,15 @@ export async function shipOrder(
     if (order.isCancelled) throw new Error('Order is cancelled')
     if (!order.isPaid) throw new Error('Order is not paid')
     if (order.isDelivered) throw new Error('Order is already delivered')
+    if (order.isPickup)
+      throw new Error('Pickup orders do not require a shipment')
 
     const provider = getShippingProvider('manual')
     if (!provider) throw new Error('Shipping provider is unavailable')
     const shipment = await provider.createShipment({
       orderId,
       trackingNumber: tracking,
-      trackingUrl: trackingUrl?.trim() || undefined,
+      trackingUrl: trackingLink || undefined,
     })
 
     order.status = 'shipped'
@@ -1244,6 +1318,8 @@ export async function shipOrder(
         status: 'shipped',
         at: new Date(),
         note: `Tracking ${shipment.trackingNumber}`,
+        actorId: session.user.id,
+        actorEmail: session.user.email ?? '',
       },
     ]
     order.shipment = {
@@ -1255,8 +1331,18 @@ export async function shipOrder(
     }
     await order.save()
 
+    try {
+      if (order.user?.email) await sendOrderShippedEmail({ order })
+    } catch (error) {
+      console.error(
+        'Order shipped, but shipment email failed:',
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+    }
+
     await revalidateAllLocales(`/account/orders/${orderId}`)
     await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales('/admin/orders')
     return { success: true, message: 'Order marked as shipped' }
   } catch (err) {
     return { success: false, message: formatError(err) }
@@ -1277,13 +1363,23 @@ export async function deliverOrder(orderId: string) {
     if (!order) throw new Error('Order not found')
     if (order.isCancelled) throw new Error('Cancelled orders cannot be delivered')
     if (!order.isPaid) throw new Error('Order is not paid')
+    if (order.isDelivered)
+      return { success: true, message: 'Order is already delivered' }
+    if (!order.isPickup && !order.shipment?.trackingNumber)
+      throw new Error('Mark the order as shipped before delivery')
 
     order.isDelivered = true
     order.deliveredAt = new Date()
     order.status = 'delivered'
     order.statusHistory = [
       ...(order.statusHistory ?? []),
-      { status: 'delivered', at: new Date(), note: 'Delivered' },
+      {
+        status: 'delivered',
+        at: new Date(),
+        note: 'Delivered',
+        actorId: session.user.id,
+        actorEmail: session.user.email ?? '',
+      },
     ]
     if (order.shipment) {
       order.shipment.deliveredAt = new Date()
@@ -1292,9 +1388,18 @@ export async function deliverOrder(orderId: string) {
 
     await order.save()
 
-    if (order.user.email) await sendAskReviewOrderItems({ order })
+    try {
+      if (order.user?.email) await sendAskReviewOrderItems({ order })
+    } catch (error) {
+      console.error(
+        'Delivered order saved, but review email failed:',
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+    }
   
     await revalidateAllLocales(`/account/orders/${orderId}`)
+    await revalidateAllLocales(`/admin/orders/${orderId}`)
+    await revalidateAllLocales('/admin/orders')
 
     return { success: true, message: 'Order delivered successfully' }
     

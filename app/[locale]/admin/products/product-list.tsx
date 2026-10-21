@@ -2,6 +2,7 @@
 'use client'
 import Link from 'next/link'
 import DeleteDialog from '@/components/shared/delete-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -29,6 +30,13 @@ type ProductListDataProps = {
   totalProducts: number
   to: number
   from: number
+}
+
+function isLowStock(product: IProduct) {
+  const threshold = product.lowStockThreshold ?? 5
+  return product.variants?.length
+    ? product.variants.some((variant) => variant.countInStock <= threshold)
+    : product.countInStock <= threshold
 }
 const ProductList = () => {
 
@@ -139,7 +147,13 @@ const ProductList = () => {
                   </TableCell>
                   <TableCell className='text-left'>${product.price}</TableCell>
                   <TableCell>{product.category}</TableCell>
-                  <TableCell>{product.countInStock}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={isLowStock(product) ? 'destructive' : 'secondary'}
+                    >
+                      {product.countInStock}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{product.avgRating}</TableCell>
                   <TableCell>{product.isPublished ? t('Yes') : t('No')}</TableCell>
                   <TableCell>

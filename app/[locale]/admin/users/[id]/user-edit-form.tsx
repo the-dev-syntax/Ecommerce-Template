@@ -40,7 +40,10 @@ export default function UserEditForm({ user }: { user: IUser })  {
 
   const form = useForm<z.infer<typeof UserUpdateSchema>>({
     resolver: zodResolver(UserUpdateSchema),
-    defaultValues: user,
+    defaultValues: {
+      ...user,
+      emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
+    },
   })
 
   async function onSubmit(values: z.infer<typeof UserUpdateSchema>) {

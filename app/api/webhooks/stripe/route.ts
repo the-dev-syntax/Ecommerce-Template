@@ -65,7 +65,14 @@ export async function POST(req: NextRequest) {
     // Backward-compatible fallback if the endpoint is still subscribed to charges.
     if (event.type === 'charge.succeeded') {
       const charge = event.data.object as Stripe.Charge
-      if (!charge.paid) return NextResponse.json({ received: true })
+      if (!charge.paid) {
+        await finishPaymentEvent(
+          paymentEventId,
+          'ignored',
+          'Charge was not paid'
+        )
+        return NextResponse.json({ received: true })
+      }
 
       let orderId = charge.metadata.orderId
       if (!orderId && typeof charge.payment_intent === 'string') {

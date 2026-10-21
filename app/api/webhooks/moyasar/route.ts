@@ -19,6 +19,7 @@ import {
   toMoyasarAmount,
   verifyMoyasarWebhookToken,
 } from '@/lib/payments/moyasar'
+import { round2 } from '@/lib/utils'
 
 type MoyasarWebhook = {
   type?: string
@@ -110,23 +111,84 @@ export async function POST(req: NextRequest) {
     }
 
     if (event.type === 'payment_refunded') {
-      // Keep the order in sync when a refund is issued from the dashboard.
-      const refundedAmount = (payment.refunded ?? 0) / 100
-      order.refundedAmount = refundedAmount
-      order.refundedAt = order.refundedAt ?? new Date()
-      if (refundedAmount >= payment.amount / 100) {
-        order.paymentResult = {
-          id: order.paymentResult?.id ?? payment.id,
-          status: 'refunded',
-          email_address: order.paymentResult?.email_address ?? '',
-          pricePaid:
-            order.paymentResult?.pricePaid ?? order.totalPrice.toFixed(2),
-        }
+      if (!order.isPaid) {
+        throw new Error('Refund received before the order was paid')
       }
-      await order.save()
+      // Keep the order in sync when a refund is issued from the dashboard.
+      const refundedAmount = round2((payment.refunded ?? 0) / 100)
+      const refundedAt = new Date()
+      let current = order
+      let refundDelta = 0
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const previousRefunded = round2(current.refundedAmount ?? 0)
+        if (refundedAmount <= previousRefunded) {
+          return respond('ignored', 'Refund already recorded')
+        }
+        if (refundedAmount > round2(current.totalPrice) + 0.01) {
+          return respond('ignored', 'Refund exceeds the order total')
+        }
+
+        refundDelta = round2(refundedAmount - previousRefunded)
+        const fullRefund =
+          refundedAmount >= round2(current.totalPrice) - 0.01
+        const updated = await Order.findOneAndUpdate(
+          { _id: current._id, refundedAmount: previousRefunded },
+          {
+            $set: {
+              refundedAmount,
+              refundedAt,
+              ...(fullRefund
+                ? {
+                    status: 'refunded',
+                    shippingRefunded: true,
+                    paymentResult: {
+                      id: current.paymentResult?.id ?? payment.id,
+                      status: 'refunded',
+                      email_address:
+                        current.paymentResult?.email_address ?? '',
+                      pricePaid:
+                        current.paymentResult?.pricePaid ??
+                        current.totalPrice.toFixed(2),
+                    },
+                  }
+                : {}),
+            },
+            $push: {
+              refundHistory: {
+                amount: refundDelta,
+                provider: 'Moyasar',
+                refundedAt,
+                reason: 'Moyasar dashboard refund',
+                reference: payment.id,
+              },
+              statusHistory: {
+                status: fullRefund ? 'refunded' : current.status ?? 'paid',
+                at: refundedAt,
+                note: `Moyasar refund ${refundedAmount.toFixed(2)} ${current.currency}`,
+              },
+            },
+          },
+          { new: true }
+        )
+        if (updated) {
+          current = updated
+          refundDelta = round2(refundedAmount - previousRefunded)
+          break
+        }
+        const reloaded = await Order.findById(orderId)
+        if (!reloaded) return respond('ignored', 'Order not found')
+        current = reloaded
+        if (attempt === 2)
+          throw new Error('Moyasar refund reconciliation contention')
+      }
+
       try {
         const creditNote = await createInvoiceForOrder(orderId, 'credit_note', {
-          refundedAmount,
+          eventId: `moyasar-refund:${payment.id}:${refundedAmount.toFixed(2)}`,
+          reason: 'return',
+          refundedAmount: refundDelta,
+          notes: 'Moyasar dashboard refund',
         })
         await queueZatcaForInvoice(String(creditNote._id))
       } catch (error) {

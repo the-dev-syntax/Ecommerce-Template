@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table'
 import { getMyOrders } from '@/lib/actions/order.actions'
 import { IOrder } from '@/lib/db/models/order.model'
+import { deriveOrderStatus } from '@/lib/orders/status'
 import { formatDateTime, formatId } from '@/lib/utils'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import ProductPrice from '@/components/shared/product/product-price'
@@ -50,15 +51,17 @@ export default async function OrdersPage(props: {  searchParams: Promise<{ page:
               <TableHead>{t('Id')}</TableHead>
               <TableHead>{t('Date')}</TableHead>
               <TableHead>{t('Total')}</TableHead>
+              <TableHead>{t('Status')}</TableHead>
               <TableHead>{t('Paid')}</TableHead>
               <TableHead>{t('Delivered')}</TableHead>
+              <TableHead>{t('Tracking')}</TableHead>
               <TableHead>{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.data.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className=''>
+                <TableCell colSpan={8} className=''>
                   {t("YouHaveNoOrders")}
                 </TableCell>
               </TableRow>
@@ -74,8 +77,14 @@ export default async function OrdersPage(props: {  searchParams: Promise<{ page:
                   {formatDateTime(order.createdAt!).dateTime}
                 </TableCell>
                 <TableCell>
-                  <ProductPrice price={order.totalPrice} plain />
+                  <ProductPrice
+                    price={order.totalPrice}
+                    plain
+                    convert={false}
+                    currencyCode={order.currency}
+                  />
                 </TableCell>
+                <TableCell>{deriveOrderStatus(order)}</TableCell>
                 <TableCell>
                   {order.isPaid && order.paidAt
                     ? formatDateTime(order.paidAt).dateTime
@@ -85,6 +94,24 @@ export default async function OrdersPage(props: {  searchParams: Promise<{ page:
                   {order.isDelivered && order.deliveredAt
                     ? formatDateTime(order.deliveredAt).dateTime
                     : t('No')}
+                </TableCell>
+                <TableCell>
+                  {order.shipment?.trackingNumber ? (
+                    order.shipment.trackingUrl ? (
+                      <a
+                        href={order.shipment.trackingUrl}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='underline'
+                      >
+                        {order.shipment.trackingNumber}
+                      </a>
+                    ) : (
+                      order.shipment.trackingNumber
+                    )
+                  ) : (
+                    '—'
+                  )}
                 </TableCell>
                 <TableCell>
                   <Link href={`/account/orders/${order._id}`}>

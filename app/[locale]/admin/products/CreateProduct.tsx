@@ -20,6 +20,7 @@ const defaultValues: IProductInputForm = {
         price: 0,
         listPrice: 0,
         countInStock: 0,
+        lowStockThreshold: 5,
         numReviews: 0,
         avgRating: 0,
         numSales: 0,

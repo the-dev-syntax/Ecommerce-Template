@@ -312,7 +312,26 @@ Known limits:
 - Added Saudi address fields: district and national address alongside city/province/postal code.
 - Admin order list shows order status; order details show the status timeline and tracking.
 - Verification: `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (704 keys), `npm test` (41 tests), `npm run build` — PASS.
-- Remaining Phase 4 work: carrier adapters, customer return notifications, low-stock alerts and inventory adjustment audit.
+- Remaining Phase 4 work: carrier adapters.
+
+## P0-33 - Inventory alerts, audit trail and lifecycle hardening (2026-10-22)
+
+
+- Added `/admin/inventory` with low-stock alerts, variant-level stock adjustments, reasons/notes, and a full adjustment history. Every adjustment records the actor, previous/new stock, source and time.
+
+- Added `lowStockThreshold` to products, a low-stock badge on the product list, and a low-stock link on the dashboard.
+
+- Inventory movements are now audited for manual adjustments, reservations, releases, expiry, fulfillment, cancellation and return restocking.
+
+- Added shipment and refund/return customer emails; the account order list now shows order status and tracking.
+
+- Fixed customer order access: owner ids are compared as strings, and admins can still open orders whose customer account was deleted.
+
+- Hardened the lifecycle: retryable failed webhooks, idempotent delivery, COD holds that do not expire in 30 minutes, atomic release claims to prevent double restocking, in-transit cancellation blocking, stale product-save protection, server-generated order line ids, required variants for variant products, and pickup delivery-date validation.
+
+- Restricted manual "mark as paid" to COD, fixed admin email-verification edits, required manual refund references for paid non-Moyasar cancellations, and locked product price/stock fields to their variant/inventory sources.
+
+- Verification: `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (770 keys), `npm test` (52 tests), `npm run build` - PASS.
 
 ## P0-32 - Admin shipping zones, rates and SMSA defaults (2026-10-21)
 
@@ -791,9 +810,9 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [x] Build the provider-agnostic shipping API now: manual shipment creation, tracking number/URL, shipment status, and a signed cron endpoint for reservation expiry. Carrier adapters are next.
 - [x] Define a `ShippingProvider` interface so Aramex, SMSA, Saudi Post, and Naqel can be added later without changing checkout.
 - [x] Add Saudi address fields (district, national address) alongside region/city and postal code.
-- [x] Add returns/refunds workflow (item-level returns, final sale, shipping rules); customer return notifications remain.
-- [ ] Add low-stock alerts and inventory adjustments with an audit trail.
-- [ ] Acceptance: full order lifecycle is operable from admin, tracking is visible to customers, and stock can never go negative.
+- [x] Add returns/refunds workflow (item-level returns, final sale, shipping rules) and customer shipment/refund notifications.
+- [x] Add low-stock alerts and inventory adjustments with an audit trail.
+- [x] Acceptance: full order lifecycle is operable from admin, tracking is visible to customers, and stock can never go negative.
 
 ### Phase 5 — Security and compliance (P0)
 - [ ] Add a full Content-Security-Policy allow-list for Stripe/PayPal/UploadThing/analytics, with nonce/hash support; keep `frame-ancestors`, HSTS, and `nosniff`.

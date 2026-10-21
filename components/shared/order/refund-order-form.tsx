@@ -80,9 +80,7 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
   const canCancel =
     !order.isDelivered &&
     !order.isCancelled &&
-    (order.paymentMethod === 'Moyasar' ||
-      order.paymentMethod === 'Cash On Delivery' ||
-      !order.isPaid) &&
+    order.shipment?.status !== 'in_transit' &&
     (remainingPayment === 0 || refundedAmount === 0)
   const isManualRefund =
     order.paymentMethod !== 'Moyasar' || refundedAmount > 0
@@ -112,7 +110,7 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
         taxRate: order.taxRate ?? 0.15,
       })
       const shippingAmount = getShippingRefundAmount(
-        order.shippingPrice,
+        round2(order.shippingPrice + (order.codFee ?? 0)),
         reason,
         order.shippingRefunded ?? false
       )
@@ -146,6 +144,7 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
     !preview.error &&
     preview.total > 0 &&
     (!overrideRequired || overrideReason.trim().length > 0) &&
+    (!isManualRefund || manualReference.trim().length > 0) &&
     !isRefunding
 
   if (!canReturn && !canCancel) return null
@@ -213,7 +212,7 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
           <div>
             <h3 className='font-bold'>{t('Return and refund')}</h3>
             <p className='text-muted-foreground text-sm'>
-              {t('Select the items being returned or refunded.')}
+              {t('Select the items being returned or refunded')}
             </p>
             <p className='text-muted-foreground text-xs'>
               {t('Shipping is non-refundable for change-of-mind returns')}
@@ -355,9 +354,9 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
               <p className='text-muted-foreground text-xs'>
                 {order.paymentMethod === 'Moyasar' && refundedAmount > 0
                   ? t(
-                      'Moyasar cannot refund this payment again; record the refund manually.'
+                      'Moyasar cannot refund this payment again; record the refund manually'
                     )
-                  : t('Record the refund reference after returning the money.')}
+                  : t('Record the refund reference after returning the money')}
               </p>
             </div>
           )}
@@ -434,10 +433,10 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
               />
             </div>
 
-            {order.isPaid && order.paymentMethod !== 'Moyasar' && (
+            {order.isPaid && isManualRefund && (
               <div className='space-y-2'>
                 <Label htmlFor='cancel-reference'>
-                  {t('Manual refund reference')} ({t('Optional')})
+                  {t('Manual refund reference')}
                 </Label>
                 <Input
                   id='cancel-reference'
@@ -455,7 +454,10 @@ export default function RefundOrderForm({ order }: { order: IOrder }) {
               <Button
                 type='button'
                 variant='destructive'
-                disabled={isCancelling}
+                disabled={
+                  isCancelling ||
+                  (order.isPaid && isManualRefund && !cancelReference.trim())
+                }
                 onClick={handleCancel}
               >
                 {isCancelling ? t('Processing') : t('ConfirmCancellation')}

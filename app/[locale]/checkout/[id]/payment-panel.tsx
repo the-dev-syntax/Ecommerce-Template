@@ -78,7 +78,7 @@ function PayPalLoadingState() {
   const [{ isPending, isRejected }] = usePayPalScriptReducer()
   const t = useTranslations()
   if (isPending) return <>{t('Loading PayPal')}</>
-  if (isRejected) return <>{t('Error in loading PayPal.')}</>
+  if (isRejected) return <>{t('Error in loading PayPal')}</>
   return null
 }
 

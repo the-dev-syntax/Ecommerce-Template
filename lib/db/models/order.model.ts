@@ -30,7 +30,13 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   disputeStatus?: string
   disputedAt?: Date
   status?: OrderStatus
-  statusHistory?: { status: OrderStatus; at: Date; note?: string }[]
+  statusHistory?: {
+    status: OrderStatus
+    at: Date
+    note?: string
+    actorId?: string
+    actorEmail?: string
+  }[]
   shipment?: {
     provider: string
     trackingNumber: string
@@ -176,6 +182,8 @@ const orderSchema = new Schema<IOrder>(
         status: { type: String, required: true },
         at: { type: Date, required: true },
         note: { type: String },
+        actorId: { type: String },
+        actorEmail: { type: String },
       },
     ],
     shipment: {

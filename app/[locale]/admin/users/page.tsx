@@ -45,7 +45,7 @@ export default async function AdminUser(props: {
     return (
       <div className='space-y-2'>
         <h1 className='h1-bold'>{t('Users')}</h1>
-        <p className='text-destructive'>{t('Error loading users: Problem with Auth or Database Connection.')}</p>
+        <p className='text-destructive'>{t('Error loading users: Problem with Auth or Database Connection')}</p>
       </div>
     )
   }

@@ -22,6 +22,31 @@ export async function beginPaymentEvent(input: {
     return { duplicate: false as const, event }
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
+      const existing = await PaymentEvent.findOne({
+        provider: input.provider,
+        eventId: input.eventId,
+      })
+      if (!existing) return { duplicate: true as const, event: null }
+
+      const receivedAt = new Date(existing.receivedAt).getTime()
+      const stale =
+        Date.now() - receivedAt > 5 * 60 * 1000 &&
+        existing.status === 'received'
+      if (existing.status === 'failed' || stale) {
+        const retried = await PaymentEvent.findOneAndUpdate(
+          { _id: existing._id, status: existing.status },
+          {
+            $set: {
+              status: 'received',
+              receivedAt: new Date(),
+              message: '',
+            },
+          },
+          { new: true }
+        )
+        if (retried) return { duplicate: false as const, event: retried }
+      }
+
       return { duplicate: true as const, event: null }
     }
     throw error

@@ -72,6 +72,11 @@ export const ProductInputSchema = z.object({
     .number()
     .int()
     .nonnegative('count in stock must be a non-negative number'),
+  lowStockThreshold: z.coerce
+    .number()
+    .int()
+    .nonnegative('low stock threshold must be a non-negative number')
+    .optional(),
   tags: z.array(z.string()).default([]),
   sizes: z.array(z.string()).default([]),
   colors: z.array(z.string()).default([]),
@@ -96,7 +101,7 @@ export const ProductInputSchema = z.object({
 
 // updating an existing product
 export const ProductUpdateSchema = ProductInputSchema.extend({
-  _id: z.string()
+  _id: z.string(),
 })
 
 
@@ -401,6 +406,11 @@ export const ProductInputFormSchema = z.object({
     .number()
     .int()
     .nonnegative('count in stock must be a non-negative number'),
+  lowStockThreshold: z.coerce
+    .number()
+    .int()
+    .nonnegative('low stock threshold must be a non-negative number')
+    .optional(),
   tags: z.array(z.string()),
   sizes: z.array(z.string()),
   colors: z.array(z.string()),

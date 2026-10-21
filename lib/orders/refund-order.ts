@@ -1,12 +1,13 @@
 import mongoose from 'mongoose'
 
 import { connectToDatabase } from '@/lib/db'
-import Order, { IOrder } from '@/lib/db/models/order.model'
+import Order, { IOrder, type OrderWithUser } from '@/lib/db/models/order.model'
 import OrderReturn, {
   type RefundProvider,
 } from '@/lib/db/models/order-return.model'
 import Product from '@/lib/db/models/product.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
+import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
 import {
   markStockReservationReleased,
   releaseStockReservation,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/returns/calculations'
 import type { RefundReason } from '@/lib/returns/policy'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
+import { sendReturnConfirmationEmail } from '@/emails'
 import {
   fetchMoyasarPayment,
   isMoyasarRefundable,
@@ -50,6 +52,7 @@ export interface ProcessOrderReturnInput {
   idempotencyKey: string
   forceManual?: boolean
   createdBy?: string
+  createdByEmail?: string
 }
 
 export interface ProcessOrderReturnResult {
@@ -174,21 +177,38 @@ export async function processOrderReturn(
     paymentStatus =
       refundedAmount >= payment.amount / 100 ? 'refunded' : payment.status
   } else {
-    refundedAmount = round2(previousRefunded + refundAmount)
-    refundReference = refundReference || 'manual'
+    if (previousRefunded + refundAmount > round2(order.totalPrice) + 0.01)
+      throw new Error('Refund exceeds the order total')
+    if (!refundReference)
+      throw new Error(
+        'A manual refund reference is required before recording this refund.'
+      )
   }
 
-  if (refundedAmount > round2(order.totalPrice) + 0.01) {
+  if (provider === 'Moyasar' && refundedAmount > round2(order.totalPrice) + 0.01) {
     throw new Error('Refund exceeds the order total')
   }
-  fullyRefunded = refundedAmount >= round2(order.totalPrice) - 0.01
 
   const refundedAt = new Date()
   const session = await mongoose.connection.startSession()
   let returnId = ''
+  const restockAudit: {
+    product: string
+    productName: string
+    variantId?: string
+    sku?: string
+    variantLabel?: string
+    previousStock: number
+    newStock: number
+    quantityChange: number
+    source: 'return_restocked' | 'order_cancelled'
+    orderId: string
+    returnId?: string
+  }[] = []
 
   try {
     await session.withTransaction(async () => {
+      restockAudit.length = 0
       const fresh = await Order.findById(input.orderId).session(session)
       if (!fresh) throw new Error('Order not found')
       if (!fresh.isPaid) throw new Error('Order is not paid')
@@ -213,6 +233,17 @@ export async function processOrderReturn(
       if (Math.abs(freshRefund - refundAmount) >= 0.01) {
         throw new Error('The order changed while the refund was processed')
       }
+      const freshPreviousRefunded = round2(fresh.refundedAmount ?? 0)
+      const nextRefundedAmount =
+        provider === 'Moyasar'
+          ? refundedAmount
+          : round2(freshPreviousRefunded + freshRefund)
+      if (nextRefundedAmount > round2(fresh.totalPrice) + 0.01) {
+        throw new Error('Refund exceeds the order total')
+      }
+      refundedAmount = nextRefundedAmount
+      fullyRefunded =
+        nextRefundedAmount >= round2(fresh.totalPrice) - 0.01
 
       const [createdReturn] = await OrderReturn.create(
         [
@@ -273,13 +304,36 @@ export async function processOrderReturn(
               ? { 'variants.$.countInStock': line.quantity }
               : {}),
           }
-          await Product.updateOne(
+          const product = await Product.findOneAndUpdate(
             line.variantId
               ? { _id: line.product, 'variants.id': line.variantId }
               : { _id: line.product },
             { $inc: increment },
-            { session }
+            { new: true, session }
           )
+          if (product) {
+            const variant = line.variantId
+              ? product.variants?.find((entry) => entry.id === line.variantId)
+              : undefined
+            const newStock = variant
+              ? variant.countInStock
+              : product.countInStock
+            restockAudit.push({
+              product: String(product._id),
+              productName: product.name,
+              variantId: variant?.id,
+              sku: variant?.sku,
+              variantLabel: variant
+                ? [variant.size, variant.color].filter(Boolean).join(' / ')
+                : '',
+              previousStock: newStock - line.quantity,
+              newStock,
+              quantityChange: line.quantity,
+              source: 'return_restocked',
+              orderId: String(fresh._id),
+              returnId,
+            })
+          }
         }
       }
 
@@ -335,6 +389,8 @@ export async function processOrderReturn(
               note: allItemsRefunded
                 ? 'All items returned'
                 : 'Return processed',
+              actorId: input.createdBy,
+              actorEmail: input.createdByEmail,
             },
           },
         },
@@ -343,6 +399,15 @@ export async function processOrderReturn(
     })
   } finally {
     await session.endSession()
+  }
+
+  for (const entry of restockAudit) {
+    await recordInventoryAdjustment({
+      ...entry,
+      reason: 'Return restock',
+      actorId: input.createdBy,
+      actorEmail: input.createdByEmail,
+    })
   }
 
   try {
@@ -358,6 +423,22 @@ export async function processOrderReturn(
   } catch (error) {
     console.error(
       'Credit note creation failed (the invoice page retries):',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
+  }
+
+  try {
+    const notificationOrder = await Order.findById(input.orderId).populate<{
+      user: { _id: string; email: string; name: string }
+    }>('user', '_id name email')
+    if (notificationOrder?.user?.email)
+      await sendReturnConfirmationEmail({
+        order: notificationOrder as unknown as OrderWithUser,
+        refundAmount,
+      })
+  } catch (error) {
+    console.error(
+      'Refund saved, but return email failed:',
       error instanceof Error ? error.message : 'Unknown error'
     )
   }
@@ -384,7 +465,7 @@ export async function processOrderReturn(
 export async function cancelOrderById(
   orderId: string,
   reason?: string,
-  options: { manualReference?: string; createdBy?: string } = {}
+  options: { manualReference?: string; createdBy?: string; createdByEmail?: string } = {}
 ) {
   await connectToDatabase()
 
@@ -401,6 +482,10 @@ export async function cancelOrderById(
     }
   if (order.isDelivered)
     throw new Error('Delivered orders cannot be cancelled')
+  if (order.shipment?.status === 'in_transit')
+    throw new Error(
+      'In-transit orders cannot be cancelled. Mark the shipment returned first.'
+    )
 
   const wasPaid = order.isPaid
   const previousRefunded = round2(order.refundedAmount ?? 0)
@@ -435,12 +520,20 @@ export async function cancelOrderById(
           throw new Error(
             'This payment was partially refunded. Record the remaining cancellation refund manually.'
           )
+        refundedAmount = round2((payment.refunded ?? 0) / 100)
+        refundedAt = new Date()
+        provider = 'Moyasar'
+        paymentStatus = 'refunded'
       } else {
         throw new Error(`Payment cannot be cancelled (status: ${payment.status})`)
       }
     } else {
       // COD, Stripe, PayPal, or a second refund on a Moyasar payment: record the
       // refund as manual. The money is returned outside the gateway.
+      if (!options.manualReference?.trim())
+        throw new Error(
+          'A manual refund reference is required before cancelling a paid order.'
+        )
       refundedAmount = round2(order.totalPrice)
       refundedAt = new Date()
       provider = 'Manual'
@@ -450,9 +543,23 @@ export async function cancelOrderById(
   const now = refundedAt ?? new Date()
   const session = await mongoose.connection.startSession()
   let alreadyCancelled = false
+  const restockAudit: {
+    product: string
+    productName: string
+    variantId?: string
+    sku?: string
+    variantLabel?: string
+    previousStock: number
+    newStock: number
+    quantityChange: number
+    source: 'return_restocked' | 'order_cancelled'
+    orderId: string
+    returnId?: string
+  }[] = []
 
   try {
     await session.withTransaction(async () => {
+      restockAudit.length = 0
       const fresh = await Order.findById(orderId).session(session)
       if (!fresh) throw new Error('Order not found')
 
@@ -462,6 +569,10 @@ export async function cancelOrderById(
       }
       if (fresh.isDelivered)
         throw new Error('Delivered orders cannot be cancelled')
+      if (fresh.isPaid !== wasPaid)
+        throw new Error(
+          'The order payment state changed. Reload and try again.'
+        )
 
       if (wasPaid) {
         for (const item of fresh.items) {
@@ -472,13 +583,35 @@ export async function cancelOrderById(
               ? { 'variants.$.countInStock': item.quantity }
               : {}),
           }
-          await Product.updateOne(
+          const product = await Product.findOneAndUpdate(
             item.variantId
               ? { _id: item.product, 'variants.id': item.variantId }
               : { _id: item.product },
             { $inc: increment },
-            { session }
+            { new: true, session }
           )
+          if (product) {
+            const variant = item.variantId
+              ? product.variants?.find((entry) => entry.id === item.variantId)
+              : undefined
+            const newStock = variant
+              ? variant.countInStock
+              : product.countInStock
+            restockAudit.push({
+              product: String(product._id),
+              productName: product.name,
+              variantId: variant?.id,
+              sku: variant?.sku,
+              variantLabel: variant
+                ? [variant.size, variant.color].filter(Boolean).join(' / ')
+                : '',
+              previousStock: newStock - item.quantity,
+              newStock,
+              quantityChange: item.quantity,
+              source: 'order_cancelled',
+              orderId: String(fresh._id),
+            })
+          }
         }
         const previouslyRefunded = fresh.refundedAmount ?? 0
         if (refundedAmount > previouslyRefunded) {
@@ -536,6 +669,8 @@ export async function cancelOrderById(
               status: 'cancelled',
               at: new Date(),
               note: reason?.trim() || 'Cancelled',
+              actorId: options.createdBy,
+              actorEmail: options.createdByEmail,
             },
           },
         },
@@ -546,15 +681,32 @@ export async function cancelOrderById(
     await session.endSession()
   }
 
+  for (const entry of restockAudit) {
+    await recordInventoryAdjustment({
+      ...entry,
+      reason: reason?.trim() || 'Order cancelled',
+      actorId: options.createdBy,
+      actorEmail: options.createdByEmail,
+    })
+  }
+
   if (!alreadyCancelled) {
-    if (wasPaid) {
-      await markStockReservationReleased(orderId)
-    } else {
-      await releaseStockReservation(orderId, true)
+    try {
+      if (wasPaid) {
+        await markStockReservationReleased(orderId)
+      } else {
+        await releaseStockReservation(orderId, true)
+      }
+    } catch (error) {
+      console.error(
+        'Order cancelled, but releasing its stock failed:',
+        error instanceof Error ? error.message : 'Unknown error'
+      )
     }
   }
 
-  if (refundedAmount > 0) {
+  const cancellationRefundDelta = round2(refundedAmount - previousRefunded)
+  if (cancellationRefundDelta > 0.01) {
     try {
       const cancellationOrder = await Order.findById(orderId).lean()
       if (cancellationOrder) {
@@ -568,21 +720,31 @@ export async function cancelOrderById(
         const shippingAmount = shippingStillRefundable
           ? round2(order.shippingPrice + (order.codFee ?? 0))
           : 0
+        const lineTotal = round2(
+          lines.reduce((sum, line) => sum + line.grossAmount, 0) +
+            shippingAmount
+        )
+        const linesMatchRefund =
+          Math.abs(lineTotal - cancellationRefundDelta) < 0.01
 
         const creditNote = await createInvoiceForOrder(
           orderId,
           'credit_note',
-          {
-            eventId: `cancel:${String(orderId)}`,
-            reason: 'cancellation',
-            lines: toCreditNoteLines(lines),
-            shippingPrice: shippingAmount,
-            refundedAmount: round2(
-              lines.reduce((sum, line) => sum + line.grossAmount, 0) +
-                shippingAmount
-            ),
-            notes: reason?.trim() || undefined,
-          }
+          linesMatchRefund
+            ? {
+                eventId: `cancel:${String(orderId)}`,
+                reason: 'cancellation',
+                lines: toCreditNoteLines(lines),
+                shippingPrice: shippingAmount,
+                refundedAmount: cancellationRefundDelta,
+                notes: reason?.trim() || undefined,
+              }
+            : {
+                eventId: `cancel:${String(orderId)}`,
+                reason: 'cancellation',
+                refundedAmount: cancellationRefundDelta,
+                notes: reason?.trim() || undefined,
+              }
         )
         await queueZatcaForInvoice(String(creditNote._id))
       }
