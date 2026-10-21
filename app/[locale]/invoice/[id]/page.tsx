@@ -10,7 +10,7 @@ import {
   getOrCreateCreditNoteForOrder,
   getOrCreateInvoiceForOrder,
 } from '@/lib/invoices/invoice'
-import { getZatcaSubmission } from '@/lib/zatca/service'
+import { getZatcaSubmission, queueZatcaForInvoice } from '@/lib/zatca/service'
 import { formatCurrency } from '@/lib/utils'
 
 export async function generateMetadata() {
@@ -34,10 +34,21 @@ export default async function InvoicePage(props: {
 
   const invoice = await getOrCreateInvoiceForOrder(id, 'invoice')
   const creditNote = await getOrCreateCreditNoteForOrder(id)
-  const invoiceSubmission = await getZatcaSubmission(invoice._id)
-  const creditSubmission = creditNote
+  let invoiceSubmission = await getZatcaSubmission(invoice._id)
+  if (!invoiceSubmission) {
+    // Fulfillment creates the invoice and queues ZATCA together. If that step
+    // failed, the invoice page is the lazy retry path: queue the submission and
+    // fall back to the Phase 1 QR until it is reported.
+    await queueZatcaForInvoice(invoice._id)
+    invoiceSubmission = await getZatcaSubmission(invoice._id)
+  }
+  let creditSubmission = creditNote
     ? await getZatcaSubmission(creditNote._id)
     : null
+  if (creditNote && !creditSubmission) {
+    await queueZatcaForInvoice(creditNote._id)
+    creditSubmission = await getZatcaSubmission(creditNote._id)
+  }
 
   const invoiceQr = await QRCode.toDataURL(
     invoiceSubmission?.qrPayload ?? invoice.qrPayload,
@@ -151,6 +162,8 @@ export default async function InvoicePage(props: {
                 <th className='p-2 text-end'>{t('Quantity')}</th>
                 <th className='p-2 text-end'>{t('Unit Price')}</th>
                 <th className='p-2 text-end'>{t('Line Total')}</th>
+                <th className='p-2 text-end'>{t('VAT')}</th>
+                <th className='p-2 text-end'>{t('Total (incl VAT)')}</th>
               </tr>
             </thead>
             <tbody>
@@ -160,6 +173,14 @@ export default async function InvoicePage(props: {
                   <td className='p-2 text-end'>{item.quantity}</td>
                   <td className='p-2 text-end'>{money(item.unitPrice)}</td>
                   <td className='p-2 text-end'>{money(item.lineTotal)}</td>
+                  <td className='p-2 text-end'>
+                    {item.vatPercent > 0
+                      ? `${money(item.vatAmount)} (${item.vatPercent}%)`
+                      : money(item.vatAmount)}
+                  </td>
+                  <td className='p-2 text-end'>
+                    {money(item.lineTotal + item.vatAmount)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -168,7 +189,7 @@ export default async function InvoicePage(props: {
 
         <div className='ms-auto max-w-sm space-y-1 text-sm'>
           <div className='flex justify-between'>
-            <span>{t('Subtotal')}</span>
+            <span>{t('Subtotal (excl VAT)')}</span>
             <span>{money(invoice.itemsPrice)}</span>
           </div>
           {invoice.shippingPrice > 0 && (
@@ -182,7 +203,7 @@ export default async function InvoicePage(props: {
             <span>{money(invoice.vatAmount)}</span>
           </div>
           <div className='flex justify-between border-t pt-1 text-base font-bold'>
-            <span>{t('Total')}</span>
+            <span>{t('Total (incl VAT)')}</span>
             <span>{money(invoice.total)}</span>
           </div>
         </div>
@@ -209,10 +230,41 @@ export default async function InvoicePage(props: {
             </div>
           </header>
 
+          <div className='overflow-x-auto'>
+            <table className='w-full text-sm'>
+              <thead className='border-y bg-muted/50'>
+                <tr>
+                  <th className='p-2 text-start'>{t('Description')}</th>
+                  <th className='p-2 text-end'>{t('Quantity')}</th>
+                  <th className='p-2 text-end'>{t('Unit Price')}</th>
+                  <th className='p-2 text-end'>{t('VAT')}</th>
+                  <th className='p-2 text-end'>{t('Total (incl VAT)')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creditNote.items.map((item, index) => (
+                  <tr key={`${item.name}-${index}`} className='border-b'>
+                    <td className='p-2'>{item.name}</td>
+                    <td className='p-2 text-end'>{item.quantity}</td>
+                    <td className='p-2 text-end'>{money(item.unitPrice)}</td>
+                    <td className='p-2 text-end'>
+                      {item.vatPercent > 0
+                        ? `${money(item.vatAmount)} (${item.vatPercent}%)`
+                        : money(item.vatAmount)}
+                    </td>
+                    <td className='p-2 text-end'>
+                      {money(item.lineTotal + item.vatAmount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           <div className='flex items-start justify-between gap-4'>
             <div className='space-y-1 text-sm'>
               <div className='flex justify-between gap-8'>
-                <span>{t('Subtotal')}</span>
+                <span>{t('Subtotal (excl VAT)')}</span>
                 <span>{money(creditNote.itemsPrice)}</span>
               </div>
               <div className='flex justify-between gap-8'>
@@ -220,7 +272,7 @@ export default async function InvoicePage(props: {
                 <span>{money(creditNote.vatAmount)}</span>
               </div>
               <div className='flex justify-between gap-8 border-t pt-1 text-base font-bold'>
-                <span>{t('Total')}</span>
+                <span>{t('Total (incl VAT)')}</span>
                 <span>{money(creditNote.total)}</span>
               </div>
               {creditNote.notes && (

@@ -11,6 +11,7 @@ import Setting from '@/lib/db/models/setting.model'
 import { withSettingDefaults } from '@/lib/settings-defaults'
 import { round2 } from '@/lib/utils'
 
+import { allocateRefundToLines } from './credit-note'
 import { buildZatcaQrPayload, getZatcaYear } from './qr'
 
 async function getInvoiceSettings() {
@@ -84,7 +85,14 @@ export async function createInvoiceForOrder(
   const typedOrder = order as unknown as OrderWithUser
   const { seller, invoice: invoiceSettings } = await getInvoiceSettings()
   const issuedAt = new Date()
-  const taxInclusive = typedOrder.taxInclusive ?? true
+  // Orders created before tax snapshots were VAT-exclusive: their total is
+  // items + shipping + VAT. New inclusive orders are items + shipping only.
+  const looksExclusive =
+    round2(
+      typedOrder.totalPrice - typedOrder.itemsPrice - typedOrder.shippingPrice
+    ) > 0.01
+  const taxInclusive =
+    typedOrder.taxInclusive === false || looksExclusive ? false : true
   const taxRate = typedOrder.taxRate ?? 0.15
 
   let items = typedOrder.items.map((item) => {
@@ -164,35 +172,11 @@ export async function createInvoiceForOrder(
 
     if (original.total <= 0) throw new Error('Original invoice has no total')
 
-    const shares = originalLines.map((line) =>
-      round2((refund * (line.lineTotal + line.vatAmount)) / original.total)
-    )
-    const allocated = shares.reduce((sum, share) => sum + share, 0)
-    shares[shares.length - 1] = round2(
-      shares[shares.length - 1] + (refund - allocated)
-    )
-
-    items = originalLines.map((line, index) => {
-      const grossShare = shares[index]
-      const lineVat =
-        line.taxCategory === 'S' && line.lineTotal + line.vatAmount > 0
-          ? round2(
-              (grossShare * line.vatAmount) / (line.lineTotal + line.vatAmount)
-            )
-          : 0
-      const net = round2(grossShare - lineVat)
-
-      return {
-        name: `Refund - ${line.name}`,
-        quantity: 1,
-        unitPrice: net,
-        lineTotal: net,
-        taxCategory: line.taxCategory,
-        exemptionReasonCode: line.exemptionReasonCode,
-        vatPercent: line.vatPercent,
-        vatAmount: lineVat,
-      }
-    })
+    const creditTotal = Math.min(refund, original.total)
+    items = allocateRefundToLines(originalLines, creditTotal, original.total)
+    if (items.length === 0) {
+      throw new Error('Refund allocation produced no invoice lines')
+    }
 
     vatAmount = round2(
       items.reduce((sum, item) => sum + item.vatAmount, 0)
@@ -201,7 +185,28 @@ export async function createInvoiceForOrder(
       items.reduce((sum, item) => sum + item.lineTotal, 0)
     )
     shippingPrice = 0
-    total = refund
+    total = creditTotal
+  }
+
+  // Legacy orders can have per-line VAT rounding that differs by a cent from
+  // the stored tax total. Make the document add up exactly to the paid amount
+  // so ZATCA's payableAmount check passes.
+  const computedTotal = round2(itemsPrice + vatAmount + shippingPrice)
+  const roundingDifference = round2(total - computedTotal)
+  if (Math.abs(roundingDifference) >= 0.01) {
+    const lastTaxableLine = [...items]
+      .reverse()
+      .find(
+        (item) =>
+          item.taxCategory === 'S' &&
+          item.vatAmount + roundingDifference >= 0
+      )
+    if (lastTaxableLine) {
+      lastTaxableLine.vatAmount = round2(
+        lastTaxableLine.vatAmount + roundingDifference
+      )
+      vatAmount = round2(vatAmount + roundingDifference)
+    }
   }
 
   const sellerName = seller.legalNameAr || seller.legalNameEn

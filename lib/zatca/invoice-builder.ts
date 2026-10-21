@@ -2,6 +2,7 @@ import type { Invoice, TaxSubtotal, VATCategory } from 'zatca-sdk'
 
 import type { IInvoice } from '@/lib/db/models/invoice.model'
 import type { IZatcaSubmission } from '@/lib/db/models/zatca.model'
+import { round2 } from '@/lib/utils'
 
 function dateParts(date: Date, timeZone = 'Asia/Riyadh') {
   const dateText = new Intl.DateTimeFormat('en-CA', {
@@ -92,7 +93,8 @@ function groupTaxSubtotals(invoice: IInvoice): TaxSubtotal[] {
 
 export function buildZatcaInvoice(
   invoice: IInvoice,
-  submission: IZatcaSubmission
+  submission: IZatcaSubmission,
+  options: { sellerVatNumber?: string } = {}
 ): Invoice {
   if (!submission.icv || !submission.pih) {
     throw new Error('ZATCA submission is missing ICV/PIH')
@@ -106,7 +108,17 @@ export function buildZatcaInvoice(
     throw new Error('Invoice issue date is invalid')
   const { issueDate, issueTime } = dateParts(issuedAt)
   const isCreditNote = invoice.type === 'credit_note'
-  const lines = invoice.items.map((item, index) => ({
+  // A partial refund can allocate zero to some lines. ZATCA rejects zero-amount
+  // credit-note lines, so only the lines that actually move money are reported.
+  const invoiceItems = isCreditNote
+    ? invoice.items.filter(
+        (item) => round2(item.lineTotal + item.vatAmount) !== 0
+      )
+    : invoice.items
+  if (invoiceItems.length === 0) {
+    throw new Error('Invoice has no billable lines')
+  }
+  const lines = invoiceItems.map((item, index) => ({
     id: String(index + 1),
     name: item.name,
     quantity: item.quantity,
@@ -161,7 +173,7 @@ export function buildZatcaInvoice(
     previousInvoiceHash: submission.pih,
     seller: {
       registrationName: invoice.seller.legalNameAr || invoice.seller.legalNameEn,
-      vatNumber: invoice.seller.vatNumber,
+      vatNumber: options.sellerVatNumber || invoice.seller.vatNumber,
       identification: invoice.seller.crNumber
         ? { schemeId: 'CRN', value: invoice.seller.crNumber }
         : undefined,

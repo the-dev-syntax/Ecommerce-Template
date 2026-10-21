@@ -58,3 +58,16 @@ export function getZatcaStateJson() {
   if (!raw) throw new Error('ZATCA_EGS_STATE is missing')
   return JSON.stringify(parseEgsState(raw))
 }
+
+/**
+ * ZATCA's sandbox CSID endpoints return a canned certificate registered to a
+ * fixed VAT number (399999999900003). Reporting is only allowed for the VAT in
+ * that certificate, so sandbox submissions must use it. Production certificates
+ * contain the store's real VAT and never need this override.
+ */
+export async function getCertificateVat(certificate: string) {
+  const { parseCertificate } = await import('zatca-sdk')
+  const parsed = parseCertificate(certificate)
+  if (!parsed.success) return null
+  return parsed.data.subject.match(/\b(\d{15})\b/)?.[1] ?? null
+}

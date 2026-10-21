@@ -1,4 +1,4 @@
-# Essential Vital — Production Readiness Log
+﻿# Essential Vital — Production Readiness Log
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
@@ -302,6 +302,43 @@ Known limits:
 - Sandbox warning `BR-KSA-F-08` only, caused by the sandbox canned CRN; production will use CR `1185102259`.
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
+
+## P0-23 — ZATCA onboarding/verification tooling and tax hardening (2026-10-21)
+
+- Added `npm run zatca:onboard`: generates the EGS key/CSR, exchanges the OTP for a compliance CSID, runs the declared simplified/standard compliance checks, issues the production CSID, and writes `.secrets/zatca-state.json` (mode `0600`). It prints the base64 `ZATCA_EGS_STATE` value for the deployment environment and refuses to overwrite an existing state without `--force`.
+
+
+- Added `npm run zatca:verify`: exercises the app's real path (UBL builder → sign → report) for a simplified invoice and a chained credit note. It is read-only and never advances the live ICV/PIH. Result: **invoice and credit note REPORTED** in the sandbox (ICV 3/4, net 4.40 + VAT 0.60 = 5.00 credit note).
+
+- Sandbox caveat: the sandbox CSID returns a canned certificate registered to VAT `399999999900003`. Reporting is only allowed for that VAT. The queue rewrites the **submitted** seller VAT to the certificate VAT in sandbox only (the invoice snapshot keeps the store VAT), and `zatca:verify` does the same for its fixture. Production uses `310161142300003` and never overrides.
+
+- Credit-note allocation is now a tested pure helper (`lib/invoices/credit-note.ts`) using integer cents and the largest-remainder method. This guarantees the credit-note total always equals the refund, never produces negative lines, and allocates non-taxable shipping correctly. Zero-value credit-note lines are dropped before ZATCA reporting.
+    * Credit-note allocation: When you refund an order, the refund is divided correctly across the products and shipping.
+    * Integer cents: Calculations use whole cents (e.g., 100 cents instead of $1.00) to avoid rounding errors.
+    * Largest-remainder method: Any small rounding differences are distributed fairly so the total matches the exact refund.
+    * No negative lines: No product or shipping line can accidentally have a negative refund amount.
+    * Non-taxable shipping: Shipping refunds are handled correctly without incorrectly applying tax.
+    * Zero-value lines removed: Items with a refund amount of zero are removed before sending the credit note to ZATCA.
+
+- Legacy (pre-snapshot) orders are handled twice: `npm run migrate:tax` backfills `taxInclusive: false`, `taxRate` and per-line tax fields, and invoice creation detects the old exclusive total shape as a safety net. Per-line VAT is reconciled to the stored tax so the invoice total still equals the paid amount.
+
+- Invoice page: net/VAT/gross columns for invoices and credit-note line items, and lazy creation now queues the ZATCA submission when fulfillment previously failed.
+
+- Receipt/review emails show net subtotal, VAT and shipping so the rows reconcile to the gross total. The cart shows a VAT-included note.
+
+- `npm run check:production` now parses `ZATCA_EGS_STATE`, rejects sandbox credentials, requires the production CSID, validates the VAT number, and fails on an expired certificate (warns within 30 days).
+
+- Added `npm test` (Node test runner via `tsx`): tax pricing, credit-note allocation, QR TLV, and ZATCA UBL builder tests.
+
+### Verification
+
+- `npm test` — PASS (19 tests).
+
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (558 keys), `npm run build` — PASS.
+
+- `npm run zatca:verify` — PASS (sandbox invoice + credit note reported).
+
+- `npm run zatca:onboard` against a throwaway state file — PASS (compliance checks + production CSID issued).
 
 ## Fix — Invalid next-intl keys (2026-10-18)
 
@@ -735,8 +772,9 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 - [x] (Dev) ZATCA Phase 1 simplified tax invoice: sequential numbering, QR TLV, Arabic/English invoice page, immutable records, and credit notes for refunds.
 - [x] (Dev) ZATCA Phase 2 sandbox API verification: Compliance CSID, compliance invoice, production CSID, reporting, and renewal.
 - [x] (Dev) ZATCA Phase 2 app integration: build UBL 2.1 per invoice, sign/report B2C invoices, persist ICV/PIH, Phase 2 QR (tags 6-9), report credit notes, and retry/error handling.
+- [x] (Dev) ZATCA onboarding/verification scripts (`zatca:onboard`, `zatca:verify`), certificate-aware production env guard, and unit tests for tax, credit notes, QR and UBL.
 - [ ] (Client/Dev) Switch ZATCA to production: real OTP/CSID, `ZATCA_ENV=production`, production `ZATCA_EGS_STATE`, live payment keys, and remove sandbox settings.
-- [ ] (Dev) Run `npm run check:production` before deployment; it rejects sandbox ZATCA and test payment keys.
+- [ ] (Dev) Run `npm run check:production` before deployment; it rejects sandbox ZATCA/test payment keys, missing production CSIDs and expired certificates.
 - [ ] (Dev) VAT/cash reconciliation report or export for accounting.
 - [ ] (Client) Publish privacy, terms, returns/refunds, shipping, contact, and VAT/CR pages in Arabic and English.
 

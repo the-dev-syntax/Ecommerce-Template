@@ -14,7 +14,7 @@ import {
     Text,
   } from '@react-email/components'
   
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, round2 } from '@/lib/utils'
 import { OrderWithUser } from '@/lib/db/models/order.model'
 import { getSetting } from '@/lib/actions/setting.actions'
 
@@ -69,6 +69,12 @@ import { getSetting } from '@/lib/actions/setting.actions'
 
     const { site } = await getSetting()
     const baseUrl = site.url.replace(/\/$/, '')
+    const taxIncluded = order.taxInclusive !== false
+    // Order items are stored gross (VAT-inclusive). The receipt shows the net
+    // subtotal, then VAT, then shipping, so the lines reconcile to the total.
+    const netItemsPrice = taxIncluded
+      ? Math.max(0, round2(order.itemsPrice - order.taxPrice))
+      : order.itemsPrice
 
     return (
       <Html>
@@ -136,9 +142,12 @@ import { getSetting } from '@/lib/actions/setting.actions'
                   </Row>
                 ))}
                 {[
-                  { name: 'Items', price: order.itemsPrice },
                   {
-                    name: order.taxInclusive === false ? 'VAT' : 'VAT (included)',
+                    name: taxIncluded ? 'Subtotal (excl. VAT)' : 'Items',
+                    price: netItemsPrice,
+                  },
+                  {
+                    name: taxIncluded ? 'VAT (included)' : 'VAT',
                     price: order.taxPrice,
                   },
                   { name: 'Shipping', price: order.shippingPrice },

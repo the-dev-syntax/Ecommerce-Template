@@ -8,7 +8,12 @@ import {
   ZatcaSubmission,
 } from '@/lib/db/models/zatca.model'
 
-import { getZatcaCredentials, getZatcaEnvironment, loadZatcaEgs } from './config'
+import {
+  getCertificateVat,
+  getZatcaCredentials,
+  getZatcaEnvironment,
+  loadZatcaEgs,
+} from './config'
 import { buildZatcaInvoice } from './invoice-builder'
 
 const LOCK_MS = 2 * 60 * 1000
@@ -157,7 +162,22 @@ async function signAndReport(
     const egs = await loadZatcaEgs()
     const credentials = await getZatcaCredentials(egs)
     const { signInvoice } = await import('zatca-sdk')
-    const zatcaInvoice = buildZatcaInvoice(invoice, submission)
+    // The sandbox CSID is a canned certificate registered to a different VAT;
+    // report under that VAT in sandbox only so the queue can be exercised
+    // before production credentials exist.
+    let sellerVatNumber: string | undefined
+    if (environment === 'sandbox') {
+      const certificateVat = await getCertificateVat(credentials.certificate)
+      if (certificateVat && certificateVat !== invoice.seller.vatNumber) {
+        console.warn(
+          `ZATCA sandbox certificate uses VAT ${certificateVat}; reporting the sandbox submission under it (invoice ${invoice.number}).`
+        )
+        sellerVatNumber = certificateVat
+      }
+    }
+    const zatcaInvoice = buildZatcaInvoice(invoice, submission, {
+      sellerVatNumber,
+    })
     const signed = await signInvoice(zatcaInvoice, {
       credentials: {
         certificate: credentials.certificate,
@@ -300,7 +320,10 @@ export async function processZatcaQueue(limit = 5) {
 
 export async function retryZatcaSubmission(invoiceId: string) {
   await connectToDatabase()
-  await ensureZatcaSubmission(invoiceId)
+  const submission = await ensureZatcaSubmission(invoiceId)
+  if (submission.status === 'accepted') {
+    throw new Error('ZATCA submission is already accepted')
+  }
   await ZatcaSubmission.updateOne(
     { invoiceId: String(invoiceId) },
     {

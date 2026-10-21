@@ -24,7 +24,7 @@ export default function CartPage() {
   const { 
     setting: {
        site, 
-       common: {freeShippingMinPrice} 
+       common: {freeShippingMinPrice, taxInclusive} 
       } 
   } = useSettingStore()
 
@@ -157,6 +157,11 @@ export default function CartPage() {
                       <ProductPrice price={itemsPrice} plain />
                     </span>{' '}
                   </div>
+                  {taxInclusive && (
+                    <p className='text-muted-foreground text-end text-xs'>
+                      {t('Prices include VAT')}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
