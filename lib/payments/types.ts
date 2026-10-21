@@ -1,4 +1,4 @@
-export type PaymentProviderId = 'moyasar' | 'stripe' | 'paypal' | 'cod'
+export type PaymentProviderId = 'moyasar' | 'stripe' | 'paypal' | 'cod' | 'mock'
 
 export interface PaymentProviderDefinition {
   id: PaymentProviderId

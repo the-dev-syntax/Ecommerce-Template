@@ -37,6 +37,7 @@ import Link from 'next/link'
 import useCartStore from '@/hooks/use-cart-store'
 import ProductPrice from '@/components/shared/product/product-price'
 import { createOrder } from '@/lib/actions/order.actions'
+import { getEnabledPaymentMethods } from '@/lib/payments'
 import { toast } from '@/hooks/use-toast'
 import useSettingStore from '@/hooks/use-setting-store'
 import { useTranslations } from 'next-intl'
@@ -82,9 +83,9 @@ const CheckoutForm = () => {
     availableCurrencies.find((currency) => currency.isBase)?.code ??
     defaultCurrency
 
-  const enabledPaymentMethods = availablePaymentMethods.filter(
-    (method) =>
-      features.cashOnDelivery || method.name !== 'Cash On Delivery'
+  const enabledPaymentMethods = getEnabledPaymentMethods(
+    availablePaymentMethods,
+    { cashOnDelivery: features.cashOnDelivery }
   )
   const defaultEnabledPaymentMethod =
     enabledPaymentMethods[0]?.name ?? defaultPaymentMethod

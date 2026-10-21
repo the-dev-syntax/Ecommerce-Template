@@ -303,6 +303,18 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-29 — Payment registry, provider status and webhook event log (2026-10-21)
+
+- Extended the payment provider registry with registry-driven availability (`getEnabledPaymentMethods`) and provider matching (`isPaymentProvider`).
+- Checkout and server-side order creation now hide disabled COD and unconfigured providers through the registry.
+- Added `/admin/payments`: configured/enabled status, refund capability, currencies, webhook path and recent webhook events; no secrets are exposed.
+- Added `PaymentEvent` with a unique provider/event-id key, status and order reference. Moyasar events use a SHA-256 hash of the raw body; Stripe uses the signed event id. Duplicate deliveries are acknowledged without reprocessing.
+- Added a test-only `mock` provider definition and registry tests.
+- Remaining Phase 3 work: full creation adapters for Stripe/PayPal/COD, a single dispatcher route, and chargeback/reconciliation reporting.
+
+### Verification
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (689 keys), `npm test` (38 tests), `npm run build` — PASS.
+
 ## P0-28 — Currency rules, immutable order currency and VAT report (2026-10-21)
 
 - Currency entries now define `locale`, `decimals`, `isBase` and `convertRate`; SAR is the base currency and conversion is display-only (base → display).
@@ -728,14 +740,15 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [x] Acceptance: a SAR order produces correct totals and a compliant invoice; currency switching never changes stored totals.
 
 ### Phase 3 — Payment gateway abstraction (P0/P1)
-- [x] Define a `PaymentProvider` definition/registry (id, name, currencies, refund capability, webhook path, configuration check). Adapter methods are added incrementally per provider.
-- [ ] Move Stripe, PayPal, and COD into adapters behind a provider registry; remove provider-specific branches from `lib/actions/order.actions.ts`.
-- [ ] Store provider credentials in environment/secret manager, not plaintext settings; add an admin screen that shows enabled providers without exposing secrets.
-- [ ] Add one signature-verified webhook dispatcher with replay protection, an event log, and idempotent `fulfillOrder` calls.
-- [x] Implement **Moyasar** core: hosted form, Mada/card networks, Apple Pay (form enabled; dashboard domain setup required), STC Pay, callback verification, and secret-token webhook verification before fulfilling. BNPL remains.
+- [x] Define a `PaymentProvider` definition/registry (id, name, currencies, refund capability, webhook path, configuration check).
+- [x] Move payment-method availability behind the registry: checkout and order creation use `getEnabledPaymentMethods`; disabled COD and unconfigured providers are filtered server-side.
+- [ ] Extract Stripe/PayPal/COD payment creation into full adapters; provider-specific checkout components and success handlers still remain.
+- [x] Store provider credentials in environment/secret manager; add `/admin/payments` showing configured/enabled providers, refund capability, currencies and webhook paths without secrets.
+- [ ] Add one unified webhook dispatcher. Replay protection/idempotent event logging was added to the Moyasar and Stripe webhook routes.
+- [x] Implement **Moyasar** core: hosted form, Mada/card networks, Apple Pay (form enabled; dashboard domain setup required), STC Pay, callback verification, and secret-token webhook verification before fulfilling.
 - [x] Add Moyasar refunds (full or one partial per payment), cancellation/void, admin UI, and refund webhook sync.
 - [ ] Add chargeback handling and payment reconciliation (Moyasar refund/cancel APIs are wired; reconciliation reports remain).
-- [ ] Add a mock/test provider for CI and sandbox end-to-end tests.
+- [x] Add a test-only mock provider definition for CI/registry tests; it is not exposed in the storefront checkout.
 - [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic; Moyasar test-mode checkout completes and refunds correctly.
 
 ### Phase 4 — Orders, inventory, and shipping (P1)

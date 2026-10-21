@@ -675,5 +675,17 @@
   "Type": "Type",
   "Net": "Net",
   "No invoices in this period": "Aucune facture sur cette période",
-  "Orders are charged in {currency}": "Les commandes sont facturées en {currency}"
+  "Orders are charged in {currency}": "Les commandes sont facturées en {currency}",
+  "Payment Providers": "Fournisseurs de paiement",
+  "Provider status is driven by environment configuration and store settings": "Le statut dépend de la configuration d'environnement et du magasin",
+  "Configured": "Configuré",
+  "Not configured": "Non configuré",
+  "Enabled in checkout": "Activé au paiement",
+  "Refunds": "Remboursements",
+  "Webhook": "Webhook",
+  "Recent webhook events": "Derniers événements webhook",
+  "Provider": "Fournisseur",
+  "Received": "Reçu",
+  "No webhook events yet": "Aucun événement webhook",
+  "Payments": "Paiements"
 }

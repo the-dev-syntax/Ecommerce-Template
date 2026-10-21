@@ -675,5 +675,17 @@
   "Type": "النوع",
   "Net": "الصافي",
   "No invoices in this period": "لا توجد فواتير في هذه الفترة",
-  "Orders are charged in {currency}": "تتم محاسبة الطلبات بعملة {currency}"
+  "Orders are charged in {currency}": "تتم محاسبة الطلبات بعملة {currency}",
+  "Payment Providers": "مزودو الدفع",
+  "Provider status is driven by environment configuration and store settings": "تعتمد حالة المزود على إعدادات البيئة وإعدادات المتجر",
+  "Configured": "مُهيأ",
+  "Not configured": "غير مُهيأ",
+  "Enabled in checkout": "مفعّل عند الدفع",
+  "Refunds": "المبالغ المستردة",
+  "Webhook": "Webhook",
+  "Recent webhook events": "أحدث أحداث Webhook",
+  "Provider": "المزود",
+  "Received": "تم الاستلام",
+  "No webhook events yet": "لا توجد أحداث Webhook بعد",
+  "Payments": "المدفوعات"
 }

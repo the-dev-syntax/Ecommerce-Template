@@ -24,6 +24,10 @@ const links = [
     href: '/admin/orders',
   },
   {
+    title: 'Payments',
+    href: '/admin/payments',
+  },
+  {
     title: 'VAT Report',
     href: '/admin/reports/vat',
   },

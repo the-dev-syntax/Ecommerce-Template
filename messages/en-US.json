@@ -675,5 +675,17 @@
   "Type": "Type",
   "Net": "Net",
   "No invoices in this period": "No invoices in this period",
-  "Orders are charged in {currency}": "Orders are charged in {currency}"
+  "Orders are charged in {currency}": "Orders are charged in {currency}",
+  "Payment Providers": "Payment Providers",
+  "Provider status is driven by environment configuration and store settings": "Provider status is driven by environment configuration and store settings",
+  "Configured": "Configured",
+  "Not configured": "Not configured",
+  "Enabled in checkout": "Enabled in checkout",
+  "Refunds": "Refunds",
+  "Webhook": "Webhook",
+  "Recent webhook events": "Recent webhook events",
+  "Provider": "Provider",
+  "Received": "Received",
+  "No webhook events yet": "No webhook events yet",
+  "Payments": "Payments"
 }

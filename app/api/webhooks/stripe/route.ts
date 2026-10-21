@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
+import { beginPaymentEvent, finishPaymentEvent } from '@/lib/payments/events'
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
@@ -18,13 +19,25 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Invalid signature', { status: 400 })
   }
 
+  let paymentEventId = ''
   try {
+    const recorded = await beginPaymentEvent({
+      provider: 'stripe',
+      eventId: event.id,
+      type: event.type,
+    })
+    if (recorded.duplicate) {
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    paymentEventId = String(recorded.event._id)
+
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       const orderId = paymentIntent.metadata.orderId
 
       if (!orderId) {
         console.error('Stripe payment intent has no orderId:', paymentIntent.id)
+        await finishPaymentEvent(paymentEventId, 'ignored', 'Missing orderId')
         return NextResponse.json({ received: true })
       }
 
@@ -38,6 +51,7 @@ export async function POST(req: NextRequest) {
         status: paymentIntent.status,
       })
 
+      await finishPaymentEvent(paymentEventId, 'processed')
       return NextResponse.json({
         received: true,
         alreadyPaid: result.alreadyPaid,
@@ -59,6 +73,7 @@ export async function POST(req: NextRequest) {
 
       if (!orderId) {
         console.error('Stripe charge has no orderId:', charge.id)
+        await finishPaymentEvent(paymentEventId, 'ignored', 'Missing orderId')
         return NextResponse.json({ received: true })
       }
 
@@ -72,6 +87,7 @@ export async function POST(req: NextRequest) {
         status: 'COMPLETED',
       })
 
+      await finishPaymentEvent(paymentEventId, 'processed')
       return NextResponse.json({
         received: true,
         alreadyPaid: result.alreadyPaid,
@@ -85,10 +101,21 @@ export async function POST(req: NextRequest) {
         paymentIntent.id,
         paymentIntent.last_payment_error?.message
       )
+      await finishPaymentEvent(
+        paymentEventId,
+        'processed',
+        'Payment failed event logged'
+      )
     }
 
+    await finishPaymentEvent(paymentEventId, 'ignored')
     return NextResponse.json({ received: true })
   } catch (error) {
+    await finishPaymentEvent(
+      paymentEventId,
+      'failed',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
     console.error('Stripe webhook fulfillment failed:', error)
     // Returning 500 lets Stripe retry the event.
     return new NextResponse('Fulfillment failed', { status: 500 })

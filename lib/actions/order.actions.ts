@@ -35,6 +35,7 @@ import {
   isMoyasarPaid,
   toMoyasarAmount,
 } from '../payments/moyasar'
+import { getEnabledPaymentMethods, isPaymentProvider } from '../payments'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -191,9 +192,9 @@ export const createOrderFromCart = async (
   if (!deliveryDate) throw new Error('Delivery date is not available')
 
   const paymentMethod = clientSideCart.paymentMethod
-  const enabledPaymentMethods = availablePaymentMethods.filter(
-    (method) =>
-      features.cashOnDelivery || method.name !== 'Cash On Delivery'
+  const enabledPaymentMethods = getEnabledPaymentMethods(
+    availablePaymentMethods,
+    { cashOnDelivery: features.cashOnDelivery }
   )
   if (!paymentMethod || !enabledPaymentMethods.some((method) => method.name === paymentMethod))
     throw new Error('Invalid payment method')
@@ -265,7 +266,7 @@ export async function createPayPalOrder(orderId: string) {
     if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
       throw new Error('Error accessing order')
     if (order.isPaid) throw new Error('Order is already paid')
-    if (order.paymentMethod !== 'PayPal')
+    if (!isPaymentProvider(order.paymentMethod, 'paypal'))
       throw new Error('Order is not payable by PayPal')
     if (order.totalPrice <= 0) throw new Error('Order total is invalid')
 
@@ -314,7 +315,7 @@ export async function approvePayPalOrder(
         message: 'Your order has already been paid by PayPal',
       }
     }
-    if (order.paymentMethod !== 'PayPal')
+    if (!isPaymentProvider(order.paymentMethod, 'paypal'))
       throw new Error('Order is not payable by PayPal')
     if (order.paymentResult?.id !== data.orderID)
       throw new Error('PayPal order does not match this order')
@@ -373,7 +374,7 @@ export async function updateOrderToPaidByStripe(
 
     if (order.isCancelled) throw new Error('Order is cancelled')
 
-    if (order.paymentMethod !== 'Stripe')
+    if (!isPaymentProvider(order.paymentMethod, 'stripe'))
       throw new Error('Order is not payable by Stripe')
 
     // Verify payment status directly with Stripe.
@@ -446,7 +447,7 @@ export async function updateOrderToPaidByMoyasar(
 
     if (order.isCancelled) throw new Error('Order is cancelled')
 
-    if (order.paymentMethod !== 'Moyasar')
+    if (!isPaymentProvider(order.paymentMethod, 'moyasar'))
       throw new Error('Order is not payable by Moyasar')
 
     if (typeof paymentId !== 'string' || !paymentId.trim())
@@ -573,7 +574,7 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
     if (!isAdminOrOwner(session.user.id, session.user.role, order.user._id))
       return { error: 'Error accessing order' }
 
-    if (order.paymentMethod !== 'Stripe' || order.isPaid)
+    if (!isPaymentProvider(order.paymentMethod, 'stripe') || order.isPaid)
       return { error: 'Not payable via Stripe' }
     if (order.totalPrice <= 0) return { error: 'Order total is invalid' }
 

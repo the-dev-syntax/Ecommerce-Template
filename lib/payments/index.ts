@@ -41,6 +41,15 @@ export const paymentProviders: PaymentProviderDefinition[] = [
     supportsRefunds: false,
     isConfigured: () => true,
   },
+  {
+    id: 'mock',
+    name: 'Mock Payment',
+    label: 'Mock Payment (test only)',
+    currencies: '*',
+    supportsRefunds: true,
+    webhookPath: '/api/webhooks/mock',
+    isConfigured: () => process.env.NODE_ENV !== 'production',
+  },
 ]
 
 export function getPaymentProviderByName(
@@ -57,4 +66,21 @@ export function getPaymentProviderById(
   id: PaymentProviderId
 ): PaymentProviderDefinition | undefined {
   return paymentProviders.find((provider) => provider.id === id)
+}
+
+export function isPaymentProvider(name: string, id: PaymentProviderId) {
+  return getPaymentProviderByName(name)?.id === id
+}
+
+export function getEnabledPaymentMethods<
+  T extends { name: string; commission: number },
+>(methods: T[], options: { cashOnDelivery?: boolean } = {}): T[] {
+  return methods.filter((method) => {
+    const provider = getPaymentProviderByName(method.name)
+    if (!provider) return true
+    if (provider.id === 'cod' && options.cashOnDelivery === false) {
+      return false
+    }
+    return provider.isConfigured()
+  })
 }

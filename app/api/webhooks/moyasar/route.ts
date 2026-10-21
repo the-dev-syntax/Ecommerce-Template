@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { connectToDatabase } from '@/lib/db'
@@ -7,6 +8,11 @@ import { getMoyasarWebhookSecret } from '@/lib/env'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
+import {
+  attachPaymentEventOrder,
+  beginPaymentEvent,
+  finishPaymentEvent,
+} from '@/lib/payments/events'
 import {
   fetchMoyasarPayment,
   isMoyasarPaid,
@@ -25,8 +31,10 @@ type MoyasarWebhook = {
 
 export async function POST(req: NextRequest) {
   let event: MoyasarWebhook
+  let rawBody = ''
   try {
-    event = (await req.json()) as MoyasarWebhook
+    rawBody = await req.text()
+    event = JSON.parse(rawBody) as MoyasarWebhook
   } catch {
     return new NextResponse('Invalid JSON', { status: 400 })
   }
@@ -35,6 +43,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Invalid payload', { status: 400 })
   }
 
+  let paymentEventId = ''
   try {
     const webhookSecret = getMoyasarWebhookSecret()
 
@@ -55,9 +64,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true })
     }
 
+    const eventKey = crypto
+      .createHash('sha256')
+      .update(rawBody)
+      .digest('hex')
+    const recorded = await beginPaymentEvent({
+      provider: 'moyasar',
+      eventId: eventKey,
+      type: event.type,
+    })
+    if (recorded.duplicate) {
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    paymentEventId = String(recorded.event._id)
+
+    const respond = async (
+      status: 'processed' | 'ignored' | 'failed',
+      message = ''
+    ) => {
+      await finishPaymentEvent(paymentEventId, status, message)
+      return NextResponse.json({ received: true })
+    }
+
     const paymentId = event.data?.id
     if (!paymentId) {
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Missing payment id')
     }
 
     // Never trust the webhook body alone: fetch the payment from Moyasar and
@@ -67,14 +98,15 @@ export async function POST(req: NextRequest) {
     const orderId = payment.metadata?.orderId
     if (!orderId || !mongoose.isValidObjectId(orderId)) {
       console.error('Moyasar webhook payment has no valid order metadata')
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Missing order metadata')
     }
+    await attachPaymentEventOrder(paymentEventId, orderId)
 
     await connectToDatabase()
 
     const order = await Order.findById(orderId)
     if (!order) {
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Order not found')
     }
 
     if (event.type === 'payment_refunded') {
@@ -87,7 +119,8 @@ export async function POST(req: NextRequest) {
           id: order.paymentResult?.id ?? payment.id,
           status: 'refunded',
           email_address: order.paymentResult?.email_address ?? '',
-          pricePaid: order.paymentResult?.pricePaid ?? order.totalPrice.toFixed(2),
+          pricePaid:
+            order.paymentResult?.pricePaid ?? order.totalPrice.toFixed(2),
         }
       }
       await order.save()
@@ -102,21 +135,21 @@ export async function POST(req: NextRequest) {
           error instanceof Error ? error.message : 'Unknown error'
         )
       }
-      return NextResponse.json({ received: true })
+      return respond('processed')
     }
 
     if (!isMoyasarPaid(payment.status) || order.isPaid || order.isCancelled) {
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Payment not payable or order closed')
     }
 
     if (order.paymentMethod !== 'Moyasar') {
       console.error('Moyasar webhook received for a non-Moyasar order')
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Order is not a Moyasar order')
     }
 
     if (payment.amount !== toMoyasarAmount(order.totalPrice)) {
       console.error('Moyasar webhook amount does not match the order total')
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Amount mismatch')
     }
 
     if (
@@ -124,7 +157,7 @@ export async function POST(req: NextRequest) {
       (order.currency || 'SAR').toUpperCase()
     ) {
       console.error('Moyasar webhook currency does not match the order')
-      return NextResponse.json({ received: true })
+      return respond('ignored', 'Currency mismatch')
     }
 
     await Order.findByIdAndUpdate(orderId, {
@@ -141,8 +174,13 @@ export async function POST(req: NextRequest) {
       status: payment.status,
     })
 
-    return NextResponse.json({ received: true })
+    return respond('processed')
   } catch (error) {
+    await finishPaymentEvent(
+      paymentEventId,
+      'failed',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
     console.error('Moyasar webhook fulfillment failed:', error)
     return new NextResponse('Fulfillment failed', { status: 500 })
   }
