@@ -314,6 +314,7 @@ Known limits:
 - Email identity: sender name/email/reply-to come from settings with `SENDER_NAME`/`SENDER_EMAIL` fallback.
 - SEO: metadata title template, default description, Open Graph image, favicon, and Twitter handle come from settings.
 - Added admin settings forms: Brand and Theme, SEO Defaults, Feature Flags, Navigation and Footer, Email Identity.
+- `npm run migrate:whitelabel` backfills existing settings documents (brand, SEO, flags, navigation, email) using the safe defaults.
 - First-run setup wizard and editable email templates remain in Phase 1B.
 
 ### Verification
