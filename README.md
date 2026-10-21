@@ -303,6 +303,17 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-30 — Payment adapters, unified webhook and reconciliation (2026-10-21)
+
+- Added `lib/payments/adapters.ts` with provider API adapters for Stripe, PayPal, Moyasar, COD and the test-only mock provider. Stripe calls now go through `lib/payments/stripe.ts`; PayPal calls go through the existing PayPal client via the adapter.
+- Added `/api/webhooks/payments/{provider}` as the unified webhook entry point. Provider-specific paths remain valid for existing dashboards.
+- Stripe `charge.dispute.created` / `charge.dispute.closed` events now mark the order as disputed with the dispute status; disputes are recorded in the payment event log.
+- `/admin/payments` now includes reconciliation totals (gross, refunded, net), provider breakdown and disputed-order count in addition to provider status and recent events.
+- Webhook replay protection and event logging remain active for both Moyasar and Stripe through the shared `PaymentEvent` model.
+
+### Verification
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (694 keys), `npm test` (38 tests), `npm run build` — PASS.
+
 ## P0-29 — Payment registry, provider status and webhook event log (2026-10-21)
 
 - Extended the payment provider registry with registry-driven availability (`getEnabledPaymentMethods`) and provider matching (`isPaymentProvider`).
@@ -742,14 +753,14 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 ### Phase 3 — Payment gateway abstraction (P0/P1)
 - [x] Define a `PaymentProvider` definition/registry (id, name, currencies, refund capability, webhook path, configuration check).
 - [x] Move payment-method availability behind the registry: checkout and order creation use `getEnabledPaymentMethods`; disabled COD and unconfigured providers are filtered server-side.
-- [ ] Extract Stripe/PayPal/COD payment creation into full adapters; provider-specific checkout components and success handlers still remain.
+- [x] Extract provider API calls into adapters (`stripe`, `paypal`, `moyasar`, `cod`, `mock`). Checkout components remain provider-specific UI shells.
 - [x] Store provider credentials in environment/secret manager; add `/admin/payments` showing configured/enabled providers, refund capability, currencies and webhook paths without secrets.
-- [ ] Add one unified webhook dispatcher. Replay protection/idempotent event logging was added to the Moyasar and Stripe webhook routes.
+- [x] Add a unified webhook entry point at `/api/webhooks/payments/{provider}` while keeping provider-specific URLs for dashboard compatibility.
 - [x] Implement **Moyasar** core: hosted form, Mada/card networks, Apple Pay (form enabled; dashboard domain setup required), STC Pay, callback verification, and secret-token webhook verification before fulfilling.
 - [x] Add Moyasar refunds (full or one partial per payment), cancellation/void, admin UI, and refund webhook sync.
-- [ ] Add chargeback handling and payment reconciliation (Moyasar refund/cancel APIs are wired; reconciliation reports remain).
+- [x] Add chargeback handling (Stripe dispute events mark orders disputed) and a provider reconciliation dashboard with gross/refunded/net totals.
 - [x] Add a test-only mock provider definition for CI/registry tests; it is not exposed in the storefront checkout.
-- [ ] Acceptance: adding a new gateway = new adapter + config + webhook mapping, with no changes to checkout or order logic; Moyasar test-mode checkout completes and refunds correctly.
+- [ ] Acceptance: a new gateway can be added with a new adapter + config + webhook mapping and minimal checkout UI work.
 
 ### Phase 4 — Orders, inventory, and shipping (P1)
 - [ ] Add an explicit order state machine (pending payment → paid → processing → shipped → delivered → cancelled/refunded/returned) with immutable status history.

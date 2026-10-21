@@ -13,16 +13,56 @@ import {
 import { getSetting } from '@/lib/actions/setting.actions'
 import { paymentProviders } from '@/lib/payments'
 import PaymentEvent from '@/lib/db/models/payment-event.model'
+import Order from '@/lib/db/models/order.model'
 import { connectToDatabase } from '@/lib/db'
-import { formatDateTime } from '@/lib/utils'
+import { formatCurrency, formatDateTime, round2 } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PaymentsAdminPage() {
   const t = await getTranslations()
-  const { availablePaymentMethods } = await getSetting()
+  const { availablePaymentMethods, availableCurrencies, defaultCurrency } =
+    await getSetting()
   await connectToDatabase()
   const events = await PaymentEvent.find().sort({ receivedAt: -1 }).limit(30).lean()
+  const orders = await Order.find({ isPaid: true })
+    .select('paymentMethod totalPrice refundedAmount isDisputed')
+    .lean()
+  const totals = orders.reduce(
+    (summary, order) => {
+      const provider = order.paymentMethod || 'Unknown'
+      const current = summary.byProvider.get(provider) ?? {
+        count: 0,
+        gross: 0,
+        refunded: 0,
+      }
+      current.count += 1
+      current.gross = round2(current.gross + order.totalPrice)
+      current.refunded = round2(
+        current.refunded + (order.refundedAmount ?? 0)
+      )
+      summary.byProvider.set(provider, current)
+      summary.gross = round2(summary.gross + order.totalPrice)
+      summary.refunded = round2(
+        summary.refunded + (order.refundedAmount ?? 0)
+      )
+      if (order.isDisputed) summary.disputes += 1
+      return summary
+    },
+    {
+      gross: 0,
+      refunded: 0,
+      disputes: 0,
+      byProvider: new Map<
+        string,
+        { count: number; gross: number; refunded: number }
+      >(),
+    }
+  )
+  const currency =
+    availableCurrencies.find((item) => item.isBase)?.code ??
+    defaultCurrency ??
+    'SAR'
 
   return (
     <main className='space-y-4 p-4'>
@@ -32,6 +72,82 @@ export default async function PaymentsAdminPage() {
           {t('Provider status is driven by environment configuration and store settings')}
         </p>
       </div>
+
+      <div className='grid gap-4 md:grid-cols-4'>
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm'>{t('Gross collected')}</CardTitle>
+          </CardHeader>
+          <CardContent className='text-2xl font-bold'>
+            {formatCurrency(totals.gross, currency)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm'>{t('Refunded')}</CardTitle>
+          </CardHeader>
+          <CardContent className='text-2xl font-bold'>
+            {formatCurrency(totals.refunded, currency)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm'>{t('Net collected')}</CardTitle>
+          </CardHeader>
+          <CardContent className='text-2xl font-bold'>
+            {formatCurrency(totals.gross - totals.refunded, currency)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm'>{t('Disputed orders')}</CardTitle>
+          </CardHeader>
+          <CardContent className='text-2xl font-bold'>
+            {totals.disputes}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Reconciliation by provider')}</CardTitle>
+        </CardHeader>
+        <CardContent className='overflow-x-auto'>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('Provider')}</TableHead>
+                <TableHead className='text-end'>{t('Orders')}</TableHead>
+                <TableHead className='text-end'>{t('Gross')}</TableHead>
+                <TableHead className='text-end'>{t('Refunded')}</TableHead>
+                <TableHead className='text-end'>{t('Net')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from(totals.byProvider.entries()).map(
+                ([provider, values]) => (
+                  <TableRow key={provider}>
+                    <TableCell>{provider}</TableCell>
+                    <TableCell className='text-end'>{values.count}</TableCell>
+                    <TableCell className='text-end'>
+                      {formatCurrency(values.gross, currency)}
+                    </TableCell>
+                    <TableCell className='text-end'>
+                      {formatCurrency(values.refunded, currency)}
+                    </TableCell>
+                    <TableCell className='text-end'>
+                      {formatCurrency(
+                        values.gross - values.refunded,
+                        currency
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <div className='grid gap-4 md:grid-cols-2'>
         {paymentProviders.map((provider) => {
@@ -73,6 +189,11 @@ export default async function PaymentsAdminPage() {
                 {provider.webhookPath && (
                   <p className='break-all text-muted-foreground text-xs'>
                     {t('Webhook')}: {provider.webhookPath}
+                  </p>
+                )}
+                {provider.unifiedWebhookPath && (
+                  <p className='break-all text-muted-foreground text-xs'>
+                    {t('Unified webhook')}: {provider.unifiedWebhookPath}
                   </p>
                 )}
               </CardContent>

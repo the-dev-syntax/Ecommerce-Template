@@ -76,11 +76,13 @@ export default function OrderPaymentForm({
   const handleCreatePayPalOrder = async () => {
     const res = await createPayPalOrder(order._id)
     if (!res.success){
-      return toast({
+      toast({
         description: res.message,
         variant: 'destructive',
       })
+      throw new Error(res.message)
     }
+    if (!res.data) throw new Error('PayPal order reference is missing')
     return res.data
   }
   

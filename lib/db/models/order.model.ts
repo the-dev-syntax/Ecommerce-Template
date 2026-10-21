@@ -16,6 +16,9 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   refundedAmount?: number
   refundedAt?: Date
   shippingRefunded?: boolean
+  isDisputed?: boolean
+  disputeStatus?: string
+  disputedAt?: Date
   refundHistory?: {
     amount: number
     provider: string
@@ -117,6 +120,9 @@ const orderSchema = new Schema<IOrder>(
     refundedAmount: { type: Number, default: 0 },
     refundedAt: { type: Date },
     shippingRefunded: { type: Boolean, default: false },
+    isDisputed: { type: Boolean, default: false },
+    disputeStatus: { type: String },
+    disputedAt: { type: Date },
     refundHistory: [
       {
         _id: false,

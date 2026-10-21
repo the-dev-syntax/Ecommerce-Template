@@ -687,5 +687,10 @@
   "Provider": "Fournisseur",
   "Received": "Reçu",
   "No webhook events yet": "Aucun événement webhook",
-  "Payments": "Paiements"
+  "Payments": "Paiements",
+  "Gross collected": "Encaissé brut",
+  "Net collected": "Encaissé net",
+  "Disputed orders": "Commandes contestées",
+  "Reconciliation by provider": "Rapprochement par fournisseur",
+  "Unified webhook": "Webhook unifié"
 }

@@ -3,13 +3,17 @@ import Stripe from 'stripe'
 
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
 import { beginPaymentEvent, finishPaymentEvent } from '@/lib/payments/events'
+import {
+  constructStripeWebhook,
+  retrieveStripeCharge,
+  retrieveStripeIntent,
+} from '@/lib/payments/stripe'
+import Order from '@/lib/db/models/order.model'
 
 export async function POST(req: NextRequest) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(
+    event = constructStripeWebhook(
       await req.text(),
       req.headers.get('stripe-signature') as string,
       process.env.STRIPE_WEBHOOK_SECRET as string
@@ -65,7 +69,7 @@ export async function POST(req: NextRequest) {
 
       let orderId = charge.metadata.orderId
       if (!orderId && typeof charge.payment_intent === 'string') {
-        const paymentIntent = await stripe.paymentIntents.retrieve(
+        const paymentIntent = await retrieveStripeIntent(
           charge.payment_intent
         )
         orderId = paymentIntent.metadata.orderId
@@ -106,6 +110,33 @@ export async function POST(req: NextRequest) {
         'processed',
         'Payment failed event logged'
       )
+    }
+
+    if (event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
+      const dispute = event.data.object as Stripe.Dispute
+      let orderId = ''
+      if (typeof dispute.charge === 'string') {
+        const charge = await retrieveStripeCharge(dispute.charge)
+        orderId = charge.metadata.orderId
+      }
+      if (orderId) {
+        await Order.updateOne(
+          { _id: orderId },
+          {
+            $set: {
+              isDisputed: event.type === 'charge.dispute.created',
+              disputeStatus: dispute.status,
+              disputedAt: new Date(),
+            },
+          }
+        )
+      }
+      await finishPaymentEvent(
+        paymentEventId,
+        'processed',
+        `Dispute ${dispute.status}`
+      )
+      return NextResponse.json({ received: true })
     }
 
     await finishPaymentEvent(paymentEventId, 'ignored')

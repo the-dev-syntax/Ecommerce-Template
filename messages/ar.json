@@ -687,5 +687,10 @@
   "Provider": "المزود",
   "Received": "تم الاستلام",
   "No webhook events yet": "لا توجد أحداث Webhook بعد",
-  "Payments": "المدفوعات"
+  "Payments": "المدفوعات",
+  "Gross collected": "إجمالي المحصل",
+  "Net collected": "صافي المحصل",
+  "Disputed orders": "الطلبات المتنازع عليها",
+  "Reconciliation by provider": "المطابقة حسب المزود",
+  "Unified webhook": "Webhook موحد"
 }

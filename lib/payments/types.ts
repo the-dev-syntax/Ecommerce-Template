@@ -8,5 +8,6 @@ export interface PaymentProviderDefinition {
   currencies: '*' | string[]
   supportsRefunds: boolean
   webhookPath?: string
+  unifiedWebhookPath?: string
   isConfigured: () => boolean
 }

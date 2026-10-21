@@ -1,7 +1,5 @@
 'use server'
 
-import type Stripe from 'stripe'
-
 import { Cart, IOrderList, OrderItem, ShippingAddress } from '@/types'
 import {
   calculateFutureDate,
@@ -17,6 +15,7 @@ import { OrderInputSchema } from '../validator'
 import Order, { IOrder } from '../db/models/order.model'
 
 import { paypal } from '../paypal'
+import { getPaymentAdapter } from '../payments/adapters'
 import { sendAskReviewOrderItems } from '@/emails'
 import { DateRange } from 'react-day-picker'
 import Product from '../db/models/product.model'
@@ -36,6 +35,10 @@ import {
   toMoyasarAmount,
 } from '../payments/moyasar'
 import { getEnabledPaymentMethods, isPaymentProvider } from '../payments'
+import {
+  createStripeIntent,
+  retrieveStripeIntent,
+} from '../payments/stripe'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -270,9 +273,11 @@ export async function createPayPalOrder(orderId: string) {
       throw new Error('Order is not payable by PayPal')
     if (order.totalPrice <= 0) throw new Error('Order total is invalid')
 
-    const paypalOrder = await paypal.createOrder(
+    const adapter = getPaymentAdapter('paypal')
+    if (!adapter?.createOrder) throw new Error('PayPal adapter is unavailable')
+    const paypalOrder = await adapter.createOrder(
       order.totalPrice,
-      (order.currency || 'USD').toUpperCase()
+      (order.currency || 'SAR').toUpperCase()
     )
 
     await Order.findByIdAndUpdate(order._id, {
@@ -320,7 +325,11 @@ export async function approvePayPalOrder(
     if (order.paymentResult?.id !== data.orderID)
       throw new Error('PayPal order does not match this order')
 
-    const captureData = await paypal.capturePayment(data.orderID)
+    const adapter = getPaymentAdapter('paypal')
+    if (!adapter?.captureOrder) throw new Error('PayPal adapter is unavailable')
+    const captureData = (await adapter.captureOrder(
+      data.orderID
+    )) as Awaited<ReturnType<typeof paypal.capturePayment>>
     if (!captureData || captureData.status !== 'COMPLETED')
       throw new Error('PayPal payment was not completed')
 
@@ -378,9 +387,7 @@ export async function updateOrderToPaidByStripe(
       throw new Error('Order is not payable by Stripe')
 
     // Verify payment status directly with Stripe.
-    const Stripe = (await import('stripe')).default
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const paymentIntent = await retrieveStripeIntent(paymentIntentId)
 
     if (paymentIntent.status !== 'succeeded')
       return { success: false, message: 'Payment not completed' }
@@ -579,15 +586,11 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
     if (order.totalPrice <= 0) return { error: 'Order total is invalid' }
 
     const currency = (order.currency || 'USD').toLowerCase()
-    const Stripe = (await import('stripe')).default
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-
-    let paymentIntent: Stripe.PaymentIntent | null = null
+    let paymentIntent: Awaited<ReturnType<typeof retrieveStripeIntent>> | null =
+      null
 
     if (order.stripePaymentIntentId) {
-      const existing = await stripe.paymentIntents.retrieve(
-        order.stripePaymentIntentId
-      )
+      const existing = await retrieveStripeIntent(order.stripePaymentIntentId)
       if (existing.metadata.orderId !== order._id.toString())
         return { error: 'Payment intent does not match this order' }
       if (
@@ -608,12 +611,11 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
     }
 
     if (!paymentIntent) {
-      paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(order.totalPrice * 100),
+      paymentIntent = await createStripeIntent({
+        amount: order.totalPrice,
         currency,
-        metadata: { orderId: order._id },
-        receipt_email: order.user?.email || undefined,
-        description: `Order ${order._id}`,
+        orderId: order._id.toString(),
+        email: order.user?.email,
       })
 
       await Order.findByIdAndUpdate(order._id, {

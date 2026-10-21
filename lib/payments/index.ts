@@ -13,6 +13,7 @@ export const paymentProviders: PaymentProviderDefinition[] = [
     currencies: '*',
     supportsRefunds: true,
     webhookPath: '/api/webhooks/moyasar',
+    unifiedWebhookPath: '/api/webhooks/payments/moyasar',
     isConfigured: isMoyasarConfigured,
   },
   {
@@ -22,6 +23,7 @@ export const paymentProviders: PaymentProviderDefinition[] = [
     currencies: '*',
     supportsRefunds: true,
     webhookPath: '/api/webhooks/stripe',
+    unifiedWebhookPath: '/api/webhooks/payments/stripe',
     isConfigured: () => Boolean(process.env.STRIPE_SECRET_KEY),
   },
   {
@@ -48,6 +50,7 @@ export const paymentProviders: PaymentProviderDefinition[] = [
     currencies: '*',
     supportsRefunds: true,
     webhookPath: '/api/webhooks/mock',
+    unifiedWebhookPath: '/api/webhooks/payments/mock',
     isConfigured: () => process.env.NODE_ENV !== 'production',
   },
 ]

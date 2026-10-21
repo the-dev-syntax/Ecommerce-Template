@@ -687,5 +687,10 @@
   "Provider": "Provider",
   "Received": "Received",
   "No webhook events yet": "No webhook events yet",
-  "Payments": "Payments"
+  "Payments": "Payments",
+  "Gross collected": "Gross collected",
+  "Net collected": "Net collected",
+  "Disputed orders": "Disputed orders",
+  "Reconciliation by provider": "Reconciliation by provider",
+  "Unified webhook": "Unified webhook"
 }
