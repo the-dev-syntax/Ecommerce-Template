@@ -10,6 +10,7 @@
     "migrate:tax": "npx tsx --env-file=.env.local ./scripts/migrate-tax-snapshots.ts",
     "migrate:returns": "npx tsx --env-file=.env.local ./scripts/migrate-returns.ts",
     "migrate:whitelabel": "npx tsx --env-file=.env.local ./scripts/migrate-white-label.ts",
+    "migrate:variants": "npx tsx --env-file=.env.local ./scripts/migrate-variants.ts",
     "zatca:onboard": "npx tsx --env-file=.env.local ./scripts/onboard-zatca.ts",
     "zatca:verify": "npx tsx --env-file=.env.local ./scripts/verify-zatca-sandbox.ts",
     "test": "tsx --test \"tests/**/*.test.ts\"",

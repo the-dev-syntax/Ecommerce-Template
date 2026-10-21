@@ -28,6 +28,7 @@ import {
 import { slugify } from '@/lib/utils'
 import { IProductInputForm } from '@/types'
 import { useTranslations } from 'next-intl'
+import VariantForm from './variant-form'
 
 
 
@@ -177,6 +178,8 @@ interface ProductFormUIProps {
             )}
           />
         </div>
+
+        <VariantForm form={form} />
 
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField

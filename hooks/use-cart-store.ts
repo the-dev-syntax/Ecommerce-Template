@@ -17,6 +17,17 @@ const initialState: Cart = {
   deliveryDateIndex: 0, // change it from undefined to 0
 }
 
+function sameLine(a: OrderItem, b: OrderItem) {
+  if (a.variantId || b.variantId) {
+    return a.product === b.product && a.variantId === b.variantId
+  }
+  return (
+    a.product === b.product &&
+    a.color === b.color &&
+    a.size === b.size
+  )
+}
+
 interface CartState {
   cart: Cart
   addItem: (item: OrderItem, quantity: number) => Promise<string>
@@ -36,13 +47,8 @@ const useCartStore = create(
       addItem: async (item: OrderItem, quantity: number) => {
         const { items,shippingAddress } = get().cart
        
-        const existItem = items.find(
-          (x) =>
-            x.product === item.product &&
-            x.color === item.color &&
-            x.size === item.size
-        )
-       // if item exist with the same color and size , existItem ={...item }
+        const existItem = items.find((x) => sameLine(x, item))
+       // if item exist with the same variant , existItem ={...item }
         if (existItem) {
           if (existItem.countInStock < quantity + existItem.quantity) {
             throw new Error('Not enough items in stock')
@@ -55,9 +61,7 @@ const useCartStore = create(
         
         const updatedCartItems = existItem
           ? items.map((x) =>
-              x.product === item.product &&
-              x.color === item.color &&
-              x.size === item.size
+              sameLine(x, item)
                 ? { ...existItem, quantity: existItem.quantity + quantity }
                 : x
             )
@@ -72,12 +76,7 @@ const useCartStore = create(
             })),
           },
         })
-        const foundItem = updatedCartItems.find(
-          (x) =>
-            x.product === item.product &&
-            x.color === item.color &&
-            x.size === item.size
-        )
+        const foundItem = updatedCartItems.find((x) => sameLine(x, item))
         if (!foundItem) {
           throw new Error('Item not found in cart')
         }
@@ -85,19 +84,10 @@ const useCartStore = create(
       },
       updateItem: async (item: OrderItem, quantity: number) => {
         const { items, shippingAddress } = get().cart
-        const exist = items.find(
-          (x) =>
-            x.product === item.product &&
-            x.color === item.color &&
-            x.size === item.size
-        )
+        const exist = items.find((x) => sameLine(x, item))
         if (!exist) return
         const updatedCartItems = items.map((x) =>
-          x.product === item.product &&
-          x.color === item.color &&
-          x.size === item.size
-            ? { ...exist, quantity: quantity }
-            : x
+          sameLine(x, item) ? { ...exist, quantity: quantity } : x
         )
         set({
           cart: {
@@ -111,12 +101,7 @@ const useCartStore = create(
       },
       removeItem: async (item: OrderItem) => {
         const { items, shippingAddress } = get().cart
-        const updatedCartItems = items.filter(
-          (x) =>
-            x.product !== item.product ||
-            x.color !== item.color ||
-            x.size !== item.size
-        )
+        const updatedCartItems = items.filter((x) => !sameLine(x, item))
         set({
           cart: {
             ...get().cart,

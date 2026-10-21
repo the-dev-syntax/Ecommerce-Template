@@ -88,6 +88,12 @@ export default function CartPage() {
                         >
                           {item.name}
                         </Link>
+                        {item.variantLabel && (
+                          <p className='text-sm'>
+                            <span className='font-bold'>{t('Variant')}: </span>{' '}
+                            {item.variantLabel}
+                          </p>
+                        )}
                         <div>
                           <p className='text-sm'>
                             <span className='font-bold'>{t('Color')}: </span>{' '}

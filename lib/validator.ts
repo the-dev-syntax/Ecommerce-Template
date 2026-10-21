@@ -38,6 +38,23 @@ export const ReviewInputSchema = z.object({
 
 
 // product eschema , z.coarse ==>convert.
+export const ProductVariantSchema = z.object({
+  id: z.string().min(1, 'Variant id is required').max(100),
+  sku: z.string().min(1, 'SKU is required').max(100),
+  size: z.string().max(50),
+  color: z.string().max(50),
+  price: Price('Variant price'),
+  listPrice: Price('Variant list price'),
+  countInStock: z.coerce
+    .number()
+    .int()
+    .nonnegative('Variant stock must be a non-negative number'),
+  image: z.string().max(2048),
+  barcode: z.string().max(100),
+  weight: z.coerce.number().nonnegative('Weight must be non-negative'),
+  isDefault: z.boolean(),
+})
+
 export const ProductInputSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   slug: z.string().min(3, 'Slug must be at least 3 characters'),
@@ -58,6 +75,7 @@ export const ProductInputSchema = z.object({
   tags: z.array(z.string()).default([]),
   sizes: z.array(z.string()).default([]),
   colors: z.array(z.string()).default([]),
+  variants: z.array(ProductVariantSchema).optional(),
   avgRating: z.coerce
     .number()
     .min(0, 'Average rating must be at least 0')
@@ -118,6 +136,9 @@ export const OrderItemSchema = z.object({
   restockedQuantity: z.coerce.number().int().nonnegative().optional(),
   size: z.string().max(50, 'Size is too long').optional(),
   color: z.string().max(50, 'Color is too long').optional(),
+  variantId: z.string().max(100).optional(),
+  sku: z.string().max(100).optional(),
+  variantLabel: z.string().max(200).optional(),
 })
 
 export const ShippingAddressSchema = z.object({
@@ -359,6 +380,7 @@ export const ProductInputFormSchema = z.object({
   tags: z.array(z.string()),
   sizes: z.array(z.string()),
   colors: z.array(z.string()),
+  variants: z.array(ProductVariantSchema).optional(),
   avgRating: z.coerce
     .number()
     .min(0, 'Average rating must be at least 0')

@@ -11,6 +11,7 @@ import { calculateFutureDate, calculatePastDate, generateId, round2 } from '../u
 import WebPage from './models/web-page.model'
 import Setting from './models/setting.model'
 import { priceOrderItems } from '../tax'
+import { normalizeProductVariants } from '../product-variants'
 
 // calling this function give you access to the .env file
 loadEnvConfig(cwd())
@@ -32,7 +33,9 @@ const main = async () => {
     const createdUser = await User.insertMany(users)
 
     await Product.deleteMany()
-    const createdProducts = await Product.insertMany(products)
+    const createdProducts = await Product.insertMany(
+      products.map(normalizeProductVariants)
+    )
 
     await Review.deleteMany()
     const rws = []

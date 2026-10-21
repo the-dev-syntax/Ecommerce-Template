@@ -621,5 +621,15 @@
   "Sender Email": "Sender Email",
   "Reply-To": "Reply-To",
   "Falls back to SENDER_NAME and SENDER_EMAIL when empty": "Falls back to SENDER_NAME and SENDER_EMAIL when empty",
-  "Save Setting": "Save Setting"
+  "Save Setting": "Save Setting",
+  "Variant": "Variant",
+  "Variants": "Variants",
+  "Add variant": "Add variant",
+  "Each variant has its own SKU, price and stock": "Each variant has its own SKU, price and stock",
+  "SKU": "SKU",
+  "Weight": "Weight",
+  "Variant image URL": "Variant image URL",
+  "Barcode": "Barcode",
+  "Default variant": "Default variant",
+  "No variants yet, a default variant will be created on save": "No variants yet, a default variant will be created on save"
 }

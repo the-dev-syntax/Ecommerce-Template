@@ -222,6 +222,9 @@ export async function processOrderReturn(
               name: line.name,
               quantity: line.quantity,
               returnPolicy: line.returnPolicy,
+              variantId: line.variantId ?? '',
+              sku: line.sku ?? '',
+              variantLabel: line.variantLabel ?? '',
               netAmount: line.netAmount,
               vatAmount: line.vatAmount,
               grossAmount: line.grossAmount,
@@ -259,14 +262,18 @@ export async function processOrderReturn(
         )
 
         if (restock) {
+          const increment = {
+            countInStock: line.quantity,
+            numSales: -line.quantity,
+            ...(line.variantId
+              ? { 'variants.$.countInStock': line.quantity }
+              : {}),
+          }
           await Product.updateOne(
-            { _id: line.product },
-            {
-              $inc: {
-                countInStock: line.quantity,
-                numSales: -line.quantity,
-              },
-            },
+            line.variantId
+              ? { _id: line.product, 'variants.id': line.variantId }
+              : { _id: line.product },
+            { $inc: increment },
             { session }
           )
         }
@@ -433,14 +440,18 @@ export async function cancelOrderById(
 
       if (wasPaid) {
         for (const item of fresh.items) {
+          const increment = {
+            countInStock: item.quantity,
+            numSales: -item.quantity,
+            ...(item.variantId
+              ? { 'variants.$.countInStock': item.quantity }
+              : {}),
+          }
           await Product.updateOne(
-            { _id: item.product },
-            {
-              $inc: {
-                countInStock: item.quantity,
-                numSales: -item.quantity,
-              },
-            },
+            item.variantId
+              ? { _id: item.product, 'variants.id': item.variantId }
+              : { _id: item.product },
+            { $inc: increment },
             { session }
           )
         }

@@ -40,18 +40,40 @@ export async function generateMetadata(props: {
 
 export default async function ProductDetails(props: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ page: string; color: string; size: string }>
+  searchParams: Promise<{
+    page: string
+    color: string
+    size: string
+    variant: string
+  }>
 }) {
 
   const searchParams = await props.searchParams
 
-  const { page, color, size } = searchParams
+  const { page, color, size, variant } = searchParams
 
   const params = await props.params
 
   const { slug } = params
 
   const product = await getProductBySlug(slug)
+  const variants = product.variants ?? []
+  const selectedVariant =
+    variants.find((candidate) => candidate.id === variant) ??
+    variants.find(
+      (candidate) =>
+        (!size || candidate.size === size) &&
+        (!color || candidate.color === color)
+    ) ??
+    variants.find((candidate) => candidate.countInStock > 0) ??
+    variants[0]
+  const selectedStock = selectedVariant?.countInStock ?? product.countInStock
+  const selectedPrice = selectedVariant?.price ?? product.price
+  const selectedListPrice = selectedVariant?.listPrice ?? product.listPrice
+  const selectedImage = selectedVariant?.image || product.images[0]
+  const selectedVariantLabel = selectedVariant
+    ? [selectedVariant.size, selectedVariant.color].filter(Boolean).join(' / ')
+    : undefined
 
   const relatedProducts = await getRelatedProductsByCategory({
     category: product.category,
@@ -93,8 +115,8 @@ export default async function ProductDetails(props: {
               <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
                 <div className='flex gap-3'>
                   <ProductPrice
-                    price={product.price}
-                    listPrice={product.listPrice}
+                    price={selectedPrice}
+                    listPrice={selectedListPrice}
                     isDeal={product.tags.includes('todays-deal')}
                     forListing={false}
                   />
@@ -121,8 +143,7 @@ export default async function ProductDetails(props: {
             <div>
               <SelectVariant
                 product={product}
-                size={size || product.sizes[0]}
-                color={color || product.colors[0]}
+                selectedVariantId={selectedVariant?.id}
               />
             </div>
             <Separator className='my-2' />
@@ -136,34 +157,40 @@ export default async function ProductDetails(props: {
           <div>
             <Card>
               <CardContent className='p-4 flex flex-col  gap-4'>
-                <ProductPrice price={product.price} />
+                <ProductPrice price={selectedPrice} />
                 {/* 1-if countInStock = a number and it is = 1,2,3 only. 2-if not 0, else out of stock  */}
-                {product.countInStock > 0 && product.countInStock <= 3 && (
+                {selectedStock > 0 && selectedStock <= 3 && (
                   <div className='text-destructive font-bold'>
-                    {t('OnlyOrderSoon', { countInStock: product.countInStock })}               
+                    {t('OnlyOrderSoon', { countInStock: selectedStock })}
                   </div>
                 )}
-                {product.countInStock !== 0 ? (
+                {selectedStock !== 0 ? (
                   <div className='text-green-700 text-xl'>{t('In Stock')}</div>
                 ) : (
                   <div className='text-destructive text-xl'>{t('Out of Stock')}</div>
                 )}
-                  {product.countInStock !== 0 && (
+                  {selectedStock !== 0 && (
                     <div className='flex justify-center items-center'>
                       <AddToCart
                         item={{
                           clientId: generateId(),
                           product: product._id,
-                          countInStock: product.countInStock,
+                          countInStock: selectedStock,
                           name: product.name,
                           slug: product.slug,
                           category: product.category,
-                          price: round2(product.price),
+                          price: round2(selectedPrice),
                           quantity: 1,
-                          image: product.images[0],
+                          image: selectedImage,
                           returnPolicy,
-                          size: size || product.sizes[0],
-                          color: color || product.colors[0],
+                          size: selectedVariant?.size || size || product.sizes[0],
+                          color:
+                            selectedVariant?.color ||
+                            color ||
+                            product.colors[0],
+                          variantId: selectedVariant?.id,
+                          sku: selectedVariant?.sku,
+                          variantLabel: selectedVariantLabel,
                         }}
                       />
                     </div>

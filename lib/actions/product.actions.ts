@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
 import { clampLimit, clampPage, escapeRegExp, formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
+import { normalizeProductVariants } from '../product-variants'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
 import { auth } from '@/auth'
@@ -332,7 +333,7 @@ export async function createProduct(data: IProductInput) {
     await connectToDatabase()
 
     const product = ProductInputSchema.parse(data)
-    await Product.create(product)
+    await Product.create(normalizeProductVariants(product))
  
     await revalidateAllLocales(`/admin/products`)
 
@@ -354,7 +355,10 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
     await connectToDatabase()
 
     const product = ProductUpdateSchema.parse(data)
-    await Product.findByIdAndUpdate(product._id, product)
+    await Product.findByIdAndUpdate(
+      product._id,
+      normalizeProductVariants(product)
+    )
  
     await revalidateAllLocales(`/admin/products`)
 

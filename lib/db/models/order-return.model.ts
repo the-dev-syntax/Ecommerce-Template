@@ -15,6 +15,9 @@ export interface IOrderReturnItem {
   name: string
   quantity: number
   returnPolicy: ReturnPolicy
+  variantId?: string
+  sku?: string
+  variantLabel?: string
   netAmount: number
   vatAmount: number
   grossAmount: number
@@ -63,6 +66,9 @@ const orderReturnSchema = new Schema<IOrderReturn>(
           enum: RETURN_POLICIES,
           required: true,
         },
+        variantId: { type: String, default: '' },
+        sku: { type: String, default: '' },
+        variantLabel: { type: String, default: '' },
         netAmount: { type: Number, required: true },
         vatAmount: { type: Number, required: true },
         grossAmount: { type: Number, required: true },

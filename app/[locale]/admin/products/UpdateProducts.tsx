@@ -32,6 +32,7 @@ const defaultValues: IProductInputForm = {
     tags: [],
     sizes: [],
     colors: [],
+    variants: [],
     ratingDistribution: [],
     reviews: [],
  };

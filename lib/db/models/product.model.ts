@@ -4,6 +4,20 @@ import { IProductInput } from '@/types'
 import { RETURN_POLICIES } from '@/lib/returns/policy'
 
 // createdAt: Date and updatedAt: Date, will be added by Mongoose anyway, but defining it here so  TypeScript would complain if you tried to access those properties on a product document.
+export interface IProductVariant {
+  id: string
+  sku: string
+  size: string
+  color: string
+  price: number
+  listPrice: number
+  countInStock: number
+  image: string
+  barcode: string
+  weight: number
+  isDefault: boolean
+}
+
 export interface IProduct extends Omit<Document, '_id'>, IProductInput {
   _id: string
   createdAt: Date
@@ -51,6 +65,22 @@ const productSchema = new Schema<IProduct>(
     tags: { type: [String], default: ['new arrival'] },
     colors: { type: [String], default: ['White', 'Red', 'Black'] },
     sizes: { type: [String], default: ['60'] },
+    variants: [
+      {
+        _id: false,
+        id: { type: String, required: true },
+        sku: { type: String, required: true },
+        size: { type: String, default: '' },
+        color: { type: String, default: '' },
+        price: { type: Number, required: true },
+        listPrice: { type: Number, required: true, default: 0 },
+        countInStock: { type: Number, required: true, default: 0 },
+        image: { type: String, default: '' },
+        barcode: { type: String, default: '' },
+        weight: { type: Number, default: 0 },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
     avgRating: {
       type: Number,
       required: true,

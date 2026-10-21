@@ -140,6 +140,12 @@ export default function OrderDetailsForm({
                           height={50}
                         ></Image>
                         <span className='px-2'>{item.name}</span>
+                        {item.variantLabel && (
+                          <span className='text-muted-foreground block px-2 text-xs'>
+                            {item.variantLabel}
+                            {item.sku ? ` · ${item.sku}` : ''}
+                          </span>
+                        )}
                       </Link>
                     </TableCell>
                     <TableCell>

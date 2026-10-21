@@ -74,6 +74,9 @@ const orderSchema = new Schema<IOrder>(
         quantity: { type: Number, required: true },
         size: { type: String },
         color: { type: String },
+        variantId: { type: String, default: '' },
+        sku: { type: String, default: '' },
+        variantLabel: { type: String, default: '' },
       },
     ],
     shippingAddress: {

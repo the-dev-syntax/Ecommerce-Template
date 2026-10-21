@@ -25,6 +25,11 @@ const ProductCard = ({
   hideBorder?: boolean
   hideAddToCart?: boolean
 }) => {
+  const defaultVariant =
+    product.variants?.find((variant) => variant.countInStock > 0) ??
+    product.variants?.[0]
+  const cardPrice = defaultVariant?.price ?? product.price
+  const cardListPrice = defaultVariant?.listPrice ?? product.listPrice
   // ProductImage () ==>links using product.slug , if  image >1 , use imageHover(usestate, timeout) if one image display normally.
   const ProductImage = () => (
     <Link href={`/product/${product.slug}`}> 
@@ -72,8 +77,8 @@ const ProductCard = ({
 
       <ProductPrice
         isDeal={product.tags.includes('todays-deal')}
-        price={product.price}
-        listPrice={product.listPrice}
+        price={cardPrice}
+        listPrice={cardListPrice}
         forListing
       />
     </div>
@@ -86,16 +91,24 @@ const ProductCard = ({
         item={{
           clientId: generateId(),
           product: product._id,
-          size: product.sizes[0],
-          color: product.colors[0],
-          countInStock: product.countInStock,
+          size: defaultVariant?.size || product.sizes[0],
+          color: defaultVariant?.color || product.colors[0],
+          countInStock:
+            defaultVariant?.countInStock ?? product.countInStock,
           name: product.name,
           slug: product.slug,
           category: product.category,
-          price: round2(product.price),
+          price: round2(cardPrice),
           quantity: 1,
-          image: product.images[0],
+          image: defaultVariant?.image || product.images[0],
           returnPolicy: product.returnPolicy ?? 'return_and_refund',
+          variantId: defaultVariant?.id,
+          sku: defaultVariant?.sku,
+          variantLabel: defaultVariant
+            ? [defaultVariant.size, defaultVariant.color]
+                .filter(Boolean)
+                .join(' / ')
+            : undefined,
         }}
       />
     </div>

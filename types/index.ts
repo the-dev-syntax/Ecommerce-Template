@@ -15,6 +15,7 @@ import {
   ProductUpdateSchema,
   ProductInputFormSchema,
   ProductUpdateFormSchema,
+  ProductVariantSchema,
   WebPageInputSchema,
   WebPageUpdateSchema,
   CarouselSchema,
@@ -45,6 +46,7 @@ export type IReviewDetails = IReviewInput & {
 
 export type IProductInput = z.infer<typeof ProductInputSchema>
 export type IProductUpdate = z.infer<typeof ProductUpdateSchema>
+export type IProductVariant = z.infer<typeof ProductVariantSchema>
 export type IProductInputForm = z.infer<typeof ProductInputFormSchema>
 export type IProductFormUpdate = z.infer<typeof ProductUpdateFormSchema>
 

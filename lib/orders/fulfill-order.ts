@@ -83,19 +83,40 @@ export async function fulfillOrder({
         throw new Error('Paid amount does not match this order total')
 
       for (const item of order.items) {
-        const product = await Product.findOneAndUpdate(
-          {
-            _id: item.product,
-            countInStock: { $gte: item.quantity },
-          },
-          {
-            $inc: {
-              countInStock: -item.quantity,
-              numSales: item.quantity,
-            },
-          },
-          { new: true, session }
-        )
+        const product = item.variantId
+          ? await Product.findOneAndUpdate(
+              {
+                _id: item.product,
+                countInStock: { $gte: item.quantity },
+                variants: {
+                  $elemMatch: {
+                    id: item.variantId,
+                    countInStock: { $gte: item.quantity },
+                  },
+                },
+              },
+              {
+                $inc: {
+                  countInStock: -item.quantity,
+                  numSales: item.quantity,
+                  'variants.$.countInStock': -item.quantity,
+                },
+              },
+              { new: true, session }
+            )
+          : await Product.findOneAndUpdate(
+              {
+                _id: item.product,
+                countInStock: { $gte: item.quantity },
+              },
+              {
+                $inc: {
+                  countInStock: -item.quantity,
+                  numSales: item.quantity,
+                },
+              },
+              { new: true, session }
+            )
 
         if (!product) throw new Error(`Not enough stock for ${item.name}`)
       }

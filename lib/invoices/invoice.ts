@@ -133,7 +133,9 @@ export async function createInvoiceForOrder(
 
     return {
       clientId: item.clientId,
-      name: item.name,
+      name: item.variantLabel
+        ? `${item.name} - ${item.variantLabel}`
+        : item.name,
       quantity: item.quantity,
       unitPrice,
       lineTotal,

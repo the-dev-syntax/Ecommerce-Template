@@ -621,5 +621,15 @@
   "Sender Email": "بريد المرسل",
   "Reply-To": "بريد الرد",
   "Falls back to SENDER_NAME and SENDER_EMAIL when empty": "يستخدم SENDER_NAME و SENDER_EMAIL عند تركه فارغًا",
-  "Save Setting": "حفظ الإعدادات"
+  "Save Setting": "حفظ الإعدادات",
+  "Variant": "الخيار",
+  "Variants": "الخيارات",
+  "Add variant": "إضافة خيار",
+  "Each variant has its own SKU, price and stock": "لكل خيار رمز SKU وسعر ومخزون خاص",
+  "SKU": "رمز SKU",
+  "Weight": "الوزن",
+  "Variant image URL": "رابط صورة الخيار",
+  "Barcode": "الباركود",
+  "Default variant": "الخيار الافتراضي",
+  "No variants yet, a default variant will be created on save": "لا توجد خيارات بعد. سيتم إنشاء خيار افتراضي عند الحفظ."
 }

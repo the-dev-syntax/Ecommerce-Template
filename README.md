@@ -303,6 +303,22 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-26 — Per-variant SKU and stock (2026-10-21)
+
+- Added `IProductVariant`: id, SKU, size, color, price, list price, stock, image, barcode, weight, default flag.
+- Every product now normalizes to at least one default variant; legacy `sizes`/`colors`/`countInStock` remain derived from variants for compatibility.
+- Admin product editor: add/remove variants, per-variant SKU, size/color, price, list price, stock, image, barcode, weight and default selection. Product totals are calculated from variants on save.
+- Product page: variant selector with per-variant price, stock, image and out-of-stock label. Product cards and add-to-cart use the first in-stock/default variant.
+- Cart identity is per variant, not per size/color. Order items snapshot `variantId`, `sku` and `variantLabel`, and invoices/order details show the variant.
+- `buildOrderItems` validates and prices the selected variant; `fulfillOrder` atomically decrements product and variant stock.
+- Returns/refunds restock the selected variant; cancellations restock every item variant. Legacy order items without a variant fall back to product-level stock.
+- Added `npm run migrate:variants`: migrated 24 existing products to a default variant without changing price or stock.
+- Seed data now generates default variants for every product.
+
+### Verification
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (633 keys), `npm test` (31 tests), `npm run build` — PASS.
+- `npm run migrate:variants` — PASS (24 products migrated, stock preserved).
+
 ## P0-25 — CI and Phase 1A white-label essentials (2026-10-21)
 
 - Added `.github/workflows/ci.yml`: Node 22, MongoDB service, seed, `tsc`, `lint`, `i18n:check`, `npm test`, and `build` on every PR/push to `main`.
@@ -663,13 +679,13 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [ ] Acceptance: a new store can be configured and published entirely from the admin without code edits.
 
 ### Phase 1b — Catalog and product variants (P0)
-- [ ] Replace the flat `sizes`/`colors` arrays with a variant model: variant id, SKU, size, color, price override, stock, image, barcode, and weight.
-- [ ] Migrate existing products to a default variant without losing prices, stock, or order history.
-- [ ] Update the admin product editor for variants (add/edit/remove, per-variant stock, bulk stock update).
-- [ ] Update product cards, product page selector, cart, checkout, order items, and reviews to reference the variant id.
-- [ ] Enforce per-variant stock in `buildOrderItems` and `fulfillOrder`; prevent overselling.
-- [ ] Add per-variant image/price display and validation for required options.
-- [ ] Acceptance: a product with multiple size/color variants can be created, sold, refunded, and stock-tracked per variant.
+- [x] Replace the flat `sizes`/`colors` arrays with a variant model: variant id, SKU, size, color, price override, stock, image, barcode, and weight. Legacy arrays remain derived for compatibility.
+- [x] Migrate existing products to a default variant without losing prices, stock, or order history (`npm run migrate:variants`).
+- [x] Update the admin product editor for variants (add/edit/remove, per-variant stock, price, SKU, barcode, weight, image).
+- [x] Update product cards, product page selector, cart, checkout, order items, and inventory to reference the variant id.
+- [x] Enforce per-variant stock in `buildOrderItems` and `fulfillOrder`; prevent overselling.
+- [x] Add per-variant image/price display and validation for required options.
+- [x] Acceptance: a product with multiple size/color variants can be created, sold, refunded, and stock-tracked per variant. Review records remain product-level.
 
 ### Phase 2 — Currency, pricing, and Saudi tax (P0)
 - [x] Add a base currency (`SAR`) and remove the hardcoded `USD` fallbacks (`app/[locale]/layout.tsx:106`, `lib/utils.ts:42`, order default).

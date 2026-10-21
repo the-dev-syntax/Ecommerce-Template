@@ -18,6 +18,9 @@ export interface OrderItemForReturn {
   vatPercent?: number
   taxCategory?: TaxCategory
   exemptionReasonCode?: string
+  variantId?: string
+  sku?: string
+  variantLabel?: string
   returnPolicy?: ReturnPolicy
   refundedQuantity?: number
   restockedQuantity?: number
@@ -41,6 +44,9 @@ export interface ReturnLine {
   returnPolicy: ReturnPolicy
   taxCategory: TaxCategory
   exemptionReasonCode: string
+  variantId?: string
+  sku?: string
+  variantLabel?: string
   vatPercent: number
   unitNetPrice: number
   netAmount: number
@@ -97,6 +103,9 @@ function buildLine(
     returnPolicy: item.returnPolicy ?? 'return_and_refund',
     taxCategory,
     exemptionReasonCode: item.exemptionReasonCode ?? '',
+    variantId: item.variantId,
+    sku: item.sku,
+    variantLabel: item.variantLabel,
     vatPercent: taxCategory === 'S' ? round2(rate * 100) : 0,
     unitNetPrice,
     netAmount,
@@ -184,7 +193,7 @@ export function getShippingRefundAmount(
 export function toCreditNoteLines(lines: ReturnLine[]): CreditNoteLine[] {
   return lines.map((line) => ({
     clientId: line.clientId,
-    name: `Refund - ${line.name}`,
+    name: `Refund - ${line.name}${line.variantLabel ? ` (${line.variantLabel})` : ''}`,
     quantity: line.quantity,
     unitPrice: line.unitNetPrice,
     lineTotal: line.netAmount,

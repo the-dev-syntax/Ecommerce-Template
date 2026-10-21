@@ -83,17 +83,28 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
     const quantity = Number(item.quantity)
     if (!Number.isInteger(quantity) || quantity < 1)
       throw new Error(`Invalid quantity for ${product.name}`)
-    if (quantity > product.countInStock)
+
+    const variantId = item.variantId?.trim()
+    const variant = variantId
+      ? product.variants?.find((candidate) => candidate.id === variantId)
+      : undefined
+    if (variantId && !variant)
+      throw new Error(`Variant is no longer available: ${product.name}`)
+
+    const availableStock = variant
+      ? variant.countInStock
+      : product.countInStock
+    if (quantity > availableStock)
       throw new Error(`Not enough stock for ${product.name}`)
 
-    const image = product.images?.[0]
+    const image = variant?.image || product.images?.[0]
     if (!image) throw new Error(`Product image is missing: ${product.name}`)
 
-    const size = item.size?.trim() || undefined
-    const color = item.color?.trim() || undefined
-    if (size && !(product.sizes ?? []).includes(size))
+    const size = variant?.size || item.size?.trim() || undefined
+    const color = variant?.color || item.color?.trim() || undefined
+    if (!variant && size && !(product.sizes ?? []).includes(size))
       throw new Error(`Invalid size for ${product.name}`)
-    if (color && !(product.colors ?? []).includes(color))
+    if (!variant && color && !(product.colors ?? []).includes(color))
       throw new Error(`Invalid color for ${product.name}`)
 
     return {
@@ -103,16 +114,21 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       slug: product.slug,
       category: product.category,
       image,
-      price: round2(product.price),
+      price: round2(variant?.price ?? product.price),
       taxCategory: product.taxCategory ?? 'S',
       exemptionReasonCode: product.exemptionReasonCode ?? '',
       returnPolicy: product.returnPolicy ?? 'return_and_refund',
       refundedQuantity: 0,
       restockedQuantity: 0,
-      countInStock: product.countInStock,
+      countInStock: availableStock,
       quantity,
       size,
       color,
+      variantId: variant?.id,
+      sku: variant?.sku,
+      variantLabel: variant
+        ? [variant.size, variant.color].filter(Boolean).join(' / ')
+        : undefined,
     }
   })
 }

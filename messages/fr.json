@@ -621,5 +621,15 @@
   "Sender Email": "Email de l'expéditeur",
   "Reply-To": "Répondre à",
   "Falls back to SENDER_NAME and SENDER_EMAIL when empty": "Utilise SENDER_NAME et SENDER_EMAIL si vide",
-  "Save Setting": "Enregistrer les paramètres"
+  "Save Setting": "Enregistrer les paramètres",
+  "Variant": "Variante",
+  "Variants": "Variantes",
+  "Add variant": "Ajouter une variante",
+  "Each variant has its own SKU, price and stock": "Chaque variante a son SKU, son prix et son stock",
+  "SKU": "SKU",
+  "Weight": "Poids",
+  "Variant image URL": "URL de l'image de la variante",
+  "Barcode": "Code-barres",
+  "Default variant": "Variante par défaut",
+  "No variants yet, a default variant will be created on save": "Aucune variante. Une variante par défaut sera créée à l'enregistrement."
 }
