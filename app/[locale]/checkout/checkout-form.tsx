@@ -92,7 +92,7 @@ const CheckoutForm = () => {
       taxInclusive = true,
       shippingAddress,
       deliveryDateIndex,
-      paymentMethod = defaultEnabledPaymentMethod,
+      paymentMethod: storedPaymentMethod,
     },
     updateItem,
     removeItem,
@@ -101,6 +101,12 @@ const CheckoutForm = () => {
     setPaymentMethod,
     setDeliveryDateIndex,
   } = useCartStore()
+
+  const paymentMethod =
+    storedPaymentMethod &&
+    enabledPaymentMethods.some((method) => method.name === storedPaymentMethod)
+      ? storedPaymentMethod
+      : defaultEnabledPaymentMethod
 
   const selectedDelivery =
     availableDeliveryDates &&
