@@ -309,6 +309,7 @@ Known limits:
 - Added `/api/webhooks/payments/{provider}` as the unified webhook entry point. Provider-specific paths remain valid for existing dashboards.
 - Stripe `charge.dispute.created` / `charge.dispute.closed` events now mark the order as disputed with the dispute status; disputes are recorded in the payment event log.
 - `/admin/payments` now includes reconciliation totals (gross, refunded, net), provider breakdown and disputed-order count in addition to provider status and recent events.
+- Checkout payment rendering now goes through `PaymentPanel`, a provider registry; `payment-form.tsx` no longer contains PayPal/Stripe/Moyasar/COD branches.
 - Webhook replay protection and event logging remain active for both Moyasar and Stripe through the shared `PaymentEvent` model.
 
 ### Verification
@@ -760,7 +761,7 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [x] Add Moyasar refunds (full or one partial per payment), cancellation/void, admin UI, and refund webhook sync.
 - [x] Add chargeback handling (Stripe dispute events mark orders disputed) and a provider reconciliation dashboard with gross/refunded/net totals.
 - [x] Add a test-only mock provider definition for CI/registry tests; it is not exposed in the storefront checkout.
-- [ ] Acceptance: a new gateway can be added with a new adapter + config + webhook mapping and minimal checkout UI work.
+- [x] Acceptance: a new gateway can be added with an adapter, configuration, webhook mapping and one payment-panel entry; checkout/order logic no longer branches on provider internals.
 
 ### Phase 4 — Orders, inventory, and shipping (P1)
 - [ ] Add an explicit order state machine (pending payment → paid → processing → shipped → delivered → cancelled/refunded/returned) with immutable status history.

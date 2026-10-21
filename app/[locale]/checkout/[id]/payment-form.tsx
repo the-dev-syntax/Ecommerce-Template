@@ -1,31 +1,16 @@
 'use client'
 
-import {
-    PayPalButtons,
-    PayPalScriptProvider,
-    usePayPalScriptReducer,
-  } from '@paypal/react-paypal-js'
-import {
-    approvePayPalOrder,
-    createPayPalOrder,
-    createStripePaymentIntent, 
-  } from '@/lib/actions/order.actions'
-import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
-import { IOrder } from '@/lib/db/models/order.model'
-import { formatCurrency, formatDateTime } from '@/lib/utils'
-import CheckoutFooter from '../checkout-footer'
 import { redirect, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import ProductPrice from '@/components/shared/product/product-price'
-import { loadStripe } from '@stripe/stripe-js'
-import { Elements } from '@stripe/react-stripe-js'
-import StripeForm from './stripe-form'
-import MoyasarForm from './moyasar-form'
 import { useTranslations } from 'next-intl'
-import useCartStore from '@/hooks/use-cart-store'
 
+import CheckoutFooter from '../checkout-footer'
+import { Card, CardContent } from '@/components/ui/card'
+import ProductPrice from '@/components/shared/product/product-price'
+import useCartStore from '@/hooks/use-cart-store'
+import type { IOrder } from '@/lib/db/models/order.model'
+import { formatCurrency, formatDateTime } from '@/lib/utils'
+
+import PaymentPanel from './payment-panel'
 
 export default function OrderPaymentForm({
   order,
@@ -39,6 +24,8 @@ export default function OrderPaymentForm({
 }) {
   const t = useTranslations()
   const router = useRouter()
+  const { clearCart } = useCartStore()
+
   const {
     shippingAddress,
     items,
@@ -52,167 +39,94 @@ export default function OrderPaymentForm({
     isPaid,
     isCancelled,
   } = order
-  const { toast } = useToast()
-  const { clearCart } = useCartStore()
-
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
-  const [isCreatingIntent, setIsCreatingIntent] = useState(false)
 
   if (isPaid || isCancelled) {
     redirect(`/account/orders/${order._id}`)
   }
 
-  function PrintLoadingState() {
-    const [{ isPending, isRejected }] = usePayPalScriptReducer()
-    let status = ''
-    if (isPending) {
-      status = t('Loading PayPal')
-    } else if (isRejected) {
-      status = t('Error in loading PayPal.')
-    }
-    return status
+  const handlePaid = () => {
+    clearCart()
+    router.push(`/account/orders/${order._id}`)
+    router.refresh()
   }
-
-  const handleCreatePayPalOrder = async () => {
-    const res = await createPayPalOrder(order._id)
-    if (!res.success){
-      toast({
-        description: res.message,
-        variant: 'destructive',
-      })
-      throw new Error(res.message)
-    }
-    if (!res.data) throw new Error('PayPal order reference is missing')
-    return res.data
-  }
-  
-  const handleApprovePayPalOrder = async (data: { orderID: string }) => {
-    const res = await approvePayPalOrder(order._id, data)
-    toast({
-      description: res.message,
-      variant: res.success ? 'default' : 'destructive',
-    })
-    if (res.success) {
-      clearCart()
-      router.push(`/account/orders/${order._id}`)
-      router.refresh()
-    }
-  }
-
-  // new addition:
-  const handleStripePayment = async () => {
-  if (isCreatingIntent) return
-  setIsCreatingIntent(true)
-  const res = await createStripePaymentIntent(order._id)
-  setIsCreatingIntent(false)
-  if ('error' in res) {
-    return toast({ description: res.error, variant: 'destructive' })
-  }
-  setClientSecret(res.clientSecret)
-}
-
-
 
   const CheckoutSummary = () => (
     <Card>
       <CardContent className='p-4'>
-        <div>
-          <div className='text-lg font-bold'>{t('Order Summary')}</div>
-          <div className='space-y-2'>
-            <div className='flex justify-between'>
-              <span>{t('Items')}:</span>
-              <span>
-                {' '}
-                <ProductPrice price={itemsPrice} plain convert={false} currencyCode={order.currency} />
-              </span>
-            </div>
-            <div className='flex justify-between'>
-              <span> {t('Shipping & Handling')}:</span>
-              <span>
-                {shippingPrice === undefined ? (
-                  '--'
-                ) : shippingPrice === 0 ? (
-                  t('FREE')
-                ) : (
-                  <ProductPrice price={shippingPrice} plain convert={false} currencyCode={order.currency} />
-                )}
-              </span>
-            </div>
-            <div className='flex justify-between'>
-              <span>{taxInclusive ? t('VAT (included)') : t('VAT')}:</span>
-              <span>
-                {taxPrice === undefined ? (
-                  '--'
-                ) : (
-                  <ProductPrice price={taxPrice} plain convert={false} currencyCode={order.currency} />
-                )}
-              </span>
-            </div>
-            <div className='flex justify-between  pt-1 font-bold text-lg'>
-              <span> {t('Order Total')}:</span>
-              <span>
-                {' '}
-                <ProductPrice price={totalPrice} plain convert={false} currencyCode={order.currency} />
-              </span>
-            </div>
-
-            {!isPaid && paymentMethod === 'PayPal' && (
-              <div>
-                <PayPalScriptProvider options={{ clientId: paypalClientId }}>
-                  <PrintLoadingState />
-                  <PayPalButtons
-                    createOrder={handleCreatePayPalOrder}
-                    onApprove={handleApprovePayPalOrder}
-                  />
-                </PayPalScriptProvider>
-              </div>
-            )}
-
-            {!isPaid && paymentMethod === 'Stripe' && (clientSecret ? (
-              <Elements options={{ clientSecret }} stripe={stripePromise}>
-                <StripeForm
-                  priceInCents={Math.round(order.totalPrice * 100)}
-                  orderId={order._id}
-                />
-              </Elements>
-            ) : (
-              <Button
-                className='w-full rounded-full'
-                onClick={handleStripePayment}
-                disabled={isCreatingIntent}
-              >
-                {isCreatingIntent ? t('Submitting') : t('Stripe Checkout')}
-              </Button>
-            ))}
-
-            {!isPaid && paymentMethod === 'Moyasar' && (
-              <MoyasarForm
-                order={order}
-                publishableKey={moyasarPublishableKey}
+        <div className='text-lg font-bold'>{t('Order Summary')}</div>
+        <div className='space-y-2'>
+          <div className='flex justify-between'>
+            <span>{t('Items')}:</span>
+            <span>
+              <ProductPrice
+                price={itemsPrice}
+                plain
+                convert={false}
+                currencyCode={order.currency}
               />
-            )}
-
-            {!isPaid && paymentMethod === 'Cash On Delivery' && (
-              <Button
-                className='w-full rounded-full'
-                onClick={() => router.push(`/account/orders/${order._id}`)}
-              >
-                {t('View Order')}
-              </Button>
-            )}
+            </span>
           </div>
+          <div className='flex justify-between'>
+            <span>{t('Shipping & Handling')}:</span>
+            <span>
+              {shippingPrice === undefined ? (
+                '--'
+              ) : shippingPrice === 0 ? (
+                t('FREE')
+              ) : (
+                <ProductPrice
+                  price={shippingPrice}
+                  plain
+                  convert={false}
+                  currencyCode={order.currency}
+                />
+              )}
+            </span>
+          </div>
+          <div className='flex justify-between'>
+            <span>{taxInclusive ? t('VAT (included)') : t('VAT')}:</span>
+            <span>
+              {taxPrice === undefined ? (
+                '--'
+              ) : (
+                <ProductPrice
+                  price={taxPrice}
+                  plain
+                  convert={false}
+                  currencyCode={order.currency}
+                />
+              )}
+            </span>
+          </div>
+          <div className='flex justify-between pt-1 font-bold text-lg'>
+            <span>{t('Order Total')}:</span>
+            <span>
+              <ProductPrice
+                price={totalPrice}
+                plain
+                convert={false}
+                currencyCode={order.currency}
+              />
+            </span>
+          </div>
+
+          {!isPaid && (
+            <PaymentPanel
+              order={order}
+              paypalClientId={paypalClientId}
+              moyasarPublishableKey={moyasarPublishableKey}
+              onPaid={handlePaid}
+            />
+          )}
         </div>
       </CardContent>
     </Card>
   )
 
-  const stripePromise = loadStripe( process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string )
-
   return (
     <main className='max-w-6xl mx-auto'>
       <div className='grid md:grid-cols-4 gap-6'>
         <div className='md:col-span-3'>
-          {/* Shipping address */}
           <div>
             <div className='grid md:grid-cols-3 my-3 pb-3'>
               <div className='text-lg font-bold'>
@@ -228,7 +142,6 @@ export default function OrderPaymentForm({
             </div>
           </div>
 
-          {/* payment method */}
           <div className='border-y'>
             <div className='grid md:grid-cols-3 my-3 pb-3'>
               <div className='text-lg font-bold'>
