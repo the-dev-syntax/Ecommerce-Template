@@ -130,7 +130,7 @@ export default async function AskReviewOrderItemsEmail({
             </Section>
             <Section className='border border-solid border-gray-500 rounded-lg p-4 md:p-6 my-4'>
               {order.items.map((item) => (
-                <Row key={item.product} className='mt-8'>
+                <Row key={item.clientId} className='mt-8'>
                   <Column className='w-20'>
                      <Link href={`${site.url}/product/${item.slug}`}>
                       <Img

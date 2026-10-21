@@ -121,7 +121,7 @@ const ProductCard = ({
           <div className='p-3 flex-1 text-center'>
             <ProductDetails />
           </div>
-          {!hideAddToCart && <AddButton />}
+          {!hideAddToCart && product.countInStock > 0 && <AddButton />}
         </>
       )}
     </div>
@@ -136,7 +136,7 @@ const ProductCard = ({
             <ProductDetails />
           </CardContent>
           <CardFooter className='p-3'>
-          {!hideAddToCart && <AddButton />}
+          {!hideAddToCart && product.countInStock > 0 && <AddButton />}
           </CardFooter>
         </>
       )}
