@@ -31,6 +31,7 @@ async function main() {
     features: merged.features,
     navigation: merged.navigation,
     email: merged.email,
+    emailTemplates: merged.emailTemplates,
   }
 
   if (!dryRun) {
@@ -38,7 +39,7 @@ async function main() {
   }
 
   console.log(
-    `${dryRun ? 'Would backfill' : 'Backfilled'} white-label settings (brand, SEO, features, navigation, email).`
+    `${dryRun ? 'Would backfill' : 'Backfilled'} white-label settings (brand, SEO, features, navigation, email, templates).`
   )
 }
 

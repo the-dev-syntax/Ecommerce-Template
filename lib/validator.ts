@@ -536,6 +536,20 @@ export const EmailSettingsSchema = z.object({
   replyTo: z.string().max(254),
 })
 
+const EmailTemplateSchema = z.object({
+  subject: z.string().min(1, 'Subject is required').max(200),
+  heading: z.string().max(200),
+  intro: z.string().max(2000),
+  footer: z.string().max(1000),
+})
+
+export const EmailTemplatesSchema = z.object({
+  receipt: EmailTemplateSchema,
+  review: EmailTemplateSchema,
+  reset: EmailTemplateSchema,
+  verification: EmailTemplateSchema,
+})
+
 export const SettingInputSchema = z.object({
   // PROMPT: create fields
   // codeium, based on the mongoose schema for settings
@@ -545,6 +559,7 @@ export const SettingInputSchema = z.object({
   features: FeatureFlagsSchema,
   navigation: NavigationSettingsSchema,
   email: EmailSettingsSchema,
+  emailTemplates: EmailTemplatesSchema,
   seller: SellerSchema,
   invoice: InvoiceSettingsSchema,
   common: z.object({
@@ -615,6 +630,7 @@ export const SettingInputSchemaNoDefaults = z.object({
   features: FeatureFlagsSchema,
   navigation: NavigationSettingsSchema,
   email: EmailSettingsSchema,
+  emailTemplates: EmailTemplatesSchema,
   seller: SellerSchema,
   invoice: InvoiceSettingsSchema,
   common: z.object({

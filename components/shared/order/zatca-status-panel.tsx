@@ -3,10 +3,25 @@
 import ActionButton from '@/components/shared/action-button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getInvoiceForOrder } from '@/lib/invoices/invoice'
+import { getCreditNotesForOrder, getInvoiceForOrder } from '@/lib/invoices/invoice'
 import { retryZatcaInvoice } from '@/lib/actions/zatca.actions'
 import { getZatcaSubmission } from '@/lib/zatca/service'
 import { formatDateTime } from '@/lib/utils'
+
+function statusLabel(
+  status: string | undefined,
+  t: (key: string) => string
+) {
+  return status === 'accepted'
+    ? t('Accepted')
+    : status === 'rejected'
+      ? t('Rejected')
+      : status === 'failed'
+        ? t('Failed')
+        : status === 'pending'
+          ? t('Pending')
+          : t('Queued')
+}
 
 export default async function ZatcaStatusPanel({
   orderId,
@@ -17,12 +32,15 @@ export default async function ZatcaStatusPanel({
   const invoice = await getInvoiceForOrder(orderId, 'invoice')
   if (!invoice) return null
 
-  const submission = await getZatcaSubmission(invoice._id)
-  const creditNote = await getInvoiceForOrder(orderId, 'credit_note')
-  const creditSubmission = creditNote
-    ? await getZatcaSubmission(creditNote._id)
-    : null
-  const status = submission?.status ?? 'queued'
+  const invoiceSubmission = await getZatcaSubmission(invoice._id)
+  const creditNotes = await getCreditNotesForOrder(orderId)
+  const creditEntries = await Promise.all(
+    creditNotes.map(async (creditNote) => ({
+      creditNote,
+      submission: await getZatcaSubmission(creditNote._id),
+    }))
+  )
+  const status = invoiceSubmission?.status ?? 'queued'
   const canRetry = status !== 'accepted'
   const messageOf = (value: unknown) =>
     value && typeof value === 'object' && 'message' in value
@@ -36,7 +54,7 @@ export default async function ZatcaStatusPanel({
       </CardHeader>
       <CardContent className='space-y-3 text-sm'>
         <div className='flex flex-wrap items-center gap-2'>
-          <span>{t('Status')}:</span>
+          <span>{t('Tax Invoice')}:</span>
           <Badge
             variant={
               status === 'accepted'
@@ -46,34 +64,35 @@ export default async function ZatcaStatusPanel({
                   : 'secondary'
             }
           >
-            {t(status === 'accepted' ? 'Accepted' : status === 'rejected' ? 'Rejected' : status === 'failed' ? 'Failed' : status === 'pending' ? 'Pending' : 'Queued')}
+            {statusLabel(status, t)}
           </Badge>
-          {submission?.icv && (
+          {invoiceSubmission?.icv && (
             <span>
-              {t('ICV')}: {submission.icv}
+              {t('ICV')}: {invoiceSubmission.icv}
             </span>
           )}
         </div>
 
-        {submission?.invoiceHash && (
+        {invoiceSubmission?.invoiceHash && (
           <p className='break-all text-muted-foreground text-xs'>
-            {t('Invoice Hash')}: {submission.invoiceHash}
+            {t('Invoice Hash')}: {invoiceSubmission.invoiceHash}
           </p>
         )}
 
-        {submission?.reportedAt && (
+        {invoiceSubmission?.reportedAt && (
           <p className='text-muted-foreground text-xs'>
-            {t('Reported At')}: {formatDateTime(submission.reportedAt).dateTime}
+            {t('Reported At')}:{' '}
+            {formatDateTime(invoiceSubmission.reportedAt).dateTime}
           </p>
         )}
 
-        {submission?.zatcaWarnings?.slice(0, 3).map((warning, index) => (
+        {invoiceSubmission?.zatcaWarnings?.slice(0, 3).map((warning, index) => (
           <p key={`warning-${index}`} className='text-amber-600 text-xs'>
             {t('Warning')}: {messageOf(warning)}
           </p>
         ))}
 
-        {submission?.zatcaErrors?.slice(0, 3).map((error, index) => (
+        {invoiceSubmission?.zatcaErrors?.slice(0, 3).map((error, index) => (
           <p key={`error-${index}`} className='text-destructive text-xs'>
             {t('Error')}: {messageOf(error)}
           </p>
@@ -86,58 +105,61 @@ export default async function ZatcaStatusPanel({
           />
         )}
 
-        {creditNote && (
-          <div className='space-y-2 border-t pt-3'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <span>{t('Credit Note')}:</span>
-              <Badge
-                variant={
-                  creditSubmission?.status === 'accepted'
-                    ? 'default'
-                    : creditSubmission?.status === 'failed' ||
-                        creditSubmission?.status === 'rejected'
-                      ? 'destructive'
-                      : 'secondary'
-                }
-              >
-                {t(
-                  creditSubmission?.status === 'accepted'
-                    ? 'Accepted'
-                    : creditSubmission?.status === 'rejected'
-                      ? 'Rejected'
-                      : creditSubmission?.status === 'failed'
-                        ? 'Failed'
-                        : creditSubmission?.status === 'pending'
-                          ? 'Pending'
-                          : 'Queued'
-                )}
-              </Badge>
-              {creditSubmission?.icv && (
+        {creditEntries.map(({ creditNote, submission }) => {
+          const creditStatus = submission?.status ?? 'queued'
+          return (
+            <div
+              key={creditNote._id}
+              className='space-y-2 border-t pt-3'
+            >
+              <div className='flex flex-wrap items-center gap-2'>
                 <span>
-                  {t('ICV')}: {creditSubmission.icv}
+                  {t('Credit Note')} {creditNote.number}:
                 </span>
+                <Badge
+                  variant={
+                    creditStatus === 'accepted'
+                      ? 'default'
+                      : creditStatus === 'failed' ||
+                          creditStatus === 'rejected'
+                        ? 'destructive'
+                        : 'secondary'
+                  }
+                >
+                  {statusLabel(creditStatus, t)}
+                </Badge>
+                {submission?.icv && (
+                  <span>
+                    {t('ICV')}: {submission.icv}
+                  </span>
+                )}
+              </div>
+              {submission?.zatcaWarnings?.slice(0, 2).map((warning, index) => (
+                <p
+                  key={`cn-warning-${index}`}
+                  className='text-amber-600 text-xs'
+                >
+                  {t('Warning')}: {messageOf(warning)}
+                </p>
+              ))}
+              {submission?.zatcaErrors?.slice(0, 2).map((error, index) => (
+                <p
+                  key={`cn-error-${index}`}
+                  className='text-destructive text-xs'
+                >
+                  {t('Error')}: {messageOf(error)}
+                </p>
+              ))}
+              {creditStatus !== 'accepted' && (
+                <ActionButton
+                  caption={t('Retry ZATCA')}
+                  action={() => retryZatcaInvoice(creditNote._id)}
+                />
               )}
             </div>
-            {creditSubmission?.zatcaWarnings?.slice(0, 2).map((warning, index) => (
-              <p key={`cn-warning-${index}`} className='text-amber-600 text-xs'>
-                {t('Warning')}: {messageOf(warning)}
-              </p>
-            ))}
-            {creditSubmission?.zatcaErrors?.slice(0, 2).map((error, index) => (
-              <p key={`cn-error-${index}`} className='text-destructive text-xs'>
-                {t('Error')}: {messageOf(error)}
-              </p>
-            ))}
-            {creditSubmission?.status !== 'accepted' && (
-              <ActionButton
-                caption={t('Retry ZATCA')}
-                action={() => retryZatcaInvoice(creditNote._id)}
-              />
-            )}
-          </div>
-        )}
+          )
+        })}
       </CardContent>
     </Card>
   )
 }
-

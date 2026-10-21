@@ -62,6 +62,7 @@ export const UpdateProductForm = ({
           taxCategory: product.taxCategory ?? 'S',
           exemptionReasonCode: product.exemptionReasonCode ?? '',
           returnPolicy: product.returnPolicy ?? 'return_and_refund',
+          variants: product.variants ?? [],
         });
         }
     }, [product, reset]);

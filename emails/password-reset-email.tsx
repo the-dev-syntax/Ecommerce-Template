@@ -12,11 +12,13 @@ import {
 } from '@react-email/components'
 
 import { getSetting } from '@/lib/actions/setting.actions'
+import type { EmailTemplateContent } from '@/lib/email-templates'
 
 export type PasswordResetEmailProps = {
   name: string
   email: string
   resetLink: string
+  content?: EmailTemplateContent
 }
 
 const main = {
@@ -83,14 +85,15 @@ export default async function PasswordResetEmail({
   name,
   email,
   resetLink,
+  content,
 }: PasswordResetEmailProps) {
-  const { site } = await getSetting()
-  const logoSrc = new URL(site.logo, site.url).toString()
+  const { site, brand } = await getSetting()
+  const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString()
 
   return (
     <Html>
       <Head />
-      <Preview>Reset your {site.name} password</Preview>
+      <Preview>{content?.heading || `Reset your ${site.name} password`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Img
@@ -100,12 +103,13 @@ export default async function PasswordResetEmail({
             height='40'
             style={logo}
           />
-          <Heading style={heading}>Reset your password</Heading>
+          <Heading style={heading}>
+            {content?.heading || 'Reset your password'}
+          </Heading>
           <Text style={text}>Hello {name || 'User'},</Text>
           <Text style={text}>
-            We received a request to reset the password for {email}. Choose a
-            new password using the button below. This link expires in 30
-            minutes.
+            {content?.intro ||
+              `We received a request to reset the password for ${email}. Choose a new password using the button below. This link expires in 30 minutes.`}
           </Text>
           <Section style={buttonContainer}>
             <Link href={resetLink} style={button}>
@@ -117,7 +121,7 @@ export default async function PasswordResetEmail({
             password will not change.
           </Text>
           <Text style={footer}>
-            This is an automated message from {site.name}.
+            {content?.footer || `This is an automated message from ${site.name}.`}
           </Text>
         </Container>
       </Body>

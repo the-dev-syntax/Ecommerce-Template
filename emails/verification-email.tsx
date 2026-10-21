@@ -9,6 +9,7 @@ import {
 } from '@react-email/components';
 import { getSetting } from '@/lib/actions/setting.actions';
 import { VerificationPropsType } from '@/types';
+import type { EmailTemplateContent } from '@/lib/email-templates';
 import  { EMAIL_EXPIRATION_TIME } from '@/lib/constants';
 
 const emailStyles = {
@@ -84,10 +85,12 @@ const emailStyles = {
   }
 };
 
-export default async function VerificationEmail(props: VerificationPropsType) {
-  const { email, token, name, update } = props;
-  const { site } = await getSetting();
-  const logoSrc = new URL(site.logo, site.url).toString();
+export default async function VerificationEmail(
+  props: VerificationPropsType & { content?: EmailTemplateContent }
+) {
+  const { token, name, update, content } = props;
+  const { site, brand } = await getSetting();
+  const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString();
   
   const signUpMessage = `Thank you for signing up with ${site.name}! To complete your registration, please verify your email address by entering this OTP code:`;
   const updateMessage = `You're updating your email address. Please verify your new email by entering this OTP code:`;
@@ -106,7 +109,7 @@ export default async function VerificationEmail(props: VerificationPropsType) {
           />
           
           <Text style={emailStyles.heading}>
-            Verify Your Email Address {email}
+            {content?.heading || 'Verify Your Email Address'}
           </Text>
           
           <Text style={emailStyles.text}>
@@ -114,7 +117,7 @@ export default async function VerificationEmail(props: VerificationPropsType) {
           </Text>
           
           <Text style={emailStyles.text}>
-            {update ? updateMessage : signUpMessage}
+            {content?.intro || (update ? updateMessage : signUpMessage)}
           </Text>
           
           <Section style={emailStyles.otpContainer}>
@@ -129,7 +132,7 @@ export default async function VerificationEmail(props: VerificationPropsType) {
           </Text>
           
           <Text style={emailStyles.footer}>
-            If you didn't request this email, you can safely ignore it.
+            {content?.footer || "If you didn't request this email, you can safely ignore it."}
             <br />
             &copy; {new Date().getFullYear()} {site.name}. All rights reserved.
             <br />

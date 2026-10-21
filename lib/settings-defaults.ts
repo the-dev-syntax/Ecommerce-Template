@@ -60,6 +60,24 @@ export function withSettingDefaults(
         defaults.email.senderEmail
       ),
     },
+    emailTemplates: {
+      receipt: {
+        ...defaults.emailTemplates.receipt,
+        ...setting?.emailTemplates?.receipt,
+      },
+      review: {
+        ...defaults.emailTemplates.review,
+        ...setting?.emailTemplates?.review,
+      },
+      reset: {
+        ...defaults.emailTemplates.reset,
+        ...setting?.emailTemplates?.reset,
+      },
+      verification: {
+        ...defaults.emailTemplates.verification,
+        ...setting?.emailTemplates?.verification,
+      },
+    },
     common: { ...defaults.common, ...setting?.common },
     site: { ...defaults.site, ...setting?.site },
     seller: { ...defaults.seller, ...setting?.seller },

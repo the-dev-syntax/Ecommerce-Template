@@ -44,6 +44,19 @@ export function normalizeProductVariants(
     })
   }
 
+  const ids = new Set<string>()
+  const skus = new Set<string>()
+  for (const variant of variants) {
+    if (ids.has(variant.id)) {
+      throw new Error(`Duplicate variant id: ${variant.id}`)
+    }
+    if (skus.has(variant.sku)) {
+      throw new Error(`Duplicate variant SKU: ${variant.sku}`)
+    }
+    ids.add(variant.id)
+    skus.add(variant.sku)
+  }
+
   let defaultIndex = variants.findIndex((variant) => variant.isDefault)
   if (defaultIndex < 0) defaultIndex = 0
   variants.forEach((variant, index) => {
@@ -55,6 +68,8 @@ export function normalizeProductVariants(
     variants,
     sizes: unique(variants.map((variant) => variant.size)),
     colors: unique(variants.map((variant) => variant.color)),
+    price: variants[defaultIndex].price,
+    listPrice: variants[defaultIndex].listPrice,
     countInStock: variants.reduce(
       (total, variant) => total + variant.countInStock,
       0

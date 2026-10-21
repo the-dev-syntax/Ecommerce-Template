@@ -1181,6 +1181,37 @@ const reviews  = [
         senderEmail: 'contact@EssentialVital.com',
         replyTo: '',
       },
+      emailTemplates: {
+        receipt: {
+          subject: 'Order Confirmation',
+          heading: 'Thank you for your order',
+          intro:
+            'We have received your order and will notify you when it ships.',
+          footer: 'Thank you for shopping with us.',
+        },
+        review: {
+          subject: 'Review your order items',
+          heading: 'How was your order?',
+          intro:
+            'Tell us what you think about the products you received.',
+          footer: 'Your feedback helps other customers.',
+        },
+        reset: {
+          subject: 'Reset your password',
+          heading: 'Reset your password',
+          intro:
+            'We received a request to reset your password. Use the button below to choose a new one.',
+          footer: 'If you did not request this, you can safely ignore this email.',
+        },
+        verification: {
+          subject: '{token} - Verify your email address',
+          heading: 'Verify your email address',
+          intro:
+            'Thank you for signing up. Enter the verification code below to complete your registration.',
+          footer:
+            'If you did not request this email, you can safely ignore it.',
+        },
+      },
       seller: {
         legalNameEn: 'NAKAA ELSEHA MEDICAL PHARMACY',
         legalNameAr: 'صيدلية نقاء الصحة الطبية',

@@ -23,6 +23,7 @@ import SeoForm from './seo-form'
 import FeaturesForm from './features-form'
 import NavigationForm from './navigation-form'
 import EmailForm from './email-form'
+import EmailTemplatesForm from './email-templates-form'
 
 
 
@@ -68,6 +69,7 @@ export default function SettingForm({ setting }: { setting: ISettingInput }) {
         <FeaturesForm id='setting-features' form={form} />
         <NavigationForm id='setting-navigation' form={form} />
         <EmailForm id='setting-email' form={form} />
+        <EmailTemplatesForm id='setting-email-templates' form={form} />
         <CommonForm id='setting-common' form={form} />
         <CarouselForm id='setting-carousels' form={form} />
 

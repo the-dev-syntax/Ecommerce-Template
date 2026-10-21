@@ -303,6 +303,21 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-27 — Phase 1B setup wizard, email templates and revision pass (2026-10-21)
+
+- Added `/admin/setup`: a first-run checklist with progress for store information, brand, seller/tax, languages/currencies, shipping, payments, email identity, first published product and store publication. Each incomplete step links to the relevant admin screen.
+- Added editable email templates in `Setting.emailTemplates` for receipt, review request, password reset and email verification. Each template has subject, heading, intro and footer; subjects support `{token}`, `{name}`, `{siteName}` and `{orderNumber}`.
+- Email components now accept the settings content and the configured email logo. Sender, reply-to, subjects and content are resolved from settings with environment fallback.
+- `migrate:whitelabel` now also backfills email templates.
+- Revision pass:
+  - ZATCA admin panel lists every credit note for an order, not only the first.
+  - Variant SKUs/ids are validated for duplicates; admin stock field is labelled as calculated from variants.
+  - Email previews follow the configured subject; verification email no longer emits an unused address.
+  - Product variant reset preserves existing variants on edit.
+
+### Verification
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (660 keys), `npm test` (33 tests), `npm run build` — PASS.
+
 ## P0-26 — Per-variant SKU and stock (2026-10-21)
 
 - Added `IProductVariant`: id, SKU, size, color, price, list price, stock, image, barcode, weight, default flag.
@@ -672,11 +687,11 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [x] Extend `Setting` with brand (light/dark logos, favicon, email logo, colours, font, social links), SEO defaults, feature flags, navigation/footer menus, and email sender identity.
 - [x] Move hardcoded brand/contact/logo strings out of the header, footer, admin/checkout layouts, metadata and email sender into settings.
 - [x] Theme tokens driven by CSS variables and Tailwind; admin colour/font picker with live preview and safe defaults.
-- [ ] Add a first-run setup wizard: store info → currency/tax → shipping → payment → domain → first product → publish.
+- [x] Add a first-run setup wizard: store info → currency/tax → shipping → payment → domain → first product → publish.
 - [x] Add feature flags for reviews, browsing history and COD (wishlist/guest checkout/BNPL remain deferred until those features exist); maintenance mode already exists.
 - [x] Make header menus, footer groups, legal pages, carousels and banners editable from `/admin`.
-- [x] Add per-store email sender identity (name, email, reply-to) with environment fallback; editable email templates remain.
-- [ ] Acceptance: a new store can be configured and published entirely from the admin without code edits.
+- [x] Add per-store email sender identity (name, email, reply-to) with environment fallback; subject, heading, intro and footer for every transactional email are editable.
+- [x] Acceptance: a new store can be configured and published entirely from the admin without code edits.
 
 ### Phase 1b — Catalog and product variants (P0)
 - [x] Replace the flat `sizes`/`colors` arrays with a variant model: variant id, SKU, size, color, price override, stock, image, barcode, and weight. Legacy arrays remain derived for compatibility.

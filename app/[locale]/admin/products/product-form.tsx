@@ -173,6 +173,9 @@ interface ProductFormUIProps {
                     {...field}
                   />
                 </FormControl>
+                <FormDescription>
+                  {t('Calculated from variants')}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -8,6 +8,10 @@ import { useTranslations } from 'next-intl'
 
 const links = [
   {
+    title: 'Setup',
+    href: '/admin/setup',
+  },
+  {
     title: 'Overview',
     href: '/admin/overview',
   },

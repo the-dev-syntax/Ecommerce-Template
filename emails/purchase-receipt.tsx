@@ -17,9 +17,13 @@ import {
 import { formatCurrency, round2 } from '@/lib/utils'
 import { OrderWithUser } from '@/lib/db/models/order.model'
 import { getSetting } from '@/lib/actions/setting.actions'
+import type { EmailTemplateContent } from '@/lib/email-templates'
 
   
-  type OrderInformationProps = { order: OrderWithUser }
+  type OrderInformationProps = {
+    order: OrderWithUser
+    content?: EmailTemplateContent
+  }
   
   PurchaseReceiptEmail.PreviewProps = {
     order: {
@@ -65,10 +69,11 @@ import { getSetting } from '@/lib/actions/setting.actions'
 
   const dateFormatter = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
   
-  export default async function PurchaseReceiptEmail({ order }: OrderInformationProps) {
+  export default async function PurchaseReceiptEmail({ order, content }: OrderInformationProps) {
 
-    const { site } = await getSetting()
+    const { site, brand } = await getSetting()
     const baseUrl = site.url.replace(/\/$/, '')
+    const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString()
     const taxIncluded = order.taxInclusive !== false
     // Order items are stored gross (VAT-inclusive). The receipt shows the net
     // subtotal, then VAT, then shipping, so the lines reconcile to the total.
@@ -78,12 +83,22 @@ import { getSetting } from '@/lib/actions/setting.actions'
 
     return (
       <Html>
-        <Preview>View order receipt</Preview>
+        <Preview>{content?.subject || 'View order receipt'}</Preview>
         <Tailwind>
           <Head />
           <Body className='font-sans bg-white'>
             <Container className='max-w-xl'>
-              <Heading>Purchase Receipt</Heading>
+              <Img
+                src={logoSrc}
+                alt={`${site.name} logo`}
+                width='140'
+                height='40'
+                className='mx-auto mb-4'
+              />
+              <Heading>{content?.heading || 'Purchase Receipt'}</Heading>
+              {content?.intro && (
+                <Text className='text-gray-600'>{content.intro}</Text>
+              )}
               <Section>
                 <Row>
                   <Column>
@@ -130,7 +145,9 @@ import { getSetting } from '@/lib/actions/setting.actions'
                     <Column className='align-top'>
                       <Link href={`${site.url}/product/${item.slug}`}>
                       <Text className='mx-2 my-0'>
-                        {item.name} x {item.quantity}
+                        {item.name}
+                        {item.variantLabel ? ` (${item.variantLabel})` : ''} x{' '}
+                        {item.quantity}
                       </Text>
                       </Link>
                     </Column>
@@ -171,6 +188,11 @@ import { getSetting } from '@/lib/actions/setting.actions'
                   View your tax invoice
                 </Link>
               </Section>
+              {content?.footer && (
+                <Text className='text-center text-sm text-gray-500'>
+                  {content.footer}
+                </Text>
+              )}
             </Container>
           </Body>
         </Tailwind>

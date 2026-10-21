@@ -68,6 +68,35 @@ const settingSchema = new Schema<ISetting>(
       senderEmail: { type: String, default: '' },
       replyTo: { type: String, default: '' },
     },
+    emailTemplates: {
+      receipt: {
+        subject: { type: String, default: 'Order Confirmation' },
+        heading: { type: String, default: 'Thank you for your order' },
+        intro: { type: String, default: '' },
+        footer: { type: String, default: '' },
+      },
+      review: {
+        subject: { type: String, default: 'Review your order items' },
+        heading: { type: String, default: 'How was your order?' },
+        intro: { type: String, default: '' },
+        footer: { type: String, default: '' },
+      },
+      reset: {
+        subject: { type: String, default: 'Reset your password' },
+        heading: { type: String, default: 'Reset your password' },
+        intro: { type: String, default: '' },
+        footer: { type: String, default: '' },
+      },
+      verification: {
+        subject: {
+          type: String,
+          default: '{token} - Verify your email address',
+        },
+        heading: { type: String, default: 'Verify your email address' },
+        intro: { type: String, default: '' },
+        footer: { type: String, default: '' },
+      },
+    },
     seller: {
       legalNameEn: {
         type: String,

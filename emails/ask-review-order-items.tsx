@@ -18,12 +18,14 @@ import {
 import { formatCurrency, round2 } from '@/lib/utils'
 import { OrderWithUser } from '@/lib/db/models/order.model'
 import { getSetting } from '@/lib/actions/setting.actions'
+import type { EmailTemplateContent } from '@/lib/email-templates'
 
 
 
 
 type OrderInformationProps = {
   order: OrderWithUser
+  content?: EmailTemplateContent
 }
 
 AskReviewOrderItemsEmail.PreviewProps = {
@@ -73,8 +75,10 @@ const dateFormatter = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
 
 export default async function AskReviewOrderItemsEmail({
   order,
+  content,
 }: OrderInformationProps) {
-  const { site } = await getSetting()
+  const { site, brand } = await getSetting()
+  const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString()
   const taxIncluded = order.taxInclusive !== false
   const netItemsPrice = taxIncluded
     ? Math.max(0, round2(order.itemsPrice - order.taxPrice))
@@ -82,12 +86,22 @@ export default async function AskReviewOrderItemsEmail({
 
   return (
     <Html>
-      <Preview>Review Order Items</Preview>
+      <Preview>{content?.subject || 'Review Order Items'}</Preview>
       <Tailwind>
         <Head />
         <Body className='font-sans bg-white'>
           <Container className='max-w-xl'>
-            <Heading>Review Order Items</Heading>
+            <Img
+              src={logoSrc}
+              alt={`${site.name} logo`}
+              width='140'
+              height='40'
+              className='mx-auto mb-4'
+            />
+            <Heading>{content?.heading || 'Review Order Items'}</Heading>
+            {content?.intro && (
+              <Text className='text-gray-600'>{content.intro}</Text>
+            )}
             <Section>
               <Row>
                 <Column>
@@ -134,7 +148,9 @@ export default async function AskReviewOrderItemsEmail({
                   <Column className='align-top'>
                      <Link href={`${site.url}/product/${item.slug}`}>
                       <Text className='mx-2 my-0'>
-                        {item.name} x {item.quantity}
+                        {item.name}
+                        {item.variantLabel ? ` (${item.variantLabel})` : ''} x{' '}
+                        {item.quantity}
                       </Text>
                     </Link>
                   </Column>
@@ -170,6 +186,11 @@ export default async function AskReviewOrderItemsEmail({
                 </Row>
               ))}
             </Section>
+            {content?.footer && (
+              <Text className='text-center text-sm text-gray-500'>
+                {content.footer}
+              </Text>
+            )}
           </Container>
         </Body>
       </Tailwind>

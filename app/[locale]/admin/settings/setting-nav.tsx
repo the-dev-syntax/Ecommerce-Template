@@ -89,6 +89,11 @@ export default function SettingNav() {
             icon: <Mail />,
           },
           {
+            name: 'Email Templates',
+            hash: 'setting-email-templates',
+            icon: <Mail />,
+          },
+          {
             name: 'Common Settings',
             hash: 'setting-common',
             icon: <SettingsIcon />,
