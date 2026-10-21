@@ -1282,10 +1282,42 @@ const reviews  = [
       // SAR is the base currency; product prices are stored in SAR and the
       // other rates convert one SAR into the listed currency.
       availableCurrencies: [
-        { name: 'Saudi Riyal', code: 'SAR', symbol: 'ر.س', convertRate: 1 },
-        { name: 'United States Dollar', code: 'USD', symbol: '$', convertRate: 0.2667 },
-        { name: 'Euro', code: 'EUR', symbol: '€', convertRate: 0.245 },
-        { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 0.979 },
+        {
+          name: 'Saudi Riyal',
+          code: 'SAR',
+          symbol: 'ر.س',
+          convertRate: 1,
+          locale: 'en-US',
+          decimals: 2,
+          isBase: true,
+        },
+        {
+          name: 'United States Dollar',
+          code: 'USD',
+          symbol: '$',
+          convertRate: 0.2667,
+          locale: 'en-US',
+          decimals: 2,
+          isBase: false,
+        },
+        {
+          name: 'Euro',
+          code: 'EUR',
+          symbol: '€',
+          convertRate: 0.245,
+          locale: 'en-US',
+          decimals: 2,
+          isBase: false,
+        },
+        {
+          name: 'UAE Dirham',
+          code: 'AED',
+          symbol: 'AED',
+          convertRate: 0.979,
+          locale: 'en-US',
+          decimals: 2,
+          isBase: false,
+        },
       ],
       defaultCurrency: 'SAR',
       availablePaymentMethods: [

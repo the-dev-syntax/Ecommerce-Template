@@ -12,6 +12,23 @@ export function withSettingDefaults(
   const text = (value: string | undefined, fallback: string) =>
     value && value.trim() ? value : fallback
 
+  const sourceCurrencies =
+    setting?.availableCurrencies?.length
+      ? setting.availableCurrencies
+      : defaults.availableCurrencies
+  const currencies = sourceCurrencies.map((currency) => ({
+    ...currency,
+    locale: currency.locale || 'en-US',
+    decimals: currency.decimals ?? 2,
+    isBase:
+      currency.isBase ??
+      currency.code === defaults.defaultCurrency,
+  }))
+  const baseIndex = currencies.findIndex((currency) => currency.isBase)
+  currencies.forEach((currency, index) => {
+    currency.isBase = index === (baseIndex >= 0 ? baseIndex : 0)
+  })
+
   return {
     ...defaults,
     ...setting,
@@ -48,6 +65,7 @@ export function withSettingDefaults(
         ? setting.navigation.footer
         : defaults.navigation.footer,
     },
+    availableCurrencies: currencies,
     email: {
       ...defaults.email,
       ...setting?.email,

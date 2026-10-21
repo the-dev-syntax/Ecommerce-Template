@@ -658,5 +658,22 @@
   "Complete": "Terminé",
   "Open settings": "Ouvrir les paramètres",
   "Create a product": "Créer un produit",
-  "Calculated from variants": "Calculé à partir des variantes"
+  "Calculated from variants": "Calculé à partir des variantes",
+  "Locale": "Locale",
+  "Decimals": "Décimales",
+  "Base": "Devise de base",
+  "VAT Report": "Rapport TVA",
+  "Tax invoices and credit notes for the selected period": "Factures et avoirs de la période sélectionnée",
+  "Export CSV": "Exporter CSV",
+  "From": "Du",
+  "To": "Au",
+  "Net sales": "Ventes nettes",
+  "Gross": "Total",
+  "Documents": "Documents",
+  "invoices": "factures",
+  "credit notes": "avoirs",
+  "Type": "Type",
+  "Net": "Net",
+  "No invoices in this period": "Aucune facture sur cette période",
+  "Orders are charged in {currency}": "Les commandes sont facturées en {currency}"
 }

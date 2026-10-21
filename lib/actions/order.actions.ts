@@ -173,6 +173,7 @@ export const createOrderFromCart = async (
   const {
     availableDeliveryDates,
     availablePaymentMethods,
+    availableCurrencies,
     defaultCurrency,
     features,
     common: { taxRate, taxInclusive },
@@ -213,13 +214,16 @@ export const createOrderFromCart = async (
     itemsPrice + shippingPrice + (taxInclusive ? 0 : taxPrice)
   )
 
+  const orderCurrency =
+    availableCurrencies.find((currency) => currency.isBase)?.code ??
+    defaultCurrency
   // Validate the final order shape after all server-side recalculation.
   const order = OrderInputSchema.parse({
     user: userId,
     items: pricedItems,
     shippingAddress: clientSideCart.shippingAddress,
     paymentMethod,
-    currency: defaultCurrency.toUpperCase(),
+    currency: orderCurrency.toUpperCase(),
     itemsPrice,
     shippingPrice,
     taxPrice,

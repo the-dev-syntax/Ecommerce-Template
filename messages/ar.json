@@ -658,5 +658,22 @@
   "Complete": "مكتمل",
   "Open settings": "فتح الإعدادات",
   "Create a product": "إنشاء منتج",
-  "Calculated from variants": "يُحسب من الخيارات"
+  "Calculated from variants": "يُحسب من الخيارات",
+  "Locale": "اللغة",
+  "Decimals": "الكسور العشرية",
+  "Base": "العملة الأساسية",
+  "VAT Report": "تقرير ضريبة القيمة المضافة",
+  "Tax invoices and credit notes for the selected period": "الفواتير الضريبية والإشعارات الدائنة للفترة المحددة",
+  "Export CSV": "تصدير CSV",
+  "From": "من",
+  "To": "إلى",
+  "Net sales": "صافي المبيعات",
+  "Gross": "الإجمالي",
+  "Documents": "المستندات",
+  "invoices": "فواتير",
+  "credit notes": "إشعارات دائنة",
+  "Type": "النوع",
+  "Net": "الصافي",
+  "No invoices in this period": "لا توجد فواتير في هذه الفترة",
+  "Orders are charged in {currency}": "تتم محاسبة الطلبات بعملة {currency}"
 }

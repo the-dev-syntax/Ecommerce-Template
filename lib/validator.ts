@@ -431,8 +431,11 @@ export const CarouselSchema = z.object({
 
 export const SiteCurrencySchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  code: z.string().min(1, 'Code is required'),
+  code: z.string().min(3).max(3, 'Use a three-letter currency code'),
   convertRate: z.coerce.number().min(0, 'Convert rate must be at least 0'),
+  locale: z.string().min(2, 'Locale is required').max(20),
+  decimals: z.coerce.number().int().min(0).max(4),
+  isBase: z.boolean(),
   symbol: z.string().min(1, 'Symbol is required'),
 })
 

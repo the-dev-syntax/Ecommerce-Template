@@ -303,6 +303,21 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-28 — Currency rules, immutable order currency and VAT report (2026-10-21)
+
+- Currency entries now define `locale`, `decimals`, `isBase` and `convertRate`; SAR is the base currency and conversion is display-only (base → display).
+- Admin currency editor exposes locale, decimals and the base-currency marker. The base currency is normalised to exactly one entry.
+- `ProductPrice` accepts explicit conversion control and currency code. Checkout, payment, order details and invoices render the **order currency** without re-converting historical orders.
+- Order creation snapshots the base currency (`SAR`) rather than the currently selected display currency. Checkout warns when the display currency differs and states that orders are charged in the base currency.
+- Added `/admin/reports/vat`: date-range VAT report with net sales, VAT, gross, document counts and invoice/credit-note rows. Credit notes subtract from the totals.
+- Added `/api/admin/reports/vat` CSV export (admin-only) for accounting.
+- `migrate:whitelabel` backfills currency metadata and the SAR base flag.
+- Per-region tax rates are deferred because this deployment is single-market KSA; VAT 15%, inclusive/exclusive pricing and per-product categories are active.
+
+### Verification
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (677 keys), `npm test` (34 tests), `npm run build` — PASS.
+- Currency migration verified: SAR is the only base currency, USD/EUR/AED remain display currencies.
+
 ## P0-27 — Phase 1B setup wizard, email templates and revision pass (2026-10-21)
 
 - Added `/admin/setup`: a first-run checklist with progress for store information, brand, seller/tax, languages/currencies, shipping, payments, email identity, first published product and store publication. Each incomplete step links to the relevant admin screen.
@@ -704,13 +719,13 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 
 ### Phase 2 — Currency, pricing, and Saudi tax (P0)
 - [x] Add a base currency (`SAR`) and remove the hardcoded `USD` fallbacks (`app/[locale]/layout.tsx:106`, `lib/utils.ts:42`, order default).
-- [ ] Define currency rules: code, symbol, locale, decimals, rounding, and whether prices are converted or entered per currency.
-- [ ] Keep order totals in the order currency; never re-convert an existing order when the display currency changes.
-- [ ] Make VAT 15% the Saudi default and add VAT-inclusive/exclusive pricing plus per-region tax rules.
-- [ ] Add seller VAT number, CR number, national address, and Arabic/English legal name to settings.
-- [ ] Add ZATCA-compliant tax invoices: invoice numbering, QR TLV, simplified invoice, credit notes, Arabic + English PDF.
-- [ ] Add a VAT report and invoice export for accounting.
-- [ ] Acceptance: a SAR order produces correct totals and a compliant invoice; currency switching never changes stored totals.
+- [x] Define currency rules: code, symbol, locale, decimals, rounding, and whether prices are converted or entered per currency. Conversion is display-only; SAR is the base.
+- [x] Keep order totals in the order currency; never re-convert an existing order when the display currency changes.
+- [x] Make VAT 15% the Saudi default and add VAT-inclusive/exclusive pricing plus per-product tax categories. Per-region rates are deferred for the single KSA market.
+- [x] Add seller VAT number, CR number, national address, and Arabic/English legal name to settings.
+- [x] Add ZATCA-compliant tax invoices: invoice numbering, QR TLV, simplified invoice, credit notes, Arabic + English PDF.
+- [x] Add a VAT report and invoice export for accounting.
+- [x] Acceptance: a SAR order produces correct totals and a compliant invoice; currency switching never changes stored totals.
 
 ### Phase 3 — Payment gateway abstraction (P0/P1)
 - [x] Define a `PaymentProvider` definition/registry (id, name, currencies, refund capability, webhook path, configuration check). Adapter methods are added incrementally per provider.

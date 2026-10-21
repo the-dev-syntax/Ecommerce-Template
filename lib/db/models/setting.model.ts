@@ -191,6 +191,9 @@ const settingSchema = new Schema<ISetting>(
         },
         code: { type: String, required: true },
         convertRate: { type: Number, required: true },
+        locale: { type: String, default: 'en-US' },
+        decimals: { type: Number, default: 2, min: 0, max: 4 },
+        isBase: { type: Boolean, default: false },
         symbol: {
           type: String,
           required: true,

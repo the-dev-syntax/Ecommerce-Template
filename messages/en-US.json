@@ -658,5 +658,22 @@
   "Complete": "Complete",
   "Open settings": "Open settings",
   "Create a product": "Create a product",
-  "Calculated from variants": "Calculated from variants"
+  "Calculated from variants": "Calculated from variants",
+  "Locale": "Locale",
+  "Decimals": "Decimals",
+  "Base": "Base currency",
+  "VAT Report": "VAT Report",
+  "Tax invoices and credit notes for the selected period": "Tax invoices and credit notes for the selected period",
+  "Export CSV": "Export CSV",
+  "From": "From",
+  "To": "To",
+  "Net sales": "Net sales",
+  "Gross": "Gross",
+  "Documents": "Documents",
+  "invoices": "invoices",
+  "credit notes": "credit notes",
+  "Type": "Type",
+  "Net": "Net",
+  "No invoices in this period": "No invoices in this period",
+  "Orders are charged in {currency}": "Orders are charged in {currency}"
 }

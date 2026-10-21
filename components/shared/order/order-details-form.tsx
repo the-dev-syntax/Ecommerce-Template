@@ -189,28 +189,28 @@ export default function OrderDetailsForm({
               <div>{t('Items')}</div>
               <div>
                 {' '}
-                <ProductPrice price={itemsPrice} plain />
+                <ProductPrice price={itemsPrice} plain convert={false} currencyCode={order.currency} />
               </div>
             </div>
             <div className='flex justify-between'>
               <div>{taxInclusive ? t('VAT (included)') : t('VAT')}</div>
               <div>
                 {' '}
-                <ProductPrice price={taxPrice} plain />
+                <ProductPrice price={taxPrice} plain convert={false} currencyCode={order.currency} />
               </div>
             </div>
             <div className='flex justify-between'>
               <div>{t('Shipping')}</div>
               <div>
                 {' '}
-                <ProductPrice price={shippingPrice} plain />
+                <ProductPrice price={shippingPrice} plain convert={false} currencyCode={order.currency} />
               </div>
             </div>
             <div className='flex justify-between'>
               <div>{t('Total')}</div>
               <div>
                 {' '}
-                <ProductPrice price={totalPrice} plain />
+                <ProductPrice price={totalPrice} plain convert={false} currencyCode={order.currency} />
               </div>
             </div>
 

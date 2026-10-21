@@ -1,7 +1,7 @@
 'use client'
 import useSettingStore from '@/hooks/use-setting-store'
-import { cn, round2 } from '@/lib/utils'
-import { useFormatter, useTranslations } from 'next-intl'
+import { cn, formatCurrency, round2 } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 const ProductPrice = ({
   price,
@@ -10,6 +10,8 @@ const ProductPrice = ({
   isDeal = false,
   forListing = true, // forListing:(stylling) Tells the component where it's being used (listing or details page) to adjust its appearance accordingly.
   plain = false,
+  convert = true,
+  currencyCode,
 }: {
   price: number
   className?: string
@@ -17,19 +19,24 @@ const ProductPrice = ({
   isDeal?: boolean
   forListing?: boolean
   plain?: boolean
+  convert?: boolean
+  currencyCode?: string
 }) => {
-  const { getCurrency } = useSettingStore()
-  const currency = getCurrency()
+  const { setting, getCurrency } = useSettingStore()
+  const currency =
+    (currencyCode &&
+      setting.availableCurrencies.find((c) => c.code === currencyCode)) ||
+    getCurrency()
   const t = useTranslations()
-  const convertedPrice = round2(currency.convertRate * price)
-  const convertedListPrice = round2(currency.convertRate * listPrice)
+  const rate = convert === false ? 1 : currency.convertRate
+  const convertedPrice = round2(rate * price)
+  const convertedListPrice = round2(rate * listPrice)
+  const decimals = currency.decimals ?? 2
 
-  const format = useFormatter()
   const discountPercent = Math.round(
     100 - (convertedPrice / convertedListPrice) * 100
   )
-  const stringValue = convertedPrice.toString() 
-
+  const stringValue = convertedPrice.toFixed(decimals)
   const [intValue, floatValue] = stringValue.includes('.')
     ? stringValue.split('.')
     : [stringValue, '']
@@ -40,11 +47,12 @@ const ProductPrice = ({
   // Otherwise (if there's a listprice and it's not a special deal)...
   // forListing prop controls whether the justify-center class is added to the div element.
   return plain ? (
-    format.number(convertedPrice, {
-      style: 'currency',
-      currency: currency.code,
-      currencyDisplay: 'narrowSymbol',
-    })
+    formatCurrency(
+      convertedPrice,
+      currency.code,
+      currency.locale,
+      currency.decimals
+    )
   ) : convertedListPrice == 0 ? (
     <div className={cn('text-3xl', className)}>
       <span className='text-xs align-super'>{currency.symbol}</span>
@@ -72,11 +80,12 @@ const ProductPrice = ({
         <div className='text-muted-foreground text-xs py-2'>
           {t('Was')}:{' '}
           <span className='line-through'>
-            {format.number(convertedListPrice, {
-              style: 'currency',
-              currency: currency.code,
-              currencyDisplay: 'narrowSymbol',
-            })}
+            {formatCurrency(
+              convertedListPrice,
+              currency.code,
+              currency.locale,
+              currency.decimals
+            )}
           </span>
         </div>
       </div>
@@ -94,11 +103,12 @@ const ProductPrice = ({
       <div className='text-muted-foreground text-xs py-2'>
        {t('List price')}:{' '}
         <span className='line-through'>
-          {format.number(convertedListPrice, {
-            style: 'currency',
-            currency: currency.code,
-            currencyDisplay: 'narrowSymbol',
-          })}
+          {formatCurrency(
+            convertedListPrice,
+            currency.code,
+            currency.locale,
+            currency.decimals
+          )}
         </span>
       </div>
     </div>

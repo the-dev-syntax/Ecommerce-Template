@@ -25,6 +25,12 @@ async function main() {
 
   const current = JSON.parse(JSON.stringify(setting))
   const merged = withSettingDefaults(current)
+  const baseCode =
+    merged.market === 'SA' ? 'SAR' : merged.defaultCurrency
+  const availableCurrencies = merged.availableCurrencies.map((currency) => ({
+    ...currency,
+    isBase: currency.code === baseCode,
+  }))
   const update = {
     brand: merged.brand,
     seo: merged.seo,
@@ -32,6 +38,8 @@ async function main() {
     navigation: merged.navigation,
     email: merged.email,
     emailTemplates: merged.emailTemplates,
+    availableCurrencies,
+    defaultCurrency: baseCode,
   }
 
   if (!dryRun) {

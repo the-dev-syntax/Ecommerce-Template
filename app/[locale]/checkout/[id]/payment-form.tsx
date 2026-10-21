@@ -121,7 +121,7 @@ export default function OrderPaymentForm({
               <span>{t('Items')}:</span>
               <span>
                 {' '}
-                <ProductPrice price={itemsPrice} plain />
+                <ProductPrice price={itemsPrice} plain convert={false} currencyCode={order.currency} />
               </span>
             </div>
             <div className='flex justify-between'>
@@ -132,7 +132,7 @@ export default function OrderPaymentForm({
                 ) : shippingPrice === 0 ? (
                   t('FREE')
                 ) : (
-                  <ProductPrice price={shippingPrice} plain />
+                  <ProductPrice price={shippingPrice} plain convert={false} currencyCode={order.currency} />
                 )}
               </span>
             </div>
@@ -142,7 +142,7 @@ export default function OrderPaymentForm({
                 {taxPrice === undefined ? (
                   '--'
                 ) : (
-                  <ProductPrice price={taxPrice} plain />
+                  <ProductPrice price={taxPrice} plain convert={false} currencyCode={order.currency} />
                 )}
               </span>
             </div>
@@ -150,7 +150,7 @@ export default function OrderPaymentForm({
               <span> {t('Order Total')}:</span>
               <span>
                 {' '}
-                <ProductPrice price={totalPrice} plain />
+                <ProductPrice price={totalPrice} plain convert={false} currencyCode={order.currency} />
               </span>
             </div>
 

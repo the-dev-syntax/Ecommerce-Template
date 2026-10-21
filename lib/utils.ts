@@ -43,12 +43,14 @@ export const slugify = (text: string): string => {
 export function formatCurrency(
   amount: number,
   currency = 'SAR',
-  locale = 'en-US'
+  locale = 'en-US',
+  decimals = 2
 ) {
   return new Intl.NumberFormat(locale, {
     currency,
     style: 'currency',
-    minimumFractionDigits: 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount)
 }
 

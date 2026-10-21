@@ -41,6 +41,9 @@ async function main() {
     code: currency.code,
     symbol: symbols[currency.code] ?? currency.symbol,
     convertRate: rates[currency.code] ?? currency.convertRate,
+    locale: currency.locale ?? 'en-US',
+    decimals: currency.decimals ?? 2,
+    isBase: currency.code === 'SAR',
   }))
 
   if (!currencies.some((currency) => currency.code === 'SAR')) {
@@ -49,6 +52,9 @@ async function main() {
       code: 'SAR',
       symbol: symbols.SAR,
       convertRate: 1,
+      locale: 'en-US',
+      decimals: 2,
+      isBase: true,
     })
   }
 

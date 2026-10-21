@@ -70,10 +70,17 @@ const CheckoutForm = () => {
     site,
     availableDeliveryDates,
     availablePaymentMethods,
+    availableCurrencies,
+    defaultCurrency,
     defaultPaymentMethod,
     features,
+    currency: displayCurrency,
   }
   } = useSettingStore()
+
+  const orderCurrency =
+    availableCurrencies.find((currency) => currency.isBase)?.code ??
+    defaultCurrency
 
   const enabledPaymentMethods = availablePaymentMethods.filter(
     (method) =>
@@ -265,7 +272,7 @@ const CheckoutForm = () => {
             <div className='flex justify-between'>
               <span>{t('Items')}:</span>
               <span>
-                <ProductPrice price={itemsPrice} plain />
+                <ProductPrice price={itemsPrice} plain convert={false} currencyCode={orderCurrency} />
               </span>
             </div>
             <div className='flex justify-between'>
@@ -276,7 +283,7 @@ const CheckoutForm = () => {
                 ) : shippingPrice === 0 ? (
                   t('FREE Shipping')
                 ) : (
-                  <ProductPrice price={shippingPrice} plain />
+                  <ProductPrice price={shippingPrice} plain convert={false} currencyCode={orderCurrency} />
                 )}
               </span>
             </div>
@@ -286,7 +293,7 @@ const CheckoutForm = () => {
                 {taxPrice === undefined ? (
                   '--'
                 ) : (
-                  <ProductPrice price={taxPrice} plain />
+                  <ProductPrice price={taxPrice} plain convert={false} currencyCode={orderCurrency} />
                 )}
               </span>
             </div>
@@ -298,7 +305,7 @@ const CheckoutForm = () => {
             <div className='flex justify-between  pt-4 font-bold text-lg'>
               <span> {t('Order Total')}:</span>
               <span>
-                <ProductPrice price={totalPrice} plain />
+                <ProductPrice price={totalPrice} plain convert={false} currencyCode={orderCurrency} />
               </span>
             </div>
           </div>
@@ -641,7 +648,7 @@ const CheckoutForm = () => {
                                 {item.name}, {item.color}, {item.size}
                               </p>
                               <p className='font-bold'>
-                                <ProductPrice price={item.price} plain />
+                                <ProductPrice price={item.price} plain convert={false} currencyCode={orderCurrency} />
                               </p>
 
                               <Select
@@ -712,6 +719,8 @@ const CheckoutForm = () => {
                                         <ProductPrice
                                           price={dd.shippingPrice}
                                           plain
+                                          convert={false}
+                                          currencyCode={orderCurrency}
                                         />
                                       )}
                                     </div>
@@ -750,8 +759,15 @@ const CheckoutForm = () => {
                   </Button>
                   <div className='flex-1'>
                     <p className='font-bold text-lg'>
-                      {t('Order Total')}: <ProductPrice price={totalPrice} plain />
+                      {t('Order Total')}: <ProductPrice price={totalPrice} plain convert={false} currencyCode={orderCurrency} />
                     </p>
+                    {displayCurrency !== orderCurrency && (
+                      <p className='text-muted-foreground text-xs'>
+                        {t('Orders are charged in {currency}', {
+                          currency: orderCurrency,
+                        })}
+                      </p>
+                    )}
                     <p className='text-xs'>
                       {' '}
                       {t.rich('agreementNotice', {

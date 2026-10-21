@@ -8,6 +8,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -127,6 +128,66 @@ export default function CurrencyForm({
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name={`availableCurrencies.${index}.locale`}
+                render={({ field }) => (
+                  <FormItem>
+                    {index == 0 && <FormLabel>{t('Locale')}</FormLabel>}
+                    <FormControl>
+                      <Input {...field} placeholder='en-US' />
+                    </FormControl>
+                    <FormMessage>
+                      {errors.availableCurrencies?.[index]?.locale?.message}
+                    </FormMessage>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name={`availableCurrencies.${index}.decimals`}
+                render={({ field }) => (
+                  <FormItem>
+                    {index == 0 && <FormLabel>{t('Decimals')}</FormLabel>}
+                    <FormControl>
+                      <Input type='number' min={0} max={4} {...field} />
+                    </FormControl>
+                    <FormMessage>
+                      {errors.availableCurrencies?.[index]?.decimals?.message}
+                    </FormMessage>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name={`availableCurrencies.${index}.isBase`}
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center gap-2 space-y-0 pt-8'>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked)
+                          if (checked) {
+                            availableCurrencies.forEach((_, currencyIndex) => {
+                              if (currencyIndex !== index) {
+                                form.setValue(
+                                  `availableCurrencies.${currencyIndex}.isBase`,
+                                  false
+                                )
+                              }
+                            })
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormLabel>{t('Base')}</FormLabel>
+                  </FormItem>
+                )}
+              />
+
               <div>
                 {index == 0 && <div>{t('Action')}</div>}
                 <Button
@@ -148,7 +209,15 @@ export default function CurrencyForm({
             type='button'
             variant={'outline'}
             onClick={() =>
-              append({ name: '', code: '', symbol: '', convertRate: 1 })
+              append({
+                name: '',
+                code: '',
+                symbol: '',
+                convertRate: 1,
+                locale: 'en-US',
+                decimals: 2,
+                isBase: false,
+              })
             }
           >
             {t('Add Currency')}
