@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { IOrder } from '@/lib/db/models/order.model'
-import { formatDateTime } from '@/lib/utils'
+import { formatCurrency, formatDateTime } from '@/lib/utils'
 import CheckoutFooter from '../checkout-footer'
 import { redirect, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -249,8 +249,14 @@ export default function OrderPaymentForm({
               </p>
               <ul>
                 {items.map((item) => (
-                  <li key={item.slug}>
-                    {item.name} x {item.quantity} = {item.price}
+                  <li key={item.clientId}>
+                    {item.name}
+                    {item.variantLabel ? ` (${item.variantLabel})` : ''} x{' '}
+                    {item.quantity} ={' '}
+                    {formatCurrency(
+                      item.price * item.quantity,
+                      order.currency
+                    )}
                   </li>
                 ))}
               </ul>
