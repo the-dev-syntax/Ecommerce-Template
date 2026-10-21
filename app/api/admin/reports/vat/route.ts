@@ -50,10 +50,13 @@ export async function GET(req: NextRequest) {
     ),
   ]
 
+  const filenameFrom = (from ?? 'all').replace(/[^0-9-]/g, '')
+  const filenameTo = (to ?? 'all').replace(/[^0-9-]/g, '')
+
   return new NextResponse(`\uFEFF${lines.join('\n')}\n`, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="vat-report-${from ?? 'all'}-${to ?? 'all'}.csv"`,
+      'Content-Disposition': `attachment; filename="vat-report-${filenameFrom}-${filenameTo}.csv"`,
       'Cache-Control': 'no-store',
     },
   })
