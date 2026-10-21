@@ -34,6 +34,7 @@ export default function OrderPaymentForm({
     shippingPrice,
     totalPrice,
     taxInclusive = true,
+    codFee = 0,
     paymentMethod,
     expectedDeliveryDate,
     isPaid,
@@ -98,6 +99,19 @@ export default function OrderPaymentForm({
               )}
             </span>
           </div>
+          {codFee > 0 && (
+            <div className='flex justify-between'>
+              <span>{t('COD fee')}:</span>
+              <span>
+                <ProductPrice
+                  price={codFee}
+                  plain
+                  convert={false}
+                  currencyCode={order.currency}
+                />
+              </span>
+            </div>
+          )}
           <div className='flex justify-between pt-1 font-bold text-lg'>
             <span>{t('Order Total')}:</span>
             <span>

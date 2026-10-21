@@ -67,6 +67,32 @@ export default function OrderDetailsForm({
               {shippingAddress.province}, {shippingAddress.postalCode},{' '}
               {shippingAddress.country}{' '}
             </p>
+            {shippingAddress.district && (
+              <p className='text-muted-foreground text-sm'>
+                {t('District')}: {shippingAddress.district}
+              </p>
+            )}
+            {shippingAddress.nationalAddress && (
+              <p className='text-muted-foreground text-sm'>
+                {t('National address')}: {shippingAddress.nationalAddress}
+              </p>
+            )}
+            {order.shippingCarrier && (
+              <p className='text-sm'>
+                {t('Shipping')}: {order.shippingCarrier}{' '}
+                {order.shippingService} ({formatCurrency(order.shippingPrice, order.currency)})
+              </p>
+            )}
+            {order.isPickup && (
+              <p className='text-sm'>
+                {t('Pickup from')}: {order.pickupLocation}
+              </p>
+            )}
+            {order.codFee ? (
+              <p className='text-sm'>
+                {t('COD fee')}: {formatCurrency(order.codFee, order.currency)}
+              </p>
+            ) : null}
 
             {isDelivered ? (
               <Badge>

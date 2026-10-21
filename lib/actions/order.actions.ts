@@ -44,6 +44,7 @@ import {
   retrieveStripeIntent,
 } from '../payments/stripe'
 import { getShippingProvider } from '../shipping'
+import { getShippingRates } from '../shipping/rates'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -138,6 +139,7 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       variantLabel: variant
         ? [variant.size, variant.color].filter(Boolean).join(' / ')
         : undefined,
+      weight: variant?.weight ?? 0,
     }
   })
 }
@@ -180,24 +182,14 @@ export const createOrderFromCart = async (
   const items = await buildOrderItems(clientSideCart.items)
 
   const {
-    availableDeliveryDates,
+    availableDeliveryDates: settingDeliveryDates,
     availablePaymentMethods,
     availableCurrencies,
     defaultCurrency,
+    seller,
     features,
     common: { taxRate, taxInclusive },
   } = await getSetting()
-
-  const deliveryDateIndex =
-    clientSideCart.deliveryDateIndex === undefined
-      ? availableDeliveryDates.length - 1
-      : clientSideCart.deliveryDateIndex
-
-  if (!Number.isInteger(deliveryDateIndex) || deliveryDateIndex < 0 || deliveryDateIndex >= availableDeliveryDates.length)
-    throw new Error('Invalid delivery date')
-
-  const deliveryDate = availableDeliveryDates[deliveryDateIndex]
-  if (!deliveryDate) throw new Error('Delivery date is not available')
 
   const paymentMethod = clientSideCart.paymentMethod
   const enabledPaymentMethods = getEnabledPaymentMethods(
@@ -211,16 +203,65 @@ export const createOrderFromCart = async (
   const itemsPrice = round2(
     pricedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
-  const shippingPrice =
-    deliveryDate.freeShippingMinPrice > 0 &&
-    itemsPrice >= deliveryDate.freeShippingMinPrice
+  const pickupLocation = [
+    seller.street,
+    seller.buildingNumber,
+    seller.citySubdivision,
+    seller.city,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  const shippingQuotes = clientSideCart.shippingAddress
+    ? await getShippingRates({
+        country: clientSideCart.shippingAddress.country,
+        region: clientSideCart.shippingAddress.province,
+        city: clientSideCart.shippingAddress.city,
+        items: pricedItems,
+        itemsPrice,
+        pickupLocation,
+      })
+    : []
+  const deliveryOptions =
+    shippingQuotes.length > 0
+      ? shippingQuotes.map((quote) => ({
+          name: quote.name,
+          daysToDeliver: quote.etaMaxDays,
+          shippingPrice: quote.shippingPrice,
+          freeShippingMinPrice: 0,
+        }))
+      : settingDeliveryDates
+
+  const requestedIndex =
+    clientSideCart.deliveryDateIndex === undefined
+      ? shippingQuotes.length > 0
+        ? 0
+        : deliveryOptions.length - 1
+      : clientSideCart.deliveryDateIndex
+  const deliveryDateIndex = Math.min(
+    Math.max(0, requestedIndex),
+    deliveryOptions.length - 1
+  )
+
+  if (!Number.isInteger(deliveryDateIndex))
+    throw new Error('Invalid delivery date')
+
+  const deliveryDate = deliveryOptions[deliveryDateIndex]
+  if (!deliveryDate) throw new Error('Delivery date is not available')
+  const selectedQuote = shippingQuotes[deliveryDateIndex]
+
+  const shippingPrice = selectedQuote
+    ? selectedQuote.shippingPrice
+    : deliveryDate.freeShippingMinPrice > 0 &&
+        itemsPrice >= deliveryDate.freeShippingMinPrice
       ? 0
       : deliveryDate.shippingPrice
+  const codFee =
+    paymentMethod === 'Cash On Delivery' ? (selectedQuote?.codFee ?? 0) : 0
   const taxPrice = round2(
     pricedItems.reduce((acc, item) => acc + (item.vatAmount ?? 0), 0)
   )
   const totalPrice = round2(
-    itemsPrice + shippingPrice + (taxInclusive ? 0 : taxPrice)
+    itemsPrice + shippingPrice + codFee + (taxInclusive ? 0 : taxPrice)
   )
 
   const orderCurrency =
@@ -239,7 +280,18 @@ export const createOrderFromCart = async (
     totalPrice,
     taxInclusive,
     taxRate,
-    expectedDeliveryDate: calculateFutureDate(deliveryDate.daysToDeliver),
+    shippingRateId: selectedQuote?.id,
+    shippingZone: selectedQuote?.zoneName,
+    shippingCarrier: selectedQuote?.carrier,
+    shippingService: selectedQuote?.serviceName,
+    shippingEtaMin: selectedQuote?.etaMinDays,
+    shippingEtaMax: selectedQuote?.etaMaxDays,
+    isPickup: selectedQuote?.isPickup ?? false,
+    pickupLocation: selectedQuote?.pickupLocation,
+    codFee,
+    expectedDeliveryDate: calculateFutureDate(
+      selectedQuote ? selectedQuote.etaMaxDays : deliveryDate.daysToDeliver
+    ),
   })
 
   const created = await Order.create({
@@ -661,10 +713,12 @@ export const calcDeliveryDateAndPrice = async ({
   items: clientItems,
   shippingAddress,
   deliveryDateIndex,
+  paymentMethod,
 }: {
   deliveryDateIndex?: number
   items: OrderItem[]
   shippingAddress?: ShippingAddress
+  paymentMethod?: string
 }) => {
   const session = await auth()
   if (!session?.user?.id) throw new Error('User not authenticated')
@@ -675,25 +729,62 @@ export const calcDeliveryDateAndPrice = async ({
     clientItems.length === 0 ? [] : await buildOrderItems(clientItems)
 
   const {
-    availableDeliveryDates,
+    availableDeliveryDates: settingDeliveryDates,
+    seller,
     common: { taxRate, taxInclusive },
   } = await getSetting()
-
-  const resolvedIndex =
-    deliveryDateIndex === undefined
-      ? availableDeliveryDates.length - 1
-      : deliveryDateIndex
-
-  if (!Number.isInteger(resolvedIndex) || resolvedIndex < 0 || resolvedIndex >= availableDeliveryDates.length)
-    throw new Error('Invalid delivery date')
-
-  const deliveryDate = availableDeliveryDates[resolvedIndex]
-  if (!deliveryDate) throw new Error('Delivery date is not available')
 
   const pricedItems = priceOrderItems(items, taxRate, taxInclusive)
   const itemsPrice = round2(
     pricedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   )
+
+  const pickupLocation = [
+    seller.street,
+    seller.buildingNumber,
+    seller.citySubdivision,
+    seller.city,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  const shippingQuotes = shippingAddress
+    ? await getShippingRates({
+        country: shippingAddress.country,
+        region: shippingAddress.province,
+        city: shippingAddress.city,
+        items: pricedItems,
+        itemsPrice,
+        pickupLocation,
+      })
+    : []
+  const deliveryOptions =
+    shippingQuotes.length > 0
+      ? shippingQuotes.map((quote) => ({
+          name: quote.name,
+          daysToDeliver: quote.etaMaxDays,
+          shippingPrice: quote.shippingPrice,
+          freeShippingMinPrice: 0,
+        }))
+      : settingDeliveryDates
+  const availableDeliveryDates = deliveryOptions
+
+  const requestedIndex =
+    deliveryDateIndex === undefined
+      ? shippingQuotes.length > 0
+        ? 0
+        : availableDeliveryDates.length - 1
+      : deliveryDateIndex
+  const resolvedIndex = Math.min(
+    Math.max(0, requestedIndex),
+    availableDeliveryDates.length - 1
+  )
+
+  if (!Number.isInteger(resolvedIndex))
+    throw new Error('Invalid delivery date')
+
+  const deliveryDate = availableDeliveryDates[resolvedIndex]
+  if (!deliveryDate) throw new Error('Delivery date is not available')
+  const selectedQuote = shippingQuotes[resolvedIndex]
 
   const hasItems = pricedItems.length > 0
 
@@ -701,10 +792,12 @@ export const calcDeliveryDateAndPrice = async ({
     ? 0
     : !shippingAddress
       ? undefined
-      : deliveryDate.freeShippingMinPrice > 0 &&
-          itemsPrice >= deliveryDate.freeShippingMinPrice
-        ? 0
-        : deliveryDate.shippingPrice
+      : selectedQuote
+        ? selectedQuote.shippingPrice
+        : deliveryDate.freeShippingMinPrice > 0 &&
+            itemsPrice >= deliveryDate.freeShippingMinPrice
+          ? 0
+          : deliveryDate.shippingPrice
 
   const taxPrice = !hasItems
     ? 0
@@ -714,9 +807,12 @@ export const calcDeliveryDateAndPrice = async ({
           pricedItems.reduce((acc, item) => acc + (item.vatAmount ?? 0), 0)
         )
 
+  const codFee =
+    paymentMethod === 'Cash On Delivery' ? (selectedQuote?.codFee ?? 0) : 0
   const totalPrice = round2(
     itemsPrice +
       (shippingPrice ?? 0) +
+      codFee +
       (taxInclusive ? 0 : (taxPrice ?? 0))
   )
 
@@ -730,6 +826,15 @@ export const calcDeliveryDateAndPrice = async ({
     totalPrice,
     taxInclusive,
     taxRate,
+    shippingRateId: selectedQuote?.id,
+    shippingZone: selectedQuote?.zoneName,
+    shippingCarrier: selectedQuote?.carrier,
+    shippingService: selectedQuote?.serviceName,
+    shippingEtaMin: selectedQuote?.etaMinDays,
+    shippingEtaMax: selectedQuote?.etaMaxDays,
+    isPickup: selectedQuote?.isPickup ?? false,
+    pickupLocation: selectedQuote?.pickupLocation,
+    codFee,
   }
 }
 

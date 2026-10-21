@@ -102,6 +102,9 @@ const CheckoutForm = () => {
       taxPrice,
       totalPrice,
       taxInclusive = true,
+      codFee = 0,
+      isPickup = false,
+      pickupLocation,
       shippingAddress,
       deliveryDateIndex,
       paymentMethod: storedPaymentMethod,
@@ -310,6 +313,24 @@ const CheckoutForm = () => {
             {taxInclusive && (
               <p className='text-muted-foreground text-end text-xs'>
                 {t('VAT is included in the displayed prices')}
+              </p>
+            )}
+            {codFee > 0 && (
+              <div className='flex justify-between'>
+                <span>{t('COD fee')}:</span>
+                <span>
+                  <ProductPrice
+                    price={codFee}
+                    plain
+                    convert={false}
+                    currencyCode={orderCurrency}
+                  />
+                </span>
+              </div>
+            )}
+            {isPickup && pickupLocation && (
+              <p className='text-muted-foreground text-end text-xs'>
+                {t('Pickup from')}: {pickupLocation}
               </p>
             )}
             <div className='flex justify-between  pt-4 font-bold text-lg'>
@@ -738,16 +759,21 @@ const CheckoutForm = () => {
                                 if (index !== -1) setDeliveryDateIndex(index)
                               }}
                             >
-                              {availableDeliveryDates.map((dd) => (
-                                <div key={dd.name} className='flex'>
+                              {availableDeliveryDates.map((dd, index) => (
+                                <div key={`${dd.name}-${index}`} className='flex'>
                                   <RadioGroupItem
                                     value={dd.name}
-                                    id={`address-${dd.name}`}
+                                    id={`address-${index}`}
                                   />
                                   <Label
                                     className='pl-2 space-y-2 cursor-pointer'
-                                    htmlFor={`address-${dd.name}`}
+                                    htmlFor={`address-${index}`}
                                   >
+                                    <div className='font-medium'>
+                                      {dd.name === 'Pickup from store'
+                                        ? t('Pickup from store')
+                                        : dd.name}
+                                    </div>
                                     <div className='text-green-700 font-semibold'>
                                       {
                                         formatDateTime(

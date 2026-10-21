@@ -109,6 +109,7 @@ const ProductCard = ({
                 .filter(Boolean)
                 .join(' / ')
             : undefined,
+          weight: defaultVariant?.weight ?? 0,
         }}
       />
     </div>

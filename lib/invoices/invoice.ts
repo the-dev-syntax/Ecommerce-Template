@@ -104,9 +104,13 @@ export async function createInvoiceForOrder(
   const issuedAt = new Date()
   // Orders created before tax snapshots were VAT-exclusive: their total is
   // items + shipping + VAT. New inclusive orders are items + shipping only.
+  const codFee = round2(typedOrder.codFee ?? 0)
   const looksExclusive =
     round2(
-      typedOrder.totalPrice - typedOrder.itemsPrice - typedOrder.shippingPrice
+      typedOrder.totalPrice -
+        typedOrder.itemsPrice -
+        typedOrder.shippingPrice -
+        codFee
     ) > 0.01
   const taxInclusive =
     typedOrder.taxInclusive === false || looksExclusive ? false : true
@@ -148,7 +152,7 @@ export async function createInvoiceForOrder(
   let itemsPrice = round2(
     items.reduce((acc, item) => acc + item.lineTotal, 0)
   )
-  let shippingPrice = round2(typedOrder.shippingPrice)
+  let shippingPrice = round2(typedOrder.shippingPrice + codFee)
   let vatAmount = round2(
     items.reduce((acc, item) => acc + item.vatAmount, 0)
   )

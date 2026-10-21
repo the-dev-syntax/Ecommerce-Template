@@ -35,7 +35,7 @@ interface CartState {
   removeItem: (item: OrderItem) => void
   clearCart: () => void
   setShippingAddress: (shippingAddress: ShippingAddress) => Promise<void>
-  setPaymentMethod: (paymentMethod: string) => void
+  setPaymentMethod: (paymentMethod: string) => Promise<void>
   setDeliveryDateIndex: (index: number) => Promise<void>
 }
 
@@ -73,6 +73,7 @@ const useCartStore = create(
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress,
+              paymentMethod: get().cart.paymentMethod,
             })),
           },
         })
@@ -94,7 +95,8 @@ const useCartStore = create(
             ...get().cart,
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
-              shippingAddress
+              shippingAddress,
+              paymentMethod: get().cart.paymentMethod,
             })),
           },
         })
@@ -107,7 +109,8 @@ const useCartStore = create(
             ...get().cart,
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
-              shippingAddress
+              shippingAddress,
+              paymentMethod: get().cart.paymentMethod,
             })),
           },
         })
@@ -122,15 +125,23 @@ const useCartStore = create(
             ...(await calcDeliveryDateAndPrice({
               items,
               shippingAddress,
+              paymentMethod: get().cart.paymentMethod,
             })),
           },
         })
       },
-      setPaymentMethod: (paymentMethod: string) => {
+      setPaymentMethod: async (paymentMethod: string) => {
+        const { items, shippingAddress, deliveryDateIndex } = get().cart
         set({
           cart: {
             ...get().cart,
             paymentMethod,
+            ...(await calcDeliveryDateAndPrice({
+              items,
+              shippingAddress,
+              deliveryDateIndex,
+              paymentMethod,
+            })),
           },
         })
       },
@@ -144,6 +155,7 @@ const useCartStore = create(
               items,
               shippingAddress,
               deliveryDateIndex: index,
+              paymentMethod: get().cart.paymentMethod,
             })),
           },
         })

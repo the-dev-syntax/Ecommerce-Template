@@ -139,6 +139,7 @@ export const OrderItemSchema = z.object({
   variantId: z.string().max(100).optional(),
   sku: z.string().max(100).optional(),
   variantLabel: z.string().max(200).optional(),
+  weight: z.coerce.number().nonnegative().optional(),
 })
 
 export const ShippingAddressSchema = z.object({
@@ -198,6 +199,15 @@ export const OrderInputSchema = z.object({
   totalPrice: Price('Total price'),
   taxInclusive: z.boolean().default(true),
   taxRate: z.coerce.number().min(0).max(1).default(0.15),
+  shippingRateId: z.string().optional(),
+  shippingZone: z.string().optional(),
+  shippingCarrier: z.string().optional(),
+  shippingService: z.string().optional(),
+  shippingEtaMin: z.coerce.number().optional(),
+  shippingEtaMax: z.coerce.number().optional(),
+  isPickup: z.boolean().optional(),
+  pickupLocation: z.string().optional(),
+  codFee: z.coerce.number().optional(),
   expectedDeliveryDate: z
     .date()
     .refine(
@@ -224,6 +234,15 @@ export const CartSchema = z.object({
   totalPrice: z.number(),
   taxInclusive: z.optional(z.boolean()),
   taxRate: z.optional(z.number()),
+  shippingRateId: z.optional(z.string()),
+  shippingZone: z.optional(z.string()),
+  shippingCarrier: z.optional(z.string()),
+  shippingService: z.optional(z.string()),
+  shippingEtaMin: z.optional(z.number()),
+  shippingEtaMax: z.optional(z.number()),
+  isPickup: z.optional(z.boolean()),
+  pickupLocation: z.optional(z.string()),
+  codFee: z.optional(z.number()),
   paymentMethod: z.optional(z.string()),
   shippingAddress: z.optional(ShippingAddressSchema),
   deliveryDateIndex: z.optional(z.number()),
@@ -447,6 +466,32 @@ export const SiteCurrencySchema = z.object({
 export const PaymentMethodSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   commission: z.coerce.number().min(0, 'Commission must be at least 0'),
+})
+
+export const ShippingRateSchema = z.object({
+  zoneName: z.string().min(1, 'Zone name is required').max(100),
+  country: z.string().min(2).max(100),
+  region: z.string().min(1, 'Region is required').max(100),
+  city: z.string().min(1, 'City is required').max(100),
+  carrier: z.string().min(1, 'Carrier is required').max(100),
+  serviceName: z.string().min(1, 'Service is required').max(100),
+  baseRate: z.coerce.number().min(0),
+  includedWeightKg: z.coerce.number().min(0),
+  extraPerKg: z.coerce.number().min(0),
+  weightRoundingKg: z.coerce.number().min(0.1),
+  freeShippingMinPrice: z.coerce.number().min(0),
+  codFee: z.coerce.number().min(0),
+  remoteSurcharge: z.coerce.number().min(0),
+  etaMinDays: z.coerce.number().int().min(0),
+  etaMaxDays: z.coerce.number().int().min(0),
+  pickupAvailable: z.boolean(),
+  codAvailable: z.boolean(),
+  isActive: z.boolean(),
+  priority: z.coerce.number().int(),
+})
+
+export const ShippingRateUpdateSchema = ShippingRateSchema.extend({
+  _id: z.string(),
 })
 
 export const DeliveryDateSchema = z.object({

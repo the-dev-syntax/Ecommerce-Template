@@ -123,7 +123,7 @@ export async function processOrderReturn(
   }
 
   const shippingAmount = getShippingRefundAmount(
-    order.shippingPrice,
+    round2(order.shippingPrice + (order.codFee ?? 0)),
     input.reason,
     order.shippingRefunded ?? false
   )
@@ -202,7 +202,7 @@ export async function processOrderReturn(
         calculationOptions
       )
       const freshShipping = getShippingRefundAmount(
-        fresh.shippingPrice,
+        round2(fresh.shippingPrice + (fresh.codFee ?? 0)),
         input.reason,
         fresh.shippingRefunded ?? false
       )
@@ -563,9 +563,10 @@ export async function cancelOrderById(
           taxRate: cancellationOrder.taxRate ?? 0.15,
         })
         const shippingStillRefundable =
-          !(order.shippingRefunded ?? false) && order.shippingPrice > 0
+          !(order.shippingRefunded ?? false) &&
+          order.shippingPrice + (order.codFee ?? 0) > 0
         const shippingAmount = shippingStillRefundable
-          ? round2(order.shippingPrice)
+          ? round2(order.shippingPrice + (order.codFee ?? 0))
           : 0
 
         const creditNote = await createInvoiceForOrder(

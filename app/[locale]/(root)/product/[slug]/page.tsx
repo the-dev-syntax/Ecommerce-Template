@@ -191,6 +191,7 @@ export default async function ProductDetails(props: {
                           variantId: selectedVariant?.id,
                           sku: selectedVariant?.sku,
                           variantLabel: selectedVariantLabel,
+                          weight: selectedVariant?.weight ?? 0,
                         }}
                       />
                     </div>

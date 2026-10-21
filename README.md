@@ -312,7 +312,17 @@ Known limits:
 - Added Saudi address fields: district and national address alongside city/province/postal code.
 - Admin order list shows order status; order details show the status timeline and tracking.
 - Verification: `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (704 keys), `npm test` (41 tests), `npm run build` — PASS.
-- Remaining Phase 4 work: shipping zones/rates by region, carrier adapters, customer return notifications, low-stock alerts and inventory adjustment audit.
+- Remaining Phase 4 work: carrier adapters, customer return notifications, low-stock alerts and inventory adjustment audit.
+
+## P0-32 - Admin shipping zones, rates and SMSA defaults (2026-10-21)
+
+- Added a `ShippingRate` collection and `/admin/shipping` to manage country/region/city zones, carrier, service, flat base rate, included/extra weight, free-shipping threshold, COD fee, remote surcharge, ETA and pickup. City rules take priority over region rules, then country defaults.
+- Checkout resolves the active rate from the entered Saudi address and cart weight, applies the free-shipping threshold, offers store pickup when enabled, and falls back to the existing delivery-date settings when no zone matches.
+- Orders snapshot the selected rate id, zone, carrier, service, ETA, pickup location, COD fee and shipping price. Order items now snapshot variant weight for stable historical calculations.
+- Added `npm run migrate:shipping` to seed SMSA flat per-city defaults (Riyadh 20 SAR, Jeddah 25 SAR, other major cities 25 SAR, 30 SAR fallback); the admin table overrides them when the commercial rate card arrives.
+- Shipping remains non-taxable. COD fees are added only for cash-on-delivery orders.
+- Added `README-SHIPPING.md` with the carrier data/API checklist, rate-table shape and confirmed starting decisions.
+- Verification: `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (733 keys), `npm test` (49 tests), `npm run build` - PASS.
 
 ## P0-30 — Payment adapters, unified webhook and reconciliation (2026-10-21)
 
@@ -777,7 +787,7 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 ### Phase 4 — Orders, inventory, and shipping (P1)
 - [x] Add an explicit order state machine (`pending_payment → paid → shipped → delivered → cancelled/refunded/returned`) with immutable status history.
 - [x] Reserve stock at order creation with a 30-minute expiry, release it on cancel/timeout, and commit it atomically on payment.
-- [ ] Add shipping zones, rates, free-shipping thresholds by region, pickup, and per-region delivery estimates.
+- [x] Add shipping zones, rates, free-shipping thresholds by region, pickup, and per-region delivery estimates.
 - [x] Build the provider-agnostic shipping API now: manual shipment creation, tracking number/URL, shipment status, and a signed cron endpoint for reservation expiry. Carrier adapters are next.
 - [x] Define a `ShippingProvider` interface so Aramex, SMSA, Saudi Post, and Naqel can be added later without changing checkout.
 - [x] Add Saudi address fields (district, national address) alongside region/city and postal code.
