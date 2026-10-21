@@ -26,6 +26,10 @@ import { isAdminOrOwner, requireAdmin } from '../access'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
 import { cancelOrderById, processOrderReturn } from '../orders/refund-order'
+import {
+  releaseExpiredReservations,
+  reserveStockForOrder,
+} from '../orders/stock-reservations'
 import { OrderReturnInputSchema } from '../validator'
 import type { IOrderReturnInput } from '@/types'
 import { priceOrderItems } from '../tax'
@@ -39,6 +43,7 @@ import {
   createStripeIntent,
   retrieveStripeIntent,
 } from '../payments/stripe'
+import { getShippingProvider } from '../shipping'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -237,7 +242,25 @@ export const createOrderFromCart = async (
     expectedDeliveryDate: calculateFutureDate(deliveryDate.daysToDeliver),
   })
 
-  return await Order.create(order)
+  const created = await Order.create({
+    ...order,
+    status: 'pending_payment',
+    statusHistory: [
+      { status: 'pending_payment', at: new Date(), note: 'Order created' },
+    ],
+  })
+  try {
+    await releaseExpiredReservations()
+    await reserveStockForOrder(created)
+  } catch (error) {
+    await Order.deleteOne({ _id: created._id })
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'Unable to reserve stock for this order'
+    )
+  }
+  return created
 }
 
 // for Paypal :
@@ -1079,10 +1102,65 @@ export async function updateOrderToPaid(orderId: string) {
   }
 }
 
+// MARK AS SHIPPED - ADMIN
+export async function shipOrder(
+  orderId: string,
+  trackingNumber: string,
+  trackingUrl?: string
+) {
+  try {
+    const session = await auth()
+    if (session?.user.role !== 'admin')
+      throw new Error('Admin permission required')
+
+    const tracking = trackingNumber?.trim()
+    if (!tracking || tracking.length > 100)
+      throw new Error('A valid tracking number is required')
+
+    await connectToDatabase()
+    const order = await dbOrderWith3UserKeys(orderId)
+    if (!order) throw new Error('Order not found')
+    if (order.isCancelled) throw new Error('Order is cancelled')
+    if (!order.isPaid) throw new Error('Order is not paid')
+    if (order.isDelivered) throw new Error('Order is already delivered')
+
+    const provider = getShippingProvider('manual')
+    if (!provider) throw new Error('Shipping provider is unavailable')
+    const shipment = await provider.createShipment({
+      orderId,
+      trackingNumber: tracking,
+      trackingUrl: trackingUrl?.trim() || undefined,
+    })
+
+    order.status = 'shipped'
+    order.statusHistory = [
+      ...(order.statusHistory ?? []),
+      {
+        status: 'shipped',
+        at: new Date(),
+        note: `Tracking ${shipment.trackingNumber}`,
+      },
+    ]
+    order.shipment = {
+      provider: shipment.provider,
+      trackingNumber: shipment.trackingNumber,
+      trackingUrl: shipment.trackingUrl,
+      shippedAt: new Date(),
+      status: shipment.status,
+    }
+    await order.save()
+
+    await revalidateAllLocales(`/account/orders/${orderId}`)
+    await revalidateAllLocales(`/admin/orders/${orderId}`)
+    return { success: true, message: 'Order marked as shipped' }
+  } catch (err) {
+    return { success: false, message: formatError(err) }
+  }
+}
+
 // MARK AS DELIVERED - ADMIN
 export async function deliverOrder(orderId: string) {
   try {
-   
     const session = await auth()
       if (session?.user.role !== "admin")
         throw new Error('Admin permission required')
@@ -1097,6 +1175,15 @@ export async function deliverOrder(orderId: string) {
 
     order.isDelivered = true
     order.deliveredAt = new Date()
+    order.status = 'delivered'
+    order.statusHistory = [
+      ...(order.statusHistory ?? []),
+      { status: 'delivered', at: new Date(), note: 'Delivered' },
+    ]
+    if (order.shipment) {
+      order.shipment.deliveredAt = new Date()
+      order.shipment.status = 'delivered'
+    }
 
     await order.save()
 

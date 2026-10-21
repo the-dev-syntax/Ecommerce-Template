@@ -3,6 +3,16 @@ import { Document, Model, model, models, Schema } from 'mongoose'
 
 import { RETURN_POLICIES } from '@/lib/returns/policy'
 
+export type OrderStatus =
+  | 'pending_payment'
+  | 'paid'
+  | 'processing'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled'
+  | 'refunded'
+  | 'returned'
+
 // omit = replace _id of document with _id of mongoose type
 export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   _id: string
@@ -19,6 +29,16 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   isDisputed?: boolean
   disputeStatus?: string
   disputedAt?: Date
+  status?: OrderStatus
+  statusHistory?: { status: OrderStatus; at: Date; note?: string }[]
+  shipment?: {
+    provider: string
+    trackingNumber: string
+    trackingUrl?: string
+    shippedAt?: Date
+    deliveredAt?: Date
+    status: 'created' | 'in_transit' | 'delivered' | 'cancelled'
+  }
   refundHistory?: {
     amount: number
     provider: string
@@ -89,6 +109,8 @@ const orderSchema = new Schema<IOrder>(
       postalCode: { type: String, required: true },
       country: { type: String, required: true },
       province: { type: String, required: true },
+      district: { type: String, default: '' },
+      nationalAddress: { type: String, default: '' },
       phone: { type: String, required: true },
     },
     expectedDeliveryDate: { type: Date, required: true },
@@ -123,6 +145,40 @@ const orderSchema = new Schema<IOrder>(
     isDisputed: { type: Boolean, default: false },
     disputeStatus: { type: String },
     disputedAt: { type: Date },
+    status: {
+      type: String,
+      enum: [
+        'pending_payment',
+        'paid',
+        'processing',
+        'shipped',
+        'delivered',
+        'cancelled',
+        'refunded',
+        'returned',
+      ],
+      default: 'pending_payment',
+      index: true,
+    },
+    statusHistory: [
+      {
+        _id: false,
+        status: { type: String, required: true },
+        at: { type: Date, required: true },
+        note: { type: String },
+      },
+    ],
+    shipment: {
+      provider: { type: String, default: '' },
+      trackingNumber: { type: String, default: '' },
+      trackingUrl: { type: String, default: '' },
+      shippedAt: { type: Date },
+      deliveredAt: { type: Date },
+      status: {
+        type: String,
+        enum: ['created', 'in_transit', 'delivered', 'cancelled'],
+      },
+    },
     refundHistory: [
       {
         _id: false,

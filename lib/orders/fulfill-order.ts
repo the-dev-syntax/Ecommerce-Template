@@ -4,6 +4,7 @@ import { sendPurchaseReceipt } from '@/emails'
 import { connectToDatabase } from '@/lib/db'
 import Order, { OrderWithUser } from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
+import StockReservation from '@/lib/db/models/stock-reservation.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
 
@@ -82,7 +83,22 @@ export async function fulfillOrder({
       if (Math.round(amountPaid * 100) !== Math.round(order.totalPrice * 100))
         throw new Error('Paid amount does not match this order total')
 
+      const reservation = await StockReservation.findOne({
+        orderId: String(order._id),
+      }).session(session)
+      const holdsStock =
+        reservation != null && reservation.status !== 'released'
+
       for (const item of order.items) {
+        if (holdsStock) {
+          await Product.updateOne(
+            { _id: item.product },
+            { $inc: { numSales: item.quantity } },
+            { session }
+          )
+          continue
+        }
+
         const product = item.variantId
           ? await Product.findOneAndUpdate(
               {
@@ -121,8 +137,18 @@ export async function fulfillOrder({
         if (!product) throw new Error(`Not enough stock for ${item.name}`)
       }
 
+      if (holdsStock) {
+        reservation.status = 'committed'
+        await reservation.save({ session })
+      }
+
       order.isPaid = true
       order.paidAt = new Date()
+      order.status = 'paid'
+      order.statusHistory = [
+        ...(order.statusHistory ?? []),
+        { status: 'paid', at: new Date(), note: `Paid via ${provider}` },
+      ]
       order.paymentResult = {
         id: paymentId,
         status,

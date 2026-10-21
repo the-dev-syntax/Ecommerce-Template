@@ -692,5 +692,15 @@
   "Net collected": "Encaissé net",
   "Disputed orders": "Commandes contestées",
   "Reconciliation by provider": "Rapprochement par fournisseur",
-  "Unified webhook": "Webhook unifié"
+  "Unified webhook": "Webhook unifié",
+  "National address": "Adresse nationale",
+  "Enter district": "Saisir le quartier",
+  "Mark as shipped": "Marquer comme expédié",
+  "Tracking number": "Numéro de suivi",
+  "Tracking URL": "URL de suivi",
+  "Saving": "Enregistrement",
+  "Order status": "Statut de la commande",
+  "Shipped": "Expédiée",
+  "Pending payment": "En attente de paiement",
+  "Returned": "Retournée"
 }

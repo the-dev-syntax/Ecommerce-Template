@@ -8,6 +8,10 @@ import OrderReturn, {
 import Product from '@/lib/db/models/product.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import {
+  markStockReservationReleased,
+  releaseStockReservation,
+} from '@/lib/orders/stock-reservations'
+import {
   calculateCancellationLines,
   calculateReturnLines,
   getShippingRefundAmount,
@@ -293,12 +297,26 @@ export async function processOrderReturn(
             }
           : {}
 
+      const allItemsRefunded = fresh.items.every((item) => {
+        if (item.quantity <= 0) return true
+        const selected =
+          freshLines.find((line) => line.clientId === item.clientId)
+            ?.quantity ?? 0
+        return (item.refundedQuantity ?? 0) + selected >= item.quantity
+      })
+      const nextStatus = fullyRefunded
+        ? 'refunded'
+        : allItemsRefunded
+          ? 'returned'
+          : fresh.status
+
       await Order.updateOne(
         { _id: fresh._id },
         {
           $set: {
             refundedAmount,
             refundedAt,
+            ...(nextStatus ? { status: nextStatus } : {}),
             ...(freshShipping > 0 ? { shippingRefunded: true } : {}),
             ...paymentUpdate,
           },
@@ -310,6 +328,13 @@ export async function processOrderReturn(
               reason: input.reason,
               returnId,
               reference: refundReference ?? '',
+            },
+            statusHistory: {
+              status: nextStatus ?? 'paid',
+              at: refundedAt,
+              note: allItemsRefunded
+                ? 'All items returned'
+                : 'Return processed',
             },
           },
         },
@@ -504,6 +529,14 @@ export async function cancelOrderById(
             isCancelled: true,
             cancelledAt: new Date(),
             cancelReason: reason?.trim() || undefined,
+            status: 'cancelled',
+          },
+          $push: {
+            statusHistory: {
+              status: 'cancelled',
+              at: new Date(),
+              note: reason?.trim() || 'Cancelled',
+            },
           },
         },
         { session }
@@ -511,6 +544,14 @@ export async function cancelOrderById(
     })
   } finally {
     await session.endSession()
+  }
+
+  if (!alreadyCancelled) {
+    if (wasPaid) {
+      await markStockReservationReleased(orderId)
+    } else {
+      await releaseStockReservation(orderId, true)
+    }
   }
 
   if (refundedAmount > 0) {

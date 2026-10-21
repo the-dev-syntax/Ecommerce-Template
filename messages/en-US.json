@@ -692,5 +692,15 @@
   "Net collected": "Net collected",
   "Disputed orders": "Disputed orders",
   "Reconciliation by provider": "Reconciliation by provider",
-  "Unified webhook": "Unified webhook"
+  "Unified webhook": "Unified webhook",
+  "National address": "National address",
+  "Enter district": "Enter district",
+  "Mark as shipped": "Mark as shipped",
+  "Tracking number": "Tracking number",
+  "Tracking URL": "Tracking URL",
+  "Saving": "Saving",
+  "Order status": "Order status",
+  "Shipped": "Shipped",
+  "Pending payment": "Pending payment",
+  "Returned": "Returned"
 }

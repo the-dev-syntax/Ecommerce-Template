@@ -692,5 +692,15 @@
   "Net collected": "صافي المحصل",
   "Disputed orders": "الطلبات المتنازع عليها",
   "Reconciliation by provider": "المطابقة حسب المزود",
-  "Unified webhook": "Webhook موحد"
+  "Unified webhook": "Webhook موحد",
+  "National address": "العنوان الوطني",
+  "Enter district": "أدخل الحي",
+  "Mark as shipped": "تحديد كتم شحن",
+  "Tracking number": "رقم التتبع",
+  "Tracking URL": "رابط التتبع",
+  "Saving": "جاري الحفظ",
+  "Order status": "حالة الطلب",
+  "Shipped": "تم الشحن",
+  "Pending payment": "بانتظار الدفع",
+  "Returned": "تم الاسترجاع"
 }

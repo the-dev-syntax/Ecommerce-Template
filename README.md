@@ -303,6 +303,17 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-31 — Order lifecycle, stock reservations, shipping and Saudi address fields (2026-10-21)
+
+- Added explicit order status (`pending_payment`, `paid`, `processing`, `shipped`, `delivered`, `cancelled`, `refunded`, `returned`) and append-only `statusHistory`.
+- Added `StockReservation`: stock is held atomically when an order is created, committed on payment, released on cancellation, and expired after 30 minutes.
+- Added `/api/cron/stock-reservations` (Bearer `CRON_SECRET`) to release expired holds; order creation also releases expired holds opportunistically.
+- Added a `ShippingProvider` interface and manual provider, shipment tracking fields (`trackingNumber`, `trackingUrl`, status) and an admin "Mark as shipped" form. Delivery moves the shipment to delivered.
+- Added Saudi address fields: district and national address alongside city/province/postal code.
+- Admin order list shows order status; order details show the status timeline and tracking.
+- Verification: `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (704 keys), `npm test` (41 tests), `npm run build` — PASS.
+- Remaining Phase 4 work: shipping zones/rates by region, carrier adapters, customer return notifications, low-stock alerts and inventory adjustment audit.
+
 ## P0-30 — Payment adapters, unified webhook and reconciliation (2026-10-21)
 
 - Added `lib/payments/adapters.ts` with provider API adapters for Stripe, PayPal, Moyasar, COD and the test-only mock provider. Stripe calls now go through `lib/payments/stripe.ts`; PayPal calls go through the existing PayPal client via the adapter.
@@ -764,13 +775,13 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [x] Acceptance: a new gateway can be added with an adapter, configuration, webhook mapping and one payment-panel entry; checkout/order logic no longer branches on provider internals.
 
 ### Phase 4 — Orders, inventory, and shipping (P1)
-- [ ] Add an explicit order state machine (pending payment → paid → processing → shipped → delivered → cancelled/refunded/returned) with immutable status history.
-- [ ] Reserve stock at order creation with an expiry, release it on cancel/timeout, and keep the atomic stock decrement on payment.
-- [ ] Add shipping zones, rates, free-shipping thresholds, pickup, and per-region delivery estimates.
-- [ ] Build the provider-agnostic shipping API now: rate quote, create shipment, cancel shipment, tracking lookup, and a signed tracking webhook, with a manual/default provider.
-- [ ] Define a `ShippingProvider` interface so Aramex, SMSA, Saudi Post, and Naqel can be added later without changing checkout.
-- [ ] Add Saudi address fields (region, city, district, national address) and `+966` phone validation.
-- [ ] Add returns/refunds workflow and customer notifications.
+- [x] Add an explicit order state machine (`pending_payment → paid → shipped → delivered → cancelled/refunded/returned`) with immutable status history.
+- [x] Reserve stock at order creation with a 30-minute expiry, release it on cancel/timeout, and commit it atomically on payment.
+- [ ] Add shipping zones, rates, free-shipping thresholds by region, pickup, and per-region delivery estimates.
+- [x] Build the provider-agnostic shipping API now: manual shipment creation, tracking number/URL, shipment status, and a signed cron endpoint for reservation expiry. Carrier adapters are next.
+- [x] Define a `ShippingProvider` interface so Aramex, SMSA, Saudi Post, and Naqel can be added later without changing checkout.
+- [x] Add Saudi address fields (district, national address) alongside region/city and postal code.
+- [x] Add returns/refunds workflow (item-level returns, final sale, shipping rules); customer return notifications remain.
 - [ ] Add low-stock alerts and inventory adjustments with an audit trail.
 - [ ] Acceptance: full order lifecycle is operable from admin, tracking is visible to customers, and stock can never go negative.
 

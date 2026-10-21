@@ -15,6 +15,8 @@ import {
 import { deleteOrder, getAllOrders } from '@/lib/actions/order.actions'
 import { formatDateTime, formatId } from '@/lib/utils'
 import { IOrderList } from '@/types'
+import type { IOrder } from '@/lib/db/models/order.model'
+import { deriveOrderStatus } from '@/lib/orders/status'
 import ProductPrice from '@/components/shared/product/product-price'
 import { getTranslations } from 'next-intl/server'
 
@@ -63,6 +65,7 @@ export default async function OrdersPage(props: {
               <TableHead>{t('Date')}</TableHead>
               <TableHead>{t('Buyer')}</TableHead>
               <TableHead>{t('Total')}</TableHead>
+              <TableHead>{t('Status')}</TableHead>
               <TableHead>{t('Paid')}</TableHead>
               <TableHead>{t('Delivered')}</TableHead>
               <TableHead>{t('Actions')}</TableHead>
@@ -80,7 +83,15 @@ export default async function OrdersPage(props: {
                 </TableCell>
                 <TableCell>
                   {' '}
-                  <ProductPrice price={order.totalPrice} plain />
+                  <ProductPrice
+                    price={order.totalPrice}
+                    plain
+                    convert={false}
+                    currencyCode={order.currency}
+                  />
+                </TableCell>
+                <TableCell>
+                  {deriveOrderStatus(order as unknown as IOrder)}
                 </TableCell>
                 <TableCell>
                   {order.isPaid && order.paidAt

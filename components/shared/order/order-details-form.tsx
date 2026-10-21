@@ -14,11 +14,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { IOrder } from '@/lib/db/models/order.model'
+import { deriveOrderStatus } from '@/lib/orders/status'
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 import ProductPrice from '../product/product-price'
 import ActionButton from '../action-button'
 import RefundOrderForm from './refund-order-form'
+import ShipOrderForm from './ship-order-form'
 import { deliverOrder, updateOrderToPaid } from '@/lib/actions/order.actions'
 import { useTranslations } from 'next-intl'
 
@@ -111,6 +113,23 @@ export default function OrderDetailsForm({
                 {t('Cancellation reason')}: {cancelReason}
               </p>
             )}
+            {order.shipment?.trackingNumber && (
+              <p className='text-sm'>
+                {t('Tracking number')}:{' '}
+                {order.shipment.trackingUrl ? (
+                  <Link
+                    href={order.shipment.trackingUrl}
+                    target='_blank'
+                    rel='noreferrer'
+                    className='underline'
+                  >
+                    {order.shipment.trackingNumber}
+                  </Link>
+                ) : (
+                  order.shipment.trackingNumber
+                )}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -180,6 +199,20 @@ export default function OrderDetailsForm({
             </Table>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className='p-4 gap-4'>
+            <h2 className='text-xl pb-4'>{t('Order status')}</h2>
+            <p className='mb-2 font-medium'>{deriveOrderStatus(order)}</p>
+            <ul className='space-y-1 text-sm'>
+              {(order.statusHistory ?? []).map((entry, index) => (
+                <li key={`${entry.status}-${index}`}>
+                  {formatDateTime(entry.at).dateTime} — {entry.status}
+                  {entry.note ? ` (${entry.note})` : ''}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </div>
       <div>
         <Card>
@@ -231,10 +264,13 @@ export default function OrderDetailsForm({
               />
             )}
             {isAdmin && isPaid && !isDelivered && !isCancelled && (
-              <ActionButton
-                caption={t('Mark as delivered')}
-                action={() => deliverOrder(order._id)}
-              />
+              <>
+                <ShipOrderForm orderId={order._id} />
+                <ActionButton
+                  caption={t('Mark as delivered')}
+                  action={() => deliverOrder(order._id)}
+                />
+              </>
             )}
             {isPaid && (
               <Link

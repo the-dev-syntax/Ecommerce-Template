@@ -50,6 +50,8 @@ const shippingAddressDefaultValues =
       street: '1911, 65 Prince bander Est',
       city: 'Riyadh',
       province: 'Riyadh',
+      district: 'Al Olaya',
+      nationalAddress: 'RFKB4744',
       phone: '4181234567',
       postalCode: 'A8C 1H4',
       country: 'Saudi Arabia',
@@ -59,6 +61,8 @@ const shippingAddressDefaultValues =
       street: '',
       city: '',
       province: '',
+      district: '',
+      nationalAddress: '',
       phone: '',
       postalCode: '',
       country: '',
@@ -145,6 +149,11 @@ const CheckoutForm = () => {
     shippingAddressForm.setValue('country', shippingAddress.country)
     shippingAddressForm.setValue('postalCode', shippingAddress.postalCode)
     shippingAddressForm.setValue('province', shippingAddress.province)
+    shippingAddressForm.setValue('district', shippingAddress.district ?? '')
+    shippingAddressForm.setValue(
+      'nationalAddress',
+      shippingAddress.nationalAddress ?? ''
+    )
     shippingAddressForm.setValue('phone', shippingAddress.phone)
   }, [items, isMounted, router, shippingAddress, shippingAddressForm])
 
@@ -443,6 +452,42 @@ const CheckoutForm = () => {
                                   <Input
                                     placeholder={t('Enter country')}
                                     {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className='flex flex-col gap-5 md:flex-row'>
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='district'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>{t('District')}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={t('Enter district')}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={shippingAddressForm.control}
+                            name='nationalAddress'
+                            render={({ field }) => (
+                              <FormItem className='w-full'>
+                                <FormLabel>{t('National address')}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder='RFKB4744'
+                                    {...field}
+                                    value={field.value ?? ''}
                                   />
                                 </FormControl>
                                 <FormMessage />

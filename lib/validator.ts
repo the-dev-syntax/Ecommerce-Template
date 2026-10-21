@@ -159,6 +159,11 @@ export const ShippingAddressSchema = z.object({
     .string()
     .min(1, 'Province is required')
     .max(100, 'Province is too long'),
+  district: z.string().max(100, 'District is too long').optional(),
+  nationalAddress: z
+    .string()
+    .max(20, 'National address is too long')
+    .optional(),
   phone: z
     .string()
     .min(1, 'Phone number is required')
