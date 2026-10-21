@@ -6,6 +6,7 @@ import { Separator } from '../ui/separator'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import { Skeleton } from '../ui/skeleton'
+import useSettingStore from '@/hooks/use-setting-store'
 
 
 export default function BrowsingHistoryList({
@@ -14,7 +15,9 @@ export default function BrowsingHistoryList({
   className?: string
 }) {
   const { products } = useBrowsingHistory()
+  const { setting: { features } } = useSettingStore()
   const t = useTranslations()
+  if (!features.browsingHistory) return null
   return (
     products.length !== 0 && (
       <div id='browsing-history' className='bg-background'>

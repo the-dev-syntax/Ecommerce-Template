@@ -15,7 +15,7 @@ export default async function AdminLayout({
   const session = await auth()
   if (session?.user?.role !== 'admin') redirect('/')
 
-  const { site } = await getSetting()
+  const { site, brand } = await getSetting()
   return (
     <>
       <div className='flex flex-col'>
@@ -23,7 +23,7 @@ export default async function AdminLayout({
           <div className='flex h-16 items-center px-2'>
             <Link href='/' className=' '>
               <Image
-                src='/icons/EV_org-sky.svg'
+                src={brand.logoDark || site.logo}
                 width={48}
                 height={48}
                 alt={`${site.name} logo`}

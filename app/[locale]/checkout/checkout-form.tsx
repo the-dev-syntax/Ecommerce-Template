@@ -70,9 +70,17 @@ const CheckoutForm = () => {
     site,
     availableDeliveryDates,
     availablePaymentMethods,
-    defaultPaymentMethod
+    defaultPaymentMethod,
+    features,
   }
   } = useSettingStore()
+
+  const enabledPaymentMethods = availablePaymentMethods.filter(
+    (method) =>
+      features.cashOnDelivery || method.name !== 'Cash On Delivery'
+  )
+  const defaultEnabledPaymentMethod =
+    enabledPaymentMethods[0]?.name ?? defaultPaymentMethod
 
   const {
     cart: {
@@ -84,7 +92,7 @@ const CheckoutForm = () => {
       taxInclusive = true,
       shippingAddress,
       deliveryDateIndex,
-      paymentMethod = defaultPaymentMethod,
+      paymentMethod = defaultEnabledPaymentMethod,
     },
     updateItem,
     removeItem,
@@ -512,7 +520,7 @@ const CheckoutForm = () => {
                       value={paymentMethod}
                       onValueChange={(value) => setPaymentMethod(value)}
                     >
-                      {availablePaymentMethods.map((pm) => (
+                      {enabledPaymentMethods.map((pm) => (
                         <div key={pm.name} className='flex items-center py-1 '>
                           <RadioGroupItem
                             value={pm.name}

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import Menu from './menu'
 import Sidebar from './sidebar'
 import { getSetting } from '@/lib/actions/setting.actions'
-import data from '@/lib/data'
 import Search from './search'
 import { auth } from '@/auth'
 import HeaderMenuLinks from './menu-links'
@@ -13,15 +12,16 @@ import { Suspense } from 'react'
 
 export default async function Header() {
   const session = await auth()
-  const { site } = await getSetting()
+  const { site, brand, features, navigation } = await getSetting()
   const categories = await getAllCategories()
 
-  const visibleMenus = data.headerMenus.filter((menu) => {
-   if (menu.name === 'Browsing History') {
-    return !!session; // this will make it true or false
-    }  
-    return true;
+  const visibleMenus = navigation.header.filter((menu) => {
+    if (menu.href.includes('browsing-history')) {
+      return features.browsingHistory && !!session
+    }
+    return true
   })
+  const logoSrc = brand.logoDark || site.logo
 
   return (
     <header className='bg-black  text-white'>
@@ -30,10 +30,10 @@ export default async function Header() {
           <div className='flex items-center'>
             <Link
               href='/'
-              className='flex items-center header-button font-bold text-2xl m-1 dark:text-orange-500 text-sky-500'
+              className='flex items-center header-button font-bold text-2xl m-1 text-primary'
             >
               <Image
-                src={site.logo}
+                src={logoSrc}
                 width={40}
                 height={40}
                 alt={`${site.name} logo`}

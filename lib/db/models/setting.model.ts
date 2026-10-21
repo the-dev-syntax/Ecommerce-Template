@@ -15,6 +15,59 @@ const settingSchema = new Schema<ISetting>(
       required: true,
       default: 'SA',
     },
+    brand: {
+      logoDark: { type: String, default: '' },
+      favicon: { type: String, default: '' },
+      emailLogo: { type: String, default: '' },
+      primaryColor: { type: String, default: '#eab308' },
+      accentColor: { type: String, default: '#0ea5e9' },
+      fontFamily: { type: String, default: 'geist' },
+      socialLinks: [
+        {
+          _id: false,
+          name: { type: String, required: true },
+          url: { type: String, required: true },
+        },
+      ],
+    },
+    seo: {
+      titleTemplate: { type: String, default: '%s | Essential Vital' },
+      defaultDescription: { type: String, default: '' },
+      ogImage: { type: String, default: '/og-preview.jpg' },
+      twitterHandle: { type: String, default: '' },
+    },
+    features: {
+      reviews: { type: Boolean, required: true, default: true },
+      browsingHistory: { type: Boolean, required: true, default: true },
+      cashOnDelivery: { type: Boolean, required: true, default: true },
+    },
+    navigation: {
+      header: [
+        {
+          _id: false,
+          name: { type: String, required: true },
+          href: { type: String, required: true },
+        },
+      ],
+      footer: [
+        {
+          _id: false,
+          title: { type: String, required: true },
+          links: [
+            {
+              _id: false,
+              name: { type: String, required: true },
+              href: { type: String, required: true },
+            },
+          ],
+        },
+      ],
+    },
+    email: {
+      senderName: { type: String, default: '' },
+      senderEmail: { type: String, default: '' },
+      replyTo: { type: String, default: '' },
+    },
     seller: {
       legalNameEn: {
         type: String,

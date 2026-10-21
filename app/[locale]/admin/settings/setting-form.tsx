@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslations } from 'next-intl'
 import { SettingInputSchemaNoDefaults } from '@/lib/validator'
 import { ClientSetting, ISettingInput } from '@/types'
 import { updateSetting } from '@/lib/actions/setting.actions'
@@ -17,11 +18,17 @@ import SiteInfoForm from './site-info-form'
 import SellerForm from './seller-form'
 import CommonForm from './common-form'
 import CarouselForm from './carousel-form'
+import BrandForm from './brand-form'
+import SeoForm from './seo-form'
+import FeaturesForm from './features-form'
+import NavigationForm from './navigation-form'
+import EmailForm from './email-form'
 
 
 
 export default function SettingForm({ setting }: { setting: ISettingInput }) {
   const { setSetting } = useSetting()
+  const t = useTranslations()
 
   const form = useForm<ISettingInput>({
     resolver: zodResolver(SettingInputSchemaNoDefaults),
@@ -55,7 +62,12 @@ export default function SettingForm({ setting }: { setting: ISettingInput }) {
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <SiteInfoForm id='setting-site-info' form={form} />
+        <BrandForm id='setting-brand' form={form} />
+        <SeoForm id='setting-seo' form={form} />
         <SellerForm id='setting-seller' form={form} />
+        <FeaturesForm id='setting-features' form={form} />
+        <NavigationForm id='setting-navigation' form={form} />
+        <EmailForm id='setting-email' form={form} />
         <CommonForm id='setting-common' form={form} />
         <CarouselForm id='setting-carousels' form={form} />
 
@@ -74,7 +86,7 @@ export default function SettingForm({ setting }: { setting: ISettingInput }) {
             disabled={isSubmitting}
             className='w-full mb-24'
           >
-            {isSubmitting ? 'Submitting...' : `Save Setting`}
+            {isSubmitting ? t('Submitting') : t('Save Setting')}
           </Button>
         </div>
       </form>

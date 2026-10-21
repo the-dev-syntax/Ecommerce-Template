@@ -6,9 +6,14 @@ import {
   ImageIcon,
   Info,
   Languages,
+  Mail,
+  Menu as MenuIcon,
   Package,
+  Palette,
   ReceiptText,
+  Search as SearchIcon,
   SettingsIcon,
+  ToggleLeft,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
@@ -54,9 +59,34 @@ export default function SettingNav() {
             hash: 'setting-site-info', 
             icon: <Info /> },
           {
+            name: 'Brand and Theme',
+            hash: 'setting-brand',
+            icon: <Palette />,
+          },
+          {
+            name: 'SEO Defaults',
+            hash: 'setting-seo',
+            icon: <SearchIcon />,
+          },
+          {
             name: 'Seller and Tax',
             hash: 'setting-seller',
             icon: <ReceiptText />,
+          },
+          {
+            name: 'Feature Flags',
+            hash: 'setting-features',
+            icon: <ToggleLeft />,
+          },
+          {
+            name: 'Navigation and Footer',
+            hash: 'setting-navigation',
+            icon: <MenuIcon />,
+          },
+          {
+            name: 'Email Identity',
+            hash: 'setting-email',
+            icon: <Mail />,
           },
           {
             name: 'Common Settings',

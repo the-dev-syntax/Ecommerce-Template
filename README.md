@@ -303,6 +303,23 @@ Known limits:
 - `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (556 keys), `npm run build` — PASS.
 - Production CSID/keys not used yet; production onboarding is deferred to deployment.
 
+## P0-25 — CI and Phase 1A white-label essentials (2026-10-21)
+
+- Added `.github/workflows/ci.yml`: Node 22, MongoDB service, seed, `tsc`, `lint`, `i18n:check`, `npm test`, and `build` on every PR/push to `main`.
+- Extended `Setting` with `brand`, `seo`, `features`, `navigation`, and `email` sections. Defaults live in `lib/data.ts`; legacy settings are merged through `withSettingDefaults`.
+- Brand: light/dark logos, favicon, email logo, primary/accent colours, font family (Geist/Cairo/System/Serif), social links.
+- Theme: brand colours are injected as CSS variables into the existing Tailwind `primary` and new `brand` tokens; admin picker shows a live preview.
+- Navigation: header menu and footer groups are editable in admin; the footer renders settings groups and social links.
+- Feature flags: product reviews, browsing history, and cash on delivery are enforced in UI and server actions. Browsing-history links hide when the flag is off.
+- Email identity: sender name/email/reply-to come from settings with `SENDER_NAME`/`SENDER_EMAIL` fallback.
+- SEO: metadata title template, default description, Open Graph image, favicon, and Twitter handle come from settings.
+- Added admin settings forms: Brand and Theme, SEO Defaults, Feature Flags, Navigation and Footer, Email Identity.
+- First-run setup wizard and editable email templates remain in Phase 1B.
+
+### Verification
+- `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (623 keys), `npm test` (29 tests), `npm run build` — PASS.
+- CI YAML mirrors the local verification commands.
+
 ## P0-24 — Item-level returns/refunds and non-refundable shipping (2026-10-21)
 
 - Products now have a `returnPolicy`: `return_and_refund`, `refund_only`, or `final_sale`. `final_sale` blocks voluntary returns and refunds.
@@ -631,17 +648,17 @@ Current baseline: credentials/Google auth, product/order/review/user/web-page ad
 - [x] Add the same keys to Vercel before deployment.
 - [x] Add environment validation with Zod (`lib/env.ts`) so a missing `MOYASAR_SECRET_KEY`, `UPSTASH_*`, etc. fails fast when used.
 - [x] Add `.env.example` with variable names only (no values).
-- [ ] Add CI (GitHub Actions): `tsc --noEmit`, `lint`, `i18n:check`, unit tests, `build` on every PR.
+- [x] Add CI (GitHub Actions): `tsc --noEmit`, `lint`, `i18n:check`, unit tests, `build` on every PR.
 - [x] Monitoring/error tracking/uptime: **client-owned** (Sentry/alerting to be configured by the client before launch).
 
 ### Phase 1 — Store configuration and white-label (P0/P1)
-- [ ] Extend `Setting`/create a `StoreProfile` model: brand colors, light/dark logo, favicon, fonts, social links, contact, legal identity (CR/VAT), SEO defaults, and feature flags.
-- [ ] Move every hardcoded brand/currency/contact string out of components into settings or translations.
-- [ ] Theme tokens driven by CSS variables and Tailwind; add an admin color/font picker with live preview and a safe default theme.
+- [x] Extend `Setting` with brand (light/dark logos, favicon, email logo, colours, font, social links), SEO defaults, feature flags, navigation/footer menus, and email sender identity.
+- [x] Move hardcoded brand/contact/logo strings out of the header, footer, admin/checkout layouts, metadata and email sender into settings.
+- [x] Theme tokens driven by CSS variables and Tailwind; admin colour/font picker with live preview and safe defaults.
 - [ ] Add a first-run setup wizard: store info → currency/tax → shipping → payment → domain → first product → publish.
-- [ ] Add feature flags: reviews, wishlist, browsing history, COD, BNPL, guest checkout, maintenance mode.
-- [ ] Make menus, footer links, legal pages, carousels, and banners editable from `/admin`.
-- [ ] Add per-store email sender identity and editable email templates (receipt, reset, verification, review request).
+- [x] Add feature flags for reviews, browsing history and COD (wishlist/guest checkout/BNPL remain deferred until those features exist); maintenance mode already exists.
+- [x] Make header menus, footer groups, legal pages, carousels and banners editable from `/admin`.
+- [x] Add per-store email sender identity (name, email, reply-to) with environment fallback; editable email templates remain.
 - [ ] Acceptance: a new store can be configured and published entirely from the admin without code edits.
 
 ### Phase 1b — Catalog and product variants (P0)

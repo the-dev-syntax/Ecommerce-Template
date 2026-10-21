@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 import { getTranslations } from 'next-intl/server'
+import { getSetting } from '@/lib/actions/setting.actions'
 
 export default async function CheckoutLayout({
   children,
@@ -10,13 +11,14 @@ export default async function CheckoutLayout({
   children: React.ReactNode
 }) {
   const t = await getTranslations()
+  const { site } = await getSetting()
   return (
     <div className='p-4'>
       <header className='bg-card mb-4 border-b'>
         <div className='max-w-6xl mx-auto flex justify-between items-center'>
           <Link href='/'>
             <Image
-              src='/icons/EV_org-sky.svg'
+              src={site.logo}
               alt={t('Logo')}
               width={70}
               height={70}

@@ -165,7 +165,9 @@ export default function OrderDetailsForm({
                             : t('Return and refund')}
                       </Badge>
                     </TableCell>
-                    <TableCell className='text-right'>${item.price}</TableCell>
+                    <TableCell className='text-right'>
+                      {formatCurrency(item.price, order.currency)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

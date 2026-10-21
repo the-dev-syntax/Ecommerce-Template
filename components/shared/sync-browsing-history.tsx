@@ -8,11 +8,14 @@ import {
   startBrowsingHistorySync,
 } from '@/lib/sync-browsing-history'
 import { MAX_BROWSING_HISTORY } from '@/lib/constants'
+import useSettingStore from '@/hooks/use-setting-store'
 
 const GUARD_KEY = 'browsingHistoryHydrated'
 
 export default function SyncBrowsingHistory() {
+  const { setting: { features } } = useSettingStore()
   useEffect(() => {
+    if (!features.browsingHistory) return
     startBrowsingHistorySync()
 
     const hydrate = async () => {
@@ -39,7 +42,7 @@ export default function SyncBrowsingHistory() {
     }
 
     hydrate()
-  }, [])
+  }, [features.browsingHistory])
 
   return null
 }

@@ -1105,6 +1105,82 @@ const reviews  = [
   const settings: ISettingInput[] = [
       {
       market: 'SA',
+      brand: {
+        logoDark: '/icons/EV_org-sky.svg',
+        favicon: '/favicon.ico',
+        emailLogo: '/icons/EV_org-sky.svg',
+        primaryColor: '#eab308',
+        accentColor: '#0ea5e9',
+        fontFamily: 'geist',
+        socialLinks: [],
+      },
+      seo: {
+        titleTemplate: '%s | Essential Vital',
+        defaultDescription:
+          'Discover premium, science-backed supplements designed to support your health and wellness goals.',
+        ogImage: '/og-preview.jpg',
+        twitterHandle: '',
+      },
+      features: {
+        reviews: true,
+        browsingHistory: true,
+        cashOnDelivery: true,
+      },
+      navigation: {
+        header: [
+          { name: 'todaysDeals', href: '/search?tag=todays-deal' },
+          { name: 'New Arrivals', href: '/search?tag=new-arrival' },
+          { name: 'Featured Products', href: '/search?tag=featured' },
+          { name: 'Best Sellers', href: '/search?tag=best-seller' },
+          {
+            name: 'Browsing History',
+            href: '/account/browsing-history',
+          },
+        ],
+        footer: [
+          {
+            title: 'Get to Know Us',
+            links: [
+              { name: 'Careers', href: '/page/careers' },
+              { name: 'Blog', href: '/page/blog' },
+              { name: 'About Us', href: '/page/about-us' },
+            ],
+          },
+          {
+            title: 'Make Money with Us',
+            links: [
+              { name: 'Sell products on', href: '/page/sell' },
+              {
+                name: 'Become an Affiliate',
+                href: '/page/become-affiliate',
+              },
+              {
+                name: 'Advertise Your Products',
+                href: '/page/advertise',
+              },
+            ],
+          },
+          {
+            title: 'Let Us Help You',
+            links: [
+              {
+                name: 'Shipping Rates & Policies',
+                href: '/page/shipping',
+              },
+              {
+                name: 'Returns & Replacements',
+                href: '/page/returns-policy',
+              },
+              { name: 'Help', href: '/page/help' },
+            ],
+          },
+        ],
+      },
+      email: {
+        senderName: 'Essential Vital',
+        senderEmail: 'contact@EssentialVital.com',
+        replyTo: '',
+      },
       seller: {
         legalNameEn: 'NAKAA ELSEHA MEDICAL PHARMACY',
         legalNameAr: 'صيدلية نقاء الصحة الطبية',

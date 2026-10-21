@@ -459,10 +459,70 @@ export const InvoiceSettingsSchema = z.object({
 
 export const MarketSchema = z.enum(['SA', 'US', 'CA']).default('SA')
 
+const SocialLinkSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(50, 'Name is too long'),
+  url: z.string().min(1, 'Url is required').max(2048, 'Url is too long'),
+})
+
+const MenuLinkSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
+  href: z.string().min(1, 'Link is required').max(2048, 'Link is too long'),
+})
+
+export const BrandSettingsSchema = z.object({
+  logoDark: z.string().max(2048),
+  favicon: z.string().max(2048),
+  emailLogo: z.string().max(2048),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex colour'),
+  accentColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex colour'),
+  fontFamily: z.enum(['geist', 'cairo', 'system', 'serif']),
+  socialLinks: z.array(SocialLinkSchema).max(20),
+})
+
+export const SeoSettingsSchema = z.object({
+  titleTemplate: z.string().max(200),
+  defaultDescription: z.string().max(500),
+  ogImage: z.string().max(2048),
+  twitterHandle: z.string().max(50),
+})
+
+export const FeatureFlagsSchema = z.object({
+  reviews: z.boolean(),
+  browsingHistory: z.boolean(),
+  cashOnDelivery: z.boolean(),
+})
+
+export const NavigationSettingsSchema = z.object({
+  header: z.array(MenuLinkSchema).max(30),
+  footer: z
+    .array(
+      z.object({
+        title: z.string().min(1, 'Title is required').max(100),
+        links: z.array(MenuLinkSchema).max(20),
+      })
+    )
+    .max(8),
+})
+
+export const EmailSettingsSchema = z.object({
+  senderName: z.string().max(100),
+  senderEmail: z.string().max(254),
+  replyTo: z.string().max(254),
+})
+
 export const SettingInputSchema = z.object({
   // PROMPT: create fields
   // codeium, based on the mongoose schema for settings
   market: MarketSchema,
+  brand: BrandSettingsSchema,
+  seo: SeoSettingsSchema,
+  features: FeatureFlagsSchema,
+  navigation: NavigationSettingsSchema,
+  email: EmailSettingsSchema,
   seller: SellerSchema,
   invoice: InvoiceSettingsSchema,
   common: z.object({
@@ -528,6 +588,11 @@ export const SettingInputSchemaNoDefaults = z.object({
   // PROMPT: create fields
   // codeium, based on the mongoose schema for settings
   market: z.enum(['SA', 'US', 'CA']),
+  brand: BrandSettingsSchema,
+  seo: SeoSettingsSchema,
+  features: FeatureFlagsSchema,
+  navigation: NavigationSettingsSchema,
+  email: EmailSettingsSchema,
   seller: SellerSchema,
   invoice: InvoiceSettingsSchema,
   common: z.object({

@@ -3,6 +3,7 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 
 import { getProductBySlug, getRelatedProductsByCategory } from '@/lib/actions/product.actions'
+import { getSetting } from '@/lib/actions/setting.actions'
 import { generateId, round2 } from '@/lib/utils'
 
 import SelectVariant from '@/components/shared/product/select-variant'
@@ -62,6 +63,7 @@ export default async function ProductDetails(props: {
 
   const t = await getTranslations()
   const returnPolicy = product.returnPolicy ?? 'return_and_refund'
+  const { features } = await getSetting()
   
   //used in order: AddToBrowsingHistory, ProductGallery, Rating, Separator, ProductPrice, SelectVariant, Separator, Card, addToCart
   return (
@@ -178,7 +180,9 @@ export default async function ProductDetails(props: {
         <h2 className='h2-bold mb-2' id='reviews'>
           {t('Customer Reviews')}
         </h2>
-        <ReviewList product={product} userId={session?.user.id} />
+        {features.reviews && (
+          <ReviewList product={product} userId={session?.user.id} />
+        )}
       </section>
 
       <section className='mt-10'>

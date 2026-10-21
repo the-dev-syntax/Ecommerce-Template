@@ -13,6 +13,14 @@ export function withSettingDefaults(
   return {
     ...defaults,
     ...setting,
+    brand: { ...defaults.brand, ...setting?.brand },
+    seo: { ...defaults.seo, ...setting?.seo },
+    features: { ...defaults.features, ...setting?.features },
+    navigation: {
+      header: setting?.navigation?.header ?? defaults.navigation.header,
+      footer: setting?.navigation?.footer ?? defaults.navigation.footer,
+    },
+    email: { ...defaults.email, ...setting?.email },
     common: { ...defaults.common, ...setting?.common },
     site: { ...defaults.site, ...setting?.site },
     seller: { ...defaults.seller, ...setting?.seller },

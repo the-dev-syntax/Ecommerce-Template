@@ -41,7 +41,7 @@ export default function HeaderMenuLinks({ menus }: { menus: MenuItem[] }) {
           href={menu.href}
           className={cn('header-button !p-2', isActive(menu.href) && 'text-sky-400')}
         >
-          {t(menu.name)}
+          {t.has(menu.name) ? t(menu.name) : menu.name}
         </Link>
       ))}
     </>

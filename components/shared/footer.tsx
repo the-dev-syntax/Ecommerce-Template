@@ -17,7 +17,7 @@ export default function Footer() {
   const router = useRouter()
   const pathname = usePathname()
   const {
-    setting: { site, availableCurrencies, currency },
+    setting: { site, availableCurrencies, currency, brand, navigation },
     setCurrency,
   } = useSettingStore()
 
@@ -38,66 +38,42 @@ export default function Footer() {
         </Button>
       </div>
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto'>
-          <div>
-            <h3 className='font-bold text-primary mb-2'>{t('Get to Know Us')}</h3>
+        {navigation.footer.map((group) => (
+          <div key={group.title}>
+            <h3 className='font-bold text-primary mb-2'>
+              {t.has(group.title) ? t(group.title) : group.title}
+            </h3>
             <ul className='space-y-2'>
-              <li>
-                <Link href='/page/careers'>{t('Careers')}</Link>
-              </li>
-              <li>
-                <Link href='/page/blog'>{t('Blog')}</Link>
-              </li>
-              <li>
-                <Link href='/page/about-us'>
-                  {t('About name', { name: site.name })}
-                </Link>
-              </li>
+              {group.links.map((link) => (
+                <li key={`${group.title}-${link.href}`}>
+                  <Link href={link.href}>
+                    {t.has(link.name) ? t(link.name) : link.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
-          <div>
-            <h3 className='font-bold text-primary mb-2'>{t('Make Money with Us')}</h3>
-            <ul className='space-y-2'>
-              <li>
-                <Link href='/page/sell'>
-                  {t('Sell products on', { name: site.name })}
-                </Link>
-              </li>
-              <li>
-                <Link href='/page/become-affiliate'>
-                  {t('Become an Affiliate')}
-                </Link>
-              </li>
-              <li>
-                <Link href='/page/advertise'>
-                  {t('Advertise Your Products')}
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className='font-bold text-primary mb-2'>{t('Let Us Help You')}</h3>
-            <ul className='space-y-2'>
-              <li>
-                <Link href='/page/shipping'>
-                  {t('Shipping Rates & Policies')}
-                </Link>
-              </li>
-              <li>
-                <Link href='/page/returns-policy'>
-                  {t('Returns & Replacements')}
-                </Link>
-              </li>
-              <li>
-                <Link href='/page/help'>{t('Help')}</Link>
-              </li>
-            </ul>
-          </div>
+        ))}
+      </div>
+      {brand.socialLinks.length > 0 && (
+        <div className='flex justify-center gap-4 pb-4 text-sm'>
+          {brand.socialLinks.map((link) => (
+            <a
+              key={`${link.name}-${link.url}`}
+              href={link.url}
+              target='_blank'
+              rel='noreferrer'
+            >
+              {link.name}
+            </a>
+          ))}
         </div>
+      )}
         <div className='border-t border-gray-800'>
           <div className='max-w-7xl mx-auto py-8 px-4 flex flex-col items-center space-y-4'>
             <div className='flex items-center space-x-4 flex-wrap md:flex-nowrap'>
               <Image
-                src='/icons/EV_org-sky.svg'
+                src={brand.logoDark || site.logo}
                 alt={`${site.name} logo`}
                 width={48}
                 height={48}

@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Cairo, Geist, Geist_Mono } from 'next/font/google'
 import '../globals.css'
 import ClientProviders from '@/components/shared/client-providers'
 import { getDirection } from '@/i18n-config'
@@ -10,6 +10,7 @@ import { getSetting } from '@/lib/actions/setting.actions'
 import { cookies } from 'next/headers'
 import { Metadata } from 'next/types'
 import CookieConsentBanner from '@/components/shared/cookie-consent-banner'
+import { fontStack, hexForeground, hexToHsl } from '@/lib/colors'
 
 // Force dynamic rendering - required because layout uses database calls and cookies
 export const dynamic = 'force-dynamic'
@@ -24,22 +25,35 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+const cairo = Cairo({
+  variable: '--font-cairo',
+  subsets: ['arabic', 'latin'],
+})
+
 export async function generateMetadata(props: {
   params:  Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await props.params
+  const setting = await getSetting()
   const {
     site: { slogan, name, description, url },
-  } = await getSetting()
+    seo,
+  } = setting
+
+  const defaultTitle = seo.titleTemplate || `%s | ${name}`
+  const seoDescription = seo.defaultDescription || description
+  const ogImage = seo.ogImage || '/og-preview.jpg'
+  const icon = setting.brand.favicon || '/favicon.ico'
 
   return {
     title: {
-      template: `%s - ${name}`,
+      template: defaultTitle,
       default: `${name}. ${slogan}`,
     },
-    description: description,
+    description: seoDescription,
     // metadataBase: new URL(url),
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || url ||'http://localhost:3000'),
+    icons: { icon },
     robots: {
       index: true,
       follow: true,
@@ -60,15 +74,15 @@ export async function generateMetadata(props: {
     // --- Open Graph (for Facebook, Pinterest, etc.) ---
     openGraph: {
       title: {
-        template: `%s - ${name}`,
+        template: defaultTitle,
         default: `${name} | ${slogan}`,
       },
-      description: description,
+      description: seoDescription,
       url: '/',
       siteName: name,
       images: [
         {
-          url: '/og-preview.jpg', // Default preview image
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: `Default Open Graph image for ${name}`,
@@ -80,12 +94,13 @@ export async function generateMetadata(props: {
     // --- Twitter Card ---
     twitter: {
       card: 'summary_large_image',
+      site: seo.twitterHandle || undefined,
       title: {
-        template: `%s - ${name}`,
+        template: defaultTitle,
         default: `${name} | ${slogan}`,
       },
-      description: description,
-      images: [`${url}/og-preview.jpg`], // Must be an absolute URL
+      description: seoDescription,
+      images: [/^https?:\/\//.test(ogImage) ? ogImage : `${url}${ogImage}`],
     },
     // Optional: other useful tags
     // themeColor: '#ffffff',
@@ -116,15 +131,27 @@ export default async function AppLayout({
     notFound()
   }
   const messages = await getMessages()
+  const primaryHsl = hexToHsl(setting.brand.primaryColor) ?? '47.9 95.8% 53.1%'
+  const accentHsl = hexToHsl(setting.brand.accentColor) ?? '199 89% 48%'
 
   return (
     <html
       lang={locale}
       dir={getDirection(locale) === 'rtl' ? 'rtl' : 'ltr'}
       suppressHydrationWarning
+      style={
+        {
+          '--primary': primaryHsl,
+          '--primary-foreground': hexForeground(setting.brand.primaryColor),
+          '--brand': primaryHsl,
+          '--brand-foreground': hexForeground(setting.brand.primaryColor),
+          '--brand-accent': accentHsl,
+        } as React.CSSProperties
+      }
     >
       <body
-        className={`min-h-screen ${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`min-h-screen ${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased`}
+        style={{ fontFamily: fontStack(setting.brand.fontFamily) }}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ClientProviders setting={{ ...setting, currency }}>

@@ -26,6 +26,9 @@ export async function createUpdateReview({
       throw new Error('User is not authenticated')
     }
 
+    const { features } = await getSetting()
+    if (!features.reviews) throw new Error('Product reviews are disabled')
+
     // get data from Form , get user from session
     const review = ReviewInputSchema.parse({
       ...data,

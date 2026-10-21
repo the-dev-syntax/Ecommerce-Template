@@ -6,6 +6,12 @@ export const SENDER_NAME = process.env.SENDER_NAME || 'Essential Vital'
 export const USER_ROLES = ['admin', 'user']
 export const COLORS = ['Gold', 'Green', 'Red']
 export const THEMES = ['Light', 'Dark', 'System']
+export const FONT_OPTIONS = [
+  { value: 'geist', name: 'Geist' },
+  { value: 'cairo', name: 'Cairo' },
+  { value: 'system', name: 'System' },
+  { value: 'serif', name: 'Serif' },
+]
 
 export const SORT_ORDERS  = [
   { value: 'price-low-to-high', name: 'Price: Low to high' },

@@ -158,6 +158,7 @@ export const createOrderFromCart = async (
     availableDeliveryDates,
     availablePaymentMethods,
     defaultCurrency,
+    features,
     common: { taxRate, taxInclusive },
   } = await getSetting()
 
@@ -173,7 +174,11 @@ export const createOrderFromCart = async (
   if (!deliveryDate) throw new Error('Delivery date is not available')
 
   const paymentMethod = clientSideCart.paymentMethod
-  if (!paymentMethod || !availablePaymentMethods.some((method) => method.name === paymentMethod))
+  const enabledPaymentMethods = availablePaymentMethods.filter(
+    (method) =>
+      features.cashOnDelivery || method.name !== 'Cash On Delivery'
+  )
+  if (!paymentMethod || !enabledPaymentMethods.some((method) => method.name === paymentMethod))
     throw new Error('Invalid payment method')
 
   const pricedItems = priceOrderItems(items, taxRate, taxInclusive)
