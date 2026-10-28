@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
 import React from 'react'
 import { formUrlQuery } from '@/lib/utils'
 import { Button } from '../ui/button'

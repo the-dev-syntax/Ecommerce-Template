@@ -6,10 +6,6 @@ export const routing = defineRouting({
   locales: i18n.locales.map((locale) => locale.code),
   defaultLocale:  i18n.defaultLocale, // Source from the central config
   localePrefix: 'as-needed',
-  pathnames: {
-    // If all locales use the same pathname, a single
-    // external path can be used for all locales
-  },
 })
 
 export const { Link, redirect, usePathname, useRouter } = createNavigation(routing)

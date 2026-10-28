@@ -3,7 +3,7 @@ import { redirect, useSearchParams } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import {
   Form,
   FormControl,
@@ -21,7 +21,8 @@ import { UserSignUpSchema } from '@/lib/validator'
 import { Separator } from '@/components/ui/separator'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import useSettingStore from '@/hooks/use-setting-store'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { localizedPath } from '@/lib/utils'
 
 
 const signUpDefaultValues =
@@ -44,6 +45,7 @@ export default function SignUpForm() {
   const { setting: { site } } = useSettingStore()  
   const tForm = useTranslations()
   const tFooter = useTranslations()
+  const locale = useLocale()
   
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
@@ -76,7 +78,7 @@ export default function SignUpForm() {
         password: data.password,
       })  
       
-      redirect('/verify-email')
+      redirect(localizedPath(locale, '/verify-email'))
 
     } catch (error) {
       if (isRedirectError(error)) {

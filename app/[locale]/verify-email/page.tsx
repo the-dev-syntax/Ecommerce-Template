@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import VerifyClientToken from './VerifyClientToken';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { localizedPath } from '@/lib/utils';
 
 // Force dynamic rendering - this page uses auth session
 export const dynamic = 'force-dynamic'
@@ -16,11 +17,11 @@ export default async function VerifyEmailPage(props: {
 
   // Perform all session checks and redirects here on the server
   if (!session || !session.user) {
-    redirect(`/${locale}/sign-in`);
+    redirect(localizedPath(locale, '/sign-in'));
   }
 
   if (session.user.emailVerified) {
-    redirect(`/${locale}/`);
+    redirect(localizedPath(locale, '/'));
   }
 
 

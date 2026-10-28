@@ -1,5 +1,5 @@
 import * as React from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { X, ChevronRight, UserCircle, MenuIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 // import { SignOut } from '@/lib/actions/user.actions'

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import Pagination from '@/components/shared/pagination'
 import ProductCard from '@/components/shared/product/product-card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import { getFilterUrl, slugify } from '@/lib/utils'
 import Rating from '@/components/shared/product/rating'
 import { getTranslations } from 'next-intl/server'
 import CollapsibleOnMobile from '@/components/shared/collapsible-on-mobile'
-import { SORT_ORDERS, PRICE_RANGES } from '@/lib/constants';
+import { SORT_ORDERS, PRICE_RANGES, DEFAULT_PRODUCT_SORT, isProductSort } from '@/lib/constants';
 
 
 
@@ -88,9 +88,13 @@ const [t, tCategory, tTags] = await Promise.all([
     tag = 'all',
     price = 'all',
     rating = 'all',
-    sort = 'best-selling',
+    sort: rawSort,
     page = '1',
   } = searchParams
+
+  // Never trust an arbitrary ?sort= value: unknown options fall back to the
+  // default so the selector and the database query always agree.
+  const sort = isProductSort(rawSort) ? rawSort : DEFAULT_PRODUCT_SORT
 
   const params = { q, category, tag, price, rating, sort, page }
 

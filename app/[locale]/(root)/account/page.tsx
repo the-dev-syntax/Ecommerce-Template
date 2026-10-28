@@ -2,7 +2,7 @@ import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import { Card, CardContent } from '@/components/ui/card'
 import { Home, PackageCheckIcon, User } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import React from 'react'
 
 // Force dynamic rendering

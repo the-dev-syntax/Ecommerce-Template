@@ -13,6 +13,15 @@ import { i18n } from '@/i18n-config'
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+/**
+ * Prefix an in-app path with the locale when it is not the default locale.
+ * Use for places that cannot use the next-intl Link/router (redirect() in a
+ * server page, plain <form action>, middleware).
+ */
+export function localizedPath(locale: string, path: string) {
+  return locale === i18n.defaultLocale ? path : `/${locale}${path}`
+}
 // the above came by default with nextjs and tailwind installation.
 
 export const formatNumberWithDecimal = (num: number): string => {

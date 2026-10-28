@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { getTranslations } from 'next-intl/server'
@@ -23,7 +23,7 @@ export default async function InvoicePage(props: {
   params: Promise<{ locale: string; id: string }>
   searchParams: Promise<{ lang?: string }>
 }) {
-  const { locale, id } = await props.params
+  const { id } = await props.params
   const { lang } = await props.searchParams
   // The printed invoice defaults to Arabic; ?lang=en switches the display.
   const invoiceLocale = lang === 'en' ? 'en-US' : 'ar'
@@ -88,7 +88,7 @@ export default async function InvoicePage(props: {
         <h1 className='h1-bold'>{t('Tax Invoice')}</h1>
         <div className='flex gap-2'>
           <Button variant='outline' asChild>
-            <Link href={`/${locale}/invoice/${id}?lang=${otherLang}`}>
+            <Link href={`/invoice/${id}?lang=${otherLang}`}>
               {isRtl ? 'English' : 'العربية'}
             </Link>
           </Button>

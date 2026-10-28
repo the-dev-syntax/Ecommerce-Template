@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { ChevronDownIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { SignOutButton } from '../signOutButton'

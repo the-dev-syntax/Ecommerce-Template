@@ -1,7 +1,7 @@
 GLM-1-DEBUGGING:
 All four audits are done and I've personally re-verified the headline findings in the code (open redirect, Math.random OTP, plaintext seed password, COD expiresAt: undefined, raw updateSetting write, missing model indexes, dead /account/addresses link, plain next/link vs next-intl, formatError leak, unvalidated browsing-history API, client-controlled isVerifiedPurchase). Two items the agents cited slightly differently resolved the same way (the isVerifiedPurchase leak flows through ReviewInputSchema.parse({...data}), not a named field in the action).
 
-P0 — Critical (security / account takeover / data-loss)
+### P0 — Critical (security / account takeover / data-loss)
 1. Open redirect via callbackUrl
 - app/[locale]/(auth)/sign-in/page.tsx:22-28 (redirect(callbackUrl) for logged-in users), sign-in/credentials-signin-form.tsx:54,79 (redirect(callbackUrl) after sign-in), sign-up/page.tsx:22; plus sign-up/signup-form.tsx:171 builds the link unencoded (/sign-in?callbackUrl=${callbackUrl}).
 - Why: redirect() follows absolute URLs. A victim hitting /sign-in?callbackUrl=https://evil.example lands off-site after authenticating.
@@ -27,7 +27,9 @@ P0 — Critical (security / account takeover / data-loss)
 8. npm run seed is destructive with no environment guard
 - lib/db/seed.ts:26-75 runs deleteMany() on settings/pages/users/products/reviews/orders. Nothing blocks production.
 - Edit: refuse unless NODE_ENV !== 'production' or --force.
-P1 — High (money, stock, order integrity)
+
+
+### P1 — High (money, stock, order integrity)
 9. COD stock reservations never expire
 - lib/orders/stock-reservations.ts:158-161 sets expiresAt: undefined for COD; releaseExpiredReservations (254-257) matches only a past expiresAt. Abandoned COD checkouts lock inventory forever.
 - Edit: give COD a long TTL (24-72 h) and/or auto-cancel its unpaid order after grace.
@@ -58,7 +60,9 @@ P1 — High (money, stock, order integrity)
 18. Missing indexes on hot paths + duplicate shipping quotes
 - order.model.ts has no { user: 1, createdAt: -1 } / { createdAt: -1 } (user orders list + admin summaries — confirmed by model grep); review.model.ts has no product index; shipping-rate (region, city, isActive, priority) is non-unique and upsertShippingRate (shipping.actions.ts:19-37) doesn't dedupe → two identical rows produce duplicate quotes and ambiguous deliveryDateIndex.
 - Edit: add the two indexes; add review {product:1, createdAt:-1}; make shipping-rate unique on (country, region, city, carrier, serviceName) + pre-check in upsert.
-P2 — Medium (public 500s, i18n, checkout UX)
+
+
+### P2 — Medium (public 500s, i18n, checkout UX)
 19. Search page 500s on any unknown ?sort= — product-sort-selector.tsx:43 does sortOrders.find(...)! while getAllProducts accepts unknown values (product.actions.ts:175-184). Edit: whitelist sort server-side and ?.name ?? t('Best selling').
 20. Unknown/unpublished product slug → 500 instead of 404 — getProductBySlug throws (product.actions.ts:69-74), page has no try/notFound() (product/[slug]/page.tsx:29-59; the if (!product) check is dead code). Edit: action returns null → notFound() in page + metadata (same for robots: it currently gets a 500 for stale URLs).
 21. /page/[slug] 404 branch is unreachable — web-page.actions.ts:64-71 throws; if (!webPage) notFound() at page/[slug]/page.tsx:38 never runs; unpublished/typo'd page → 500. Same fix as 20.
@@ -75,7 +79,10 @@ P2 — Medium (public 500s, i18n, checkout UX)
 32. Home-page banners link the wrong "tag" and unencoded categories — app/[locale]/(home)/page.tsx:62,73-89 sends Best Sellers/Featured to ?tag=new-arrival; category tiles build /search?category=${category} unencoded (breaks on &/spaces) in home page and sidebar.tsx:84. Edit: correct tags; use encodeURIComponent/getFilterUrl.
 33. No rate limits on heavy public actions — calcDeliveryDateAndPrice (product fetch + shipping query on every cart mutation), getAllProducts, setCurrencyOnServer. The limiter infra exists but is wired only for auth. Edit: per-IP buckets + short-TTL cache of active shipping rates.
 34. sitemap/robots read different env vars — app/sitemap.ts:12 NEXT_PUBLIC_SITE_URL vs app/robots.ts:5 NEXT_PUBLIC_SERVER_URL → one can point at localhost. Edit: single source of truth.
-P3 — Low / hygiene / suspected (needs runtime confirmation)
+
+
+
+### P3 — Low / hygiene / suspected (needs runtime confirmation)
 - 35. Non-variant products always weight: 0 (order.actions.ts:179, no product-level weight field) → extraPerKg surcharges never apply. Add product/parcel default weight.
 - 36. ShippingAddressSchema is length-only (phone: "x" passes; validator.ts:150-181); ShippingRateSchema allows etaMinDays > etaMaxDays (add .refine) and unbounded freeShippingMinPrice.
 - 37. Timezone mismatches: getOrderSummary groups $dateToString (UTC) over server-local month start (order.actions.ts:994-999); parseDateParam (local) vs VAT report's UTC parsing — one-day bucket slippage. Standardize on UTC.

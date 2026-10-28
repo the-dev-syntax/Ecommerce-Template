@@ -1,7 +1,8 @@
 import { auth } from '@/auth'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { localizedPath } from '@/lib/utils'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { PasswordForm } from './password-form'
@@ -15,7 +16,10 @@ export async function generateMetadata() {
 
 export default async function ChangePasswordPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/sign-in')
+  if (!session?.user?.id) {
+    const locale = await getLocale()
+    redirect(localizedPath(locale, '/sign-in'))
+  }
 
   const t = await getTranslations()
 

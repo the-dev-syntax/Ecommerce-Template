@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { CheckCircle2Icon } from 'lucide-react'
 import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 
 import ProductPrice from '@/components/shared/product/product-price'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'

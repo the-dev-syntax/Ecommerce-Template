@@ -8,7 +8,7 @@ import {
 } from '@paypal/react-paypal-js'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 
 import { Button } from '@/components/ui/button'

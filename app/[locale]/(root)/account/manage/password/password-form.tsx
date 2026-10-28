@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
 import { signOut } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { useToast } from '@/hooks/use-toast'

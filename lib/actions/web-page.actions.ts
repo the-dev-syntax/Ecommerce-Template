@@ -61,11 +61,12 @@ export async function getWebPageById(webPageId: string) {
 }
 
 // GET ONE PAGE BY SLUG - PUBLIC
-export async function getWebPageBySlug(slug: string) {
+export async function getWebPageBySlug(slug: string): Promise<IWebPage | null> {
   await connectToDatabase()
 
   const webPage = await WebPage.findOne({ slug, isPublished: true })
-  if (!webPage) throw new Error('WebPage not found')
+  // Missing/unpublished pages are a 404, not a server error.
+  if (!webPage) return null
 
   return JSON.parse(JSON.stringify(webPage)) as IWebPage
 }

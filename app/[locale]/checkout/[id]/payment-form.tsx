@@ -1,14 +1,15 @@
 'use client'
 
-import { redirect, useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { redirect } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
+import { useLocale, useTranslations } from 'next-intl'
 
 import CheckoutFooter from '../checkout-footer'
 import { Card, CardContent } from '@/components/ui/card'
 import ProductPrice from '@/components/shared/product/product-price'
 import useCartStore from '@/hooks/use-cart-store'
 import type { IOrder } from '@/lib/db/models/order.model'
-import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { formatCurrency, formatDateTime, localizedPath } from '@/lib/utils'
 
 import PaymentPanel from './payment-panel'
 
@@ -23,6 +24,7 @@ export default function OrderPaymentForm({
   moyasarPublishableKey: string
 }) {
   const t = useTranslations()
+  const locale = useLocale()
   const router = useRouter()
   const { clearCart } = useCartStore()
 
@@ -42,7 +44,7 @@ export default function OrderPaymentForm({
   } = order
 
   if (isPaid || isCancelled) {
-    redirect(`/account/orders/${order._id}`)
+    redirect(localizedPath(locale, `/account/orders/${order._id}`))
   }
 
   const handlePaid = () => {

@@ -6,6 +6,7 @@ import StockReservation from '@/lib/db/models/stock-reservation.model'
 import { clampLimit, clampPage, escapeRegExp, formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { normalizeProductVariants } from '../product-variants'
+import { DEFAULT_PRODUCT_SORT, PRODUCT_SORT_QUERY } from '../constants'
 import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
 import { IProductInput } from '@/types'
 import { z } from 'zod'
@@ -66,10 +67,11 @@ export async function getProductsByTag({
 }
 
 // GET ONE PRODUCT BY SLUG
-export async function getProductBySlug(slug: string) {
+export async function getProductBySlug(slug: string): Promise<IProduct | null> {
   await connectToDatabase()
   const product = await Product.findOne({ slug, isPublished: true })
-  if (!product) throw new Error('Product not found')
+  // Missing/unpublished products are a 404, not a server error.
+  if (!product) return null
   return JSON.parse(JSON.stringify(product)) as IProduct
 }
 
@@ -173,15 +175,9 @@ export async function getAllProducts({
       : {}
 
   const order: Record<string, 1 | -1> =
-    sort === 'best-selling' // default value given
-      ? { numSales: -1 }
-      : sort === 'price-low-to-high'
-        ? { price: 1 }
-        : sort === 'price-high-to-low'
-          ? { price: -1 }
-          : sort === 'avg-customer-review'
-            ? { avgRating: -1 }
-            : { _id: -1 }
+    PRODUCT_SORT_QUERY[sort ?? ''] ??
+    PRODUCT_SORT_QUERY[DEFAULT_PRODUCT_SORT] ??
+    { _id: -1 }
 
   const isPublished = { isPublished: true }
 

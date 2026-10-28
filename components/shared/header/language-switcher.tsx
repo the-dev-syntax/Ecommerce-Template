@@ -13,6 +13,7 @@ import {
 
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/routing'
+import { useSearchParams } from 'next/navigation'
 import useSettingStore from '@/hooks/use-setting-store'
 import { i18n } from '@/i18n-config'
 import { setCurrencyOnServer } from '@/lib/actions/setting.actions'
@@ -23,6 +24,11 @@ export default function LanguageSwitcher() {
   const { locales } = i18n
   const locale = useLocale()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  // next-intl's usePathname excludes the query string; keep it so switching
+  // language preserves search terms and filters.
+  const query = searchParams.toString()
+  const localizedHref = query ? `${pathname}?${query}` : pathname
 // availableCurrencies: from data.ts, currency: added to setting in useSettingStore but its value is the default currency from data.ts
   const {
     setting: { availableCurrencies, currency },
@@ -54,7 +60,7 @@ export default function LanguageSwitcher() {
             <DropdownMenuRadioItem key={c.name} value={c.code}>
               <Link
                 className='w-full flex items-center gap-1'
-                href={pathname}
+                href={localizedHref}
                 locale={c.code}
               >
                 <span className='text-lg'>{c.icon}</span> {c.name}

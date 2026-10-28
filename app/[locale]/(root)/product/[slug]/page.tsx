@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { notFound } from 'next/navigation'
 
 import { getProductBySlug, getRelatedProductsByCategory } from '@/lib/actions/product.actions'
 import { getSetting } from '@/lib/actions/setting.actions'
@@ -57,6 +58,8 @@ export default async function ProductDetails(props: {
   const { slug } = params
 
   const product = await getProductBySlug(slug)
+  // Unknown/unpublished slug: render the 404 page instead of throwing a 500.
+  if (!product) notFound()
   const variants = product.variants ?? []
   const selectedVariant =
     variants.find((candidate) => candidate.id === variant) ??

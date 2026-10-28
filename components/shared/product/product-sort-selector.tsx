@@ -7,7 +7,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getFilterUrl } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
+import { useTranslations } from 'next-intl'
 import React from 'react'
 
 
@@ -30,6 +31,7 @@ export default function ProductSortSelector({
 }) {
 
   const router = useRouter()
+  const t = useTranslations()
 
   return (
     <Select
@@ -40,7 +42,7 @@ export default function ProductSortSelector({
     >
       <SelectTrigger>
         <SelectValue>
-          Sort By: {sortOrders.find((s) => s.value === sort)!.name}
+          Sort By: {sortOrders.find((s) => s.value === sort)?.name ?? t('Best selling')}
         </SelectValue>
       </SelectTrigger>
 

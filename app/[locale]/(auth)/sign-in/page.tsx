@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { redirect } from 'next/navigation'
 
 import { auth } from '@/auth'

@@ -20,6 +20,23 @@ export const SORT_ORDERS  = [
   { value: 'avg-customer-review', name: 'Avg. customer review' },
   { value: 'best-selling', name: 'Best selling' },
 ]
+export const PRODUCT_SORT_VALUES = SORT_ORDERS.map((order) => order.value)
+// The value used when a URL carries an unknown/missing sort option.
+export const DEFAULT_PRODUCT_SORT = 'best-selling'
+// Whitelisted sort -> Mongo sort document. Unknown values never reach the
+// database, so `?sort=<garbage>` cannot change the query shape.
+export const PRODUCT_SORT_QUERY: Record<string, Record<string, 1 | -1>> = {
+  'best-selling': { numSales: -1 },
+  'price-low-to-high': { price: 1 },
+  'price-high-to-low': { price: -1 },
+  'avg-customer-review': { avgRating: -1 },
+  'newest-arrivals': { createdAt: -1 },
+}
+
+/** True when a value from the URL is a supported sort option. */
+export function isProductSort(value?: string | null): value is string {
+  return !!value && PRODUCT_SORT_VALUES.includes(value)
+}
 export const PRICE_RANGES = [
   { name: '$1 to $20', value: '1-20' },
   { name: '$21 to $50', value: '21-50' },

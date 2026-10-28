@@ -1,7 +1,6 @@
 'use client'
 
 import { ChevronUp } from 'lucide-react'
-import Link from 'next/link'
 import Image from 'next/image'
 
 import { Button } from '@/components/ui/button'
@@ -10,13 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '../ui/select'
 
 import { SelectValue } from '@radix-ui/react-select'
 import { useLocale, useTranslations } from 'next-intl'
-import { usePathname, useRouter } from '@/i18n/routing'
+import { Link, usePathname, useRouter } from '@/i18n/routing'
+import { useSearchParams } from 'next/navigation'
 import { i18n } from '@/i18n-config'
 import { useTheme } from 'next-themes'
 
 export default function Footer() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const query = searchParams.toString()
   const { resolvedTheme } = useTheme()
   const {
     setting: { site, availableCurrencies, currency, brand, navigation },
@@ -95,7 +97,9 @@ export default function Footer() {
               <Select
                 value={locale}
                 onValueChange={(value) => {
-                  router.push(pathname, { locale: value })
+                  router.push(query ? `${pathname}?${query}` : pathname, {
+                    locale: value,
+                  })
                 }}
               >
                 <SelectTrigger>

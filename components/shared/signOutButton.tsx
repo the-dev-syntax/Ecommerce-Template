@@ -2,8 +2,9 @@
 
 import { signOut } from 'next-auth/react'
 import  useCartStore  from '@/hooks/use-cart-store'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { redirect } from 'next/navigation'
+import { localizedPath } from '@/lib/utils'
 import { flushBrowsingHistoryNow } from '@/lib/sync-browsing-history'
 
 
@@ -11,6 +12,7 @@ import { flushBrowsingHistoryNow } from '@/lib/sync-browsing-history'
 export function SignOutButton() {
   const { clearCart } = useCartStore()
   const t = useTranslations()
+  const locale = useLocale()
 
   // 2. Create the handler function
   const handleSignOut = async () => {    
@@ -22,7 +24,7 @@ export function SignOutButton() {
     sessionStorage.removeItem('browsingHistoryHydrated')
 
     await signOut()
-    redirect('/')
+    redirect(localizedPath(locale, '/'))
   }
 
   return (

@@ -1,6 +1,6 @@
 import { getAllCategories } from '@/lib/actions/product.actions'
 import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import Menu from './menu'
 import Sidebar from './sidebar'
 import { getSetting } from '@/lib/actions/setting.actions'

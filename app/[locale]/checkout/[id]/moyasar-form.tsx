@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
 
 import type { IOrder } from '@/lib/db/models/order.model'
 import useCartStore from '@/hooks/use-cart-store'

@@ -4,18 +4,16 @@
 
 import { useState, useTransition } from 'react';
 import { sendVerifyEmailAgain, verifyEmailOtp } from '@/lib/actions/user.actions';
-import Link from 'next/link';
-import { useLocale } from 'next-intl';
+import { Link } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input'; // Assuming you have Shadcn UI Input
 import { useToast } from '@/hooks/use-toast';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 
 
 
 export default function VerifyClientOtp() {
-  const locale = useLocale();
   const { toast } = useToast();
   const { update , data } = useSession();
   const router = useRouter()
@@ -47,7 +45,7 @@ export default function VerifyClientOtp() {
         router.refresh();
         // Small delay to ensure session is updated before navigation
         setTimeout(() => {
-          router.push(`/${locale}/`);
+          router.push('/');
         }, 100);
       } else {
         setIsValidationEnded(true);
@@ -75,7 +73,7 @@ export default function VerifyClientOtp() {
           await update({ id: data?.user?.id });   // string
           setMessage(result.message);
           // useRouter().push(`/${locale}/`); // Redirect to home page    
-          router.push(`/${locale}/`); // Redirect to home page      
+          router.push('/'); // Redirect to home page      
         } 
       }); 
   };
@@ -110,7 +108,7 @@ export default function VerifyClientOtp() {
         Resend Verification Email
       </Button>
       {(isSuccess || isValidationEnded) && (
-        <Link href={`/${locale}/`} className="mt-4 inline-block text-black hover:underline">
+        <Link href='/' className="mt-4 inline-block text-black hover:underline">
           Home Page
         </Link>
       )}
@@ -222,7 +220,7 @@ export default function VerifyClientToken() {
      
     
         {(isSuccess || isValidationEnded) && (
-          <Link href={`/${locale}/`} className="mt-4 inline-block text-black ">
+          <Link href='/' className="mt-4 inline-block text-black ">
             Home Page
           </Link>
         )}

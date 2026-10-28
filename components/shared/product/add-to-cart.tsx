@@ -12,7 +12,7 @@ import {
 import useCartStore from '@/hooks/use-cart-store'
 import { useToast } from '@/hooks/use-toast'
 import { OrderItem } from '@/types'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
   //PROMPT: add quantity state

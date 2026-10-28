@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { X, Cookie, ChevronDown, ChevronUp, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 

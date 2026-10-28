@@ -1,7 +1,7 @@
 'use client'
 
 import { ShoppingCartIcon } from 'lucide-react'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import useIsMounted from '@/hooks/use-is-mounted'
 import { cn } from '@/lib/utils'
 import useCartStore from '@/hooks/use-cart-store'

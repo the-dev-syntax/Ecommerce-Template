@@ -17,8 +17,7 @@ import useIsMounted from '@/hooks/use-is-mounted'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { Link, useRouter } from '@/i18n/routing'
 import React, { useEffect, useRef } from 'react'
 
 export default function CartPage() {

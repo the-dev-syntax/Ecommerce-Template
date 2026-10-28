@@ -1,7 +1,7 @@
 // import { SessionProvider } from 'next-auth/react'
 // import { auth } from '@/auth'
 import { ProfileForm } from './profile-form'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { Card, CardContent } from '@/components/ui/card'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { getTranslations } from 'next-intl/server'

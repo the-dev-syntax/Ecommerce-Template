@@ -1,6 +1,6 @@
 // import { SessionProvider } from 'next-auth/react'
 import { auth } from '@/auth'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'

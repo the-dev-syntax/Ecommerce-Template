@@ -2,6 +2,14 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P2-A — MC1-bugs: 500s and locale-preserving navigation (2026-10-28)
+
+- Sort options are whitelisted. `getAllProducts` maps `sort` through `PRODUCT_SORT_QUERY` and falls back to `DEFAULT_PRODUCT_SORT`, and the search page normalizes `?sort=` before passing it to the selector, which no longer uses a non-null assertion (`?.name ?? t('Best selling')`). Why: any unknown `?sort=` value crashed the selector during render (500), while the database query silently fell back to an unrelated order.
+- `getProductBySlug` and `getWebPageBySlug` now return `null` instead of throwing, and the product page calls `notFound()` (metadata returns a safe title). Why: stale or unpublished product/page URLs returned 500 to visitors and crawlers, and the existing `if (!webPage) notFound()` branch was unreachable.
+- Storefront, auth and checkout navigation now uses the locale-aware `Link`/`useRouter` from `@/i18n/routing` instead of `next/link` and `next/navigation`. The header search form builds its action from the active locale, and server redirects use `localizedPath()`. Why: with `localePrefix: 'as-needed'`, plain links dropped `/ar` and `/fr` users back into the default English locale mid-journey.
+- Language and currency switchers keep the query string (`useSearchParams`) when changing locale. Why: switching language discarded search terms, filters and the selected variant.
+- Removed the empty `pathnames` map from `i18n/routing.ts` so `Link` accepts plain string hrefs again; no localized path segments exist in this app. Added `tests/routing-sort.test.ts`.
+
 ## P1-1 — MC1-bugs: stock, shipping and data-integrity fixes (2026-10-28)
 
 - COD stock reservations now expire after 72 hours instead of never (`COD_RESERVATION_TTL_MS`), and the online-payment hold is 60 minutes instead of 30. `createStripePaymentIntent` and `createPayPalOrder` refresh the hold with `extendStockReservation` while the customer completes 3-D Secure/redirect, so a payment started in time is not released mid-checkout. Why: an abandoned COD order used to lock inventory forever, and a slow payment could lose its reservation before the webhook arrived.
