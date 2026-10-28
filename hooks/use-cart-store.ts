@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Cart, OrderItem, ShippingAddress } from '@/types'
-import { calcDeliveryDateAndPrice } from '@/lib/actions/order.actions'
+import { calcDeliveryDateAndPrice, getAvailableCartItemIds } from '@/lib/actions/order.actions'
 
 // explaination in readme
 
@@ -32,7 +32,7 @@ interface CartState {
   cart: Cart
   addItem: (item: OrderItem, quantity: number) => Promise<string>
   updateItem: (item: OrderItem, quantity: number) => Promise<void>
-  removeItem: (item: OrderItem) => void
+  removeItem: (item: OrderItem) => Promise<void>
   clearCart: () => void
   setShippingAddress: (shippingAddress: ShippingAddress) => Promise<void>
   setPaymentMethod: (paymentMethod: string) => Promise<void>
@@ -124,11 +124,29 @@ const useCartStore = create(
           get().cart
         if (items.length === 0) return
         try {
+          // Drop lines whose product/variant was unpublished or deleted before
+          // repricing, otherwise a stale persisted cart blocks checkout with
+          // "Product is no longer available" forever.
+          const available = await getAvailableCartItemIds(items)
+          const availableIds = new Set(available)
+          const pruned = items.filter((item) =>
+            availableIds.has(item.clientId)
+          )
+
+          if (pruned.length === 0) {
+            set({ cart: { ...initialState } })
+            return
+          }
+
+          if (pruned.length !== items.length) {
+            set({ cart: { ...get().cart, items: pruned } })
+          }
+
           set({
             cart: {
               ...get().cart,
               ...(await calcDeliveryDateAndPrice({
-                items,
+                items: pruned,
                 shippingAddress,
                 deliveryDateIndex,
                 paymentMethod,
@@ -136,8 +154,8 @@ const useCartStore = create(
             },
           })
         } catch (error) {
-          // Keep the local cart visible even if a product was unpublished or
-          // a variant sold out; the next quantity change will surface the error.
+          // Keep the local cart visible even if the database is unreachable;
+          // the next quantity change will surface the error.
           console.error('Unable to refresh cart prices:', error)
         }
       },

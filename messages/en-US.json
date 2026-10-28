@@ -701,6 +701,8 @@
   "Tracking number": "Tracking number",
   "Tracking URL": "Tracking URL",
   "Saving": "Saving",
+  "Unable to update quantity": "Unable to update quantity",
+  "Unable to remove this item": "Unable to remove this item",
   "Order status": "Order status",
   "Shipped": "Shipped",
   "Pending payment": "Pending payment",

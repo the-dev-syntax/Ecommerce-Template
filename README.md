@@ -2,6 +2,18 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P2-B — MC1-bugs: middleware, checkout reliability and gallery fallback (2026-10-28)
+
+- Middleware now parses the locale as an exact first segment (`splitLocaleFromPathname` in `lib/locale-path.ts`) instead of `pathname.startsWith('/fr')`, which also matched `/friends-page` and `/archives`. Protected routes are an explicit list (`/account`, `/admin`, `/checkout`, `/invoice`); any other non-public path is passed to the intl middleware so unknown URLs render a 404 instead of redirecting guests to sign-in. Added locale-parsing tests to `tests/routing-sort.test.ts`.
+
+- Redirects built by middleware now omit the prefix for the default locale (`/sign-in` instead of `/en-US/sign-in`, `/verify-email` instead of `/en-US/verify-email`), removing the extra 308 hop under `localePrefix: 'as-needed'`.
+
+- The email-verification gate compares the locale-less pathname with exact prefixes instead of `pathname.includes('/account')`, and `/invoice` was added to the gated routes so unverified users cannot open tax invoices while being blocked from orders.
+
+- Cart writes are awaited: the checkout address step waits for `setShippingAddress` (showing a destructive toast and staying on the step on failure), payment-method/delivery-date changes and the cart/cart-sidebar quantity and remove handlers catch errors, and the checkout page refreshes the persisted cart on mount. `refreshCart` prunes lines whose product or variant no longer exists via the new `getAvailableCartItemIds` action before repricing, so a stale localStorage cart no longer fails later with "Product is no longer available". Placing an order also guards empty carts and a missing address.
+
+- `ProductGallery` renders an image-off placeholder when a product has no images and keeps the selected index in range. Why: `images[0]` on an empty array crashed the product page with `Invalid src`, and the schema only guarantees images for newly created products.
+
 ## P2-A — MC1-bugs: 500s and locale-preserving navigation (2026-10-28)
 
 - Sort options are whitelisted. `getAllProducts` maps `sort` through `PRODUCT_SORT_QUERY` and falls back to `DEFAULT_PRODUCT_SORT`, and the search page normalizes `?sort=` before passing it to the selector, which no longer uses a non-null assertion (`?.name ?? t('Best selling')`). Why: any unknown `?sort=` value crashed the selector during render (500), while the database query silently fell back to an unrelated order.

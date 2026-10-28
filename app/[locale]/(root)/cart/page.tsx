@@ -15,6 +15,7 @@ import useCartStore from '@/hooks/use-cart-store'
 import useSettingStore from '@/hooks/use-setting-store'
 import useIsMounted from '@/hooks/use-is-mounted'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/hooks/use-toast'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { Link, useRouter } from '@/i18n/routing'
@@ -48,6 +49,7 @@ export default function CartPage() {
   }, [isMounted, refreshCart])
 
   const t = useTranslations()
+  const { toast } = useToast()
   const router = useRouter()
 
   if (!isMounted) {
@@ -136,9 +138,19 @@ export default function CartPage() {
                         <div className='flex gap-2 items-center'>
                           <Select
                             value={item.quantity.toString()}
-                            onValueChange={(value) =>
-                              updateItem(item, Number(value))
-                            }
+                            onValueChange={(value) => {
+                              updateItem(item, Number(value)).catch(
+                                (error) => {
+                                  toast({
+                                    variant: 'destructive',
+                                    description:
+                                      error instanceof Error
+                                        ? error.message
+                                        : t('Unable to update quantity'),
+                                  })
+                                }
+                              )
+                            }}
                           >
                             <SelectTrigger className='w-auto'>
                               <SelectValue>
@@ -157,7 +169,17 @@ export default function CartPage() {
                           </Select>
                           <Button
                             variant={'outline'}
-                            onClick={() => removeItem(item)}
+                            onClick={() => {
+                              removeItem(item).catch((error) => {
+                                toast({
+                                  variant: 'destructive',
+                                  description:
+                                    error instanceof Error
+                                      ? error.message
+                                      : t('Unable to remove this item'),
+                                })
+                              })
+                            }}
                           >
                             {t('Delete')}
                           </Button>

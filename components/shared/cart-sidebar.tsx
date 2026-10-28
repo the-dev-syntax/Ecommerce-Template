@@ -16,6 +16,7 @@ import {
 import { TrashIcon } from 'lucide-react'
 import ProductPrice from './product/product-price'
 import useSettingStore from '@/hooks/use-setting-store'
+import { useToast } from '@/hooks/use-toast'
 import { useLocale, useTranslations } from 'next-intl'
 import { getDirection } from '@/i18n-config'
 
@@ -30,6 +31,7 @@ export default function CartSidebar() {
 
   const t = useTranslations()
   const locale = useLocale()
+  const { toast } = useToast()
 
   const {
     cart: { items, itemsPrice },
@@ -86,7 +88,15 @@ export default function CartSidebar() {
                     <Select
                       value={item.quantity.toString()}
                       onValueChange={(value) => {
-                        updateItem(item, Number(value))
+                        updateItem(item, Number(value)).catch((error) => {
+                          toast({
+                            variant: 'destructive',
+                            description:
+                              error instanceof Error
+                                ? error.message
+                                : t('Unable to update quantity'),
+                          })
+                        })
                       }}
                     >
                       <SelectTrigger className='text-xs w-12 ml-1 h-auto py-0'>
@@ -106,7 +116,15 @@ export default function CartSidebar() {
                       variant={'outline'}
                       size={'sm'}
                       onClick={() => {
-                        removeItem(item)
+                        removeItem(item).catch((error) => {
+                          toast({
+                            variant: 'destructive',
+                            description:
+                              error instanceof Error
+                                ? error.message
+                                : t('Unable to remove this item'),
+                          })
+                        })
                       }}
                     >
                       <TrashIcon className='w-4 h-4' />

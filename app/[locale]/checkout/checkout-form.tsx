@@ -28,7 +28,7 @@ import { ShippingAddressSchema } from '@/lib/validator'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter, Link } from '@/i18n/routing'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import CheckoutFooter from './checkout-footer'
 import { ShippingAddress } from '@/types'
@@ -112,6 +112,7 @@ const CheckoutForm = () => {
     updateItem,
     removeItem,
     // clearCart,
+    refreshCart,
     setShippingAddress,
     setPaymentMethod,
     setDeliveryDateIndex,
@@ -167,9 +168,29 @@ const CheckoutForm = () => {
     defaultValues: shippingAddress || shippingAddressDefaultValues,
   })
 
-  const onSubmitShippingAddress: SubmitHandler<ShippingAddress> = (values) => {
-    setShippingAddress(values) // update cart state
-    setIsAddressSelected(true) // update UI
+  const [isAddressSaving, setIsAddressSaving] = useState(false)
+
+  const onSubmitShippingAddress: SubmitHandler<ShippingAddress> = async (
+    values
+  ) => {
+    if (isAddressSaving) return
+    setIsAddressSaving(true)
+    try {
+      // This reprices the cart through a server action and can throw when a
+      // product/variant disappeared or the address is not serviceable.
+      await setShippingAddress(values)
+      setIsAddressSelected(true)
+    } catch (error) {
+      toast({
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Unable to save this address. Please review your cart.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsAddressSaving(false)
+    }
   }
   // for it to render all inside, isMounted and shippingAddress has to be true.
   // items and router is unnecessary. 
@@ -197,8 +218,35 @@ const CheckoutForm = () => {
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
 
+  // Refresh the persisted cart once on mount so prices/stock/shipping match the
+  // database (previously only /cart did this, so /checkout could use a stale
+  // localStorage copy until place-order failed).
+  const hasRefreshedCart = useRef(false)
+  useEffect(() => {
+    if (!isMounted || hasRefreshedCart.current) return
+    hasRefreshedCart.current = true
+    refreshCart()
+  }, [isMounted, refreshCart])
+
   const handlePlaceOrder = async () => {
     if (isPlacingOrder) return
+
+    if (items.length === 0) {
+      toast({
+        description: 'Your cart is empty',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!shippingAddress) {
+      toast({
+        description: 'Please enter a shipping address',
+        variant: 'destructive',
+      })
+      setIsAddressSelected(false)
+      return
+    }
 
     if (!selectedDelivery) {
       toast({
@@ -584,8 +632,11 @@ const CheckoutForm = () => {
                         <Button
                           type='submit'
                           className='rounded-full font-bold'
+                          disabled={isAddressSaving}
                         >
-                          {t('Ship to this address')}
+                          {isAddressSaving
+                            ? t('Saving')
+                            : t('Ship to this address')}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -627,7 +678,17 @@ const CheckoutForm = () => {
                   <CardContent className='p-4'>
                     <RadioGroup
                       value={paymentMethod}
-                      onValueChange={(value) => setPaymentMethod(value)}
+                      onValueChange={(value) => {
+                        setPaymentMethod(value).catch((error) => {
+                          toast({
+                            variant: 'destructive',
+                            description:
+                              error instanceof Error
+                                ? error.message
+                                : t('Something went wrong. Please try again.'),
+                          })
+                        })
+                      }}
                     >
                       {enabledPaymentMethods.map((pm) => (
                         <div key={pm.name} className='flex items-center py-1 '>
@@ -811,7 +872,19 @@ const CheckoutForm = () => {
                               onValueChange={(value) => {
                                 const index = Number(value)
                                 if (Number.isInteger(index)) {
-                                  setDeliveryDateIndex(index)
+                                  setDeliveryDateIndex(index).catch(
+                                    (error) => {
+                                      toast({
+                                        variant: 'destructive',
+                                        description:
+                                          error instanceof Error
+                                            ? error.message
+                                            : t(
+                                                'Something went wrong. Please try again.'
+                                              ),
+                                      })
+                                    }
+                                  )
                                 }
                               }}
                             >

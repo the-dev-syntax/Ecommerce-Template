@@ -701,6 +701,8 @@
   "Tracking number": "رقم التتبع",
   "Tracking URL": "رابط التتبع",
   "Saving": "جاري الحفظ",
+  "Unable to update quantity": "تعذر تحديث الكمية",
+  "Unable to remove this item": "تعذر إزالة هذا العنصر",
   "Order status": "حالة الطلب",
   "Shipped": "تم الشحن",
   "Pending payment": "بانتظار الدفع",

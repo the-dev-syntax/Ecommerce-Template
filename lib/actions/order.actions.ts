@@ -183,6 +183,53 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
   })
 }
 
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i
+
+/**
+ * PUBLIC: return the clientIds of cart lines whose product is still published
+ * and, when the line references a variant, whose variant still exists.
+ * The cart store uses this to prune stale persisted carts before repricing.
+ */
+export async function getAvailableCartItemIds(items: OrderItem[]) {
+  if (items.length === 0) return []
+
+  await connectToDatabase()
+
+  const productIds = [
+    ...new Set(
+      items
+        .map((item) => String(item.product))
+        .filter((id) => OBJECT_ID_RE.test(id))
+    ),
+  ]
+  if (productIds.length === 0) return []
+
+  const products = await Product.find({
+    _id: { $in: productIds },
+    isPublished: true,
+  })
+    .select({ _id: 1, variants: 1 })
+    .lean()
+
+  const productsById = new Map(
+    products.map((product) => [String(product._id), product])
+  )
+
+  return items
+    .filter((item) => {
+      const product = productsById.get(String(item.product))
+      if (!product) return false
+
+      const variantId = item.variantId?.trim()
+      if (!variantId) return true
+
+      return (product.variants ?? []).some(
+        (variant) => variant.id === variantId
+      )
+    })
+    .map((item) => item.clientId)
+}
+
 // CREATE ORDER - PRIVATE
 export const createOrder = async (clientSideCart: Cart) => {
   try {

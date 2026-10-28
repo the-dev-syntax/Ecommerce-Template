@@ -701,6 +701,8 @@
   "Tracking number": "Numéro de suivi",
   "Tracking URL": "URL de suivi",
   "Saving": "Enregistrement",
+  "Unable to update quantity": "Impossible de mettre à jour la quantité",
+  "Unable to remove this item": "Impossible de supprimer cet article",
   "Order status": "Statut de la commande",
   "Shipped": "Expédiée",
   "Pending payment": "En attente de paiement",
