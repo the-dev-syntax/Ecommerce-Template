@@ -81,7 +81,7 @@ body {
   }
 
   .header-button {
-    @apply cursor-pointer p-1 border border-transparent hover:text-primary/60 rounded-[2px] active:bg-white/15;
+    @apply cursor-pointer p-1 border border-transparent rounded-[2px] hover:bg-black/10 active:bg-black/20;
 
   }
 

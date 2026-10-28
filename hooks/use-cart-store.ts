@@ -37,6 +37,7 @@ interface CartState {
   setShippingAddress: (shippingAddress: ShippingAddress) => Promise<void>
   setPaymentMethod: (paymentMethod: string) => Promise<void>
   setDeliveryDateIndex: (index: number) => Promise<void>
+  refreshCart: () => Promise<void>
 }
 
 const useCartStore = create(
@@ -45,7 +46,7 @@ const useCartStore = create(
       cart: initialState,
 
       addItem: async (item: OrderItem, quantity: number) => {
-        const { items,shippingAddress } = get().cart
+        const { items, shippingAddress, deliveryDateIndex } = get().cart
        
         const existItem = items.find((x) => sameLine(x, item))
        // if item exist with the same variant , existItem ={...item }
@@ -54,7 +55,7 @@ const useCartStore = create(
             throw new Error('Not enough items in stock')
           }
         } else {
-          if (item.countInStock < item.quantity) {
+          if (item.countInStock < quantity) {
             throw new Error('Not enough items in stock')
           }
         }
@@ -73,6 +74,7 @@ const useCartStore = create(
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress,
+              deliveryDateIndex,
               paymentMethod: get().cart.paymentMethod,
             })),
           },
@@ -84,7 +86,7 @@ const useCartStore = create(
         return foundItem.clientId
       },
       updateItem: async (item: OrderItem, quantity: number) => {
-        const { items, shippingAddress } = get().cart
+        const { items, shippingAddress, deliveryDateIndex } = get().cart
         const exist = items.find((x) => sameLine(x, item))
         if (!exist) return
         const updatedCartItems = items.map((x) =>
@@ -96,13 +98,14 @@ const useCartStore = create(
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress,
+              deliveryDateIndex,
               paymentMethod: get().cart.paymentMethod,
             })),
           },
         })
       },
       removeItem: async (item: OrderItem) => {
-        const { items, shippingAddress } = get().cart
+        const { items, shippingAddress, deliveryDateIndex } = get().cart
         const updatedCartItems = items.filter((x) => !sameLine(x, item))
         set({
           cart: {
@@ -110,14 +113,37 @@ const useCartStore = create(
             ...(await calcDeliveryDateAndPrice({
               items: updatedCartItems,
               shippingAddress,
+              deliveryDateIndex,
               paymentMethod: get().cart.paymentMethod,
             })),
           },
         })
       },
+      refreshCart: async () => {
+        const { items, shippingAddress, deliveryDateIndex, paymentMethod } =
+          get().cart
+        if (items.length === 0) return
+        try {
+          set({
+            cart: {
+              ...get().cart,
+              ...(await calcDeliveryDateAndPrice({
+                items,
+                shippingAddress,
+                deliveryDateIndex,
+                paymentMethod,
+              })),
+            },
+          })
+        } catch (error) {
+          // Keep the local cart visible even if a product was unpublished or
+          // a variant sold out; the next quantity change will surface the error.
+          console.error('Unable to refresh cart prices:', error)
+        }
+      },
       init: () => set({ cart: initialState }),
       setShippingAddress: async (shippingAddress: ShippingAddress) => {
-        const { items } = get().cart
+        const { items, deliveryDateIndex } = get().cart
         set({
           cart: {
             ...get().cart,
@@ -125,6 +151,7 @@ const useCartStore = create(
             ...(await calcDeliveryDateAndPrice({
               items,
               shippingAddress,
+              deliveryDateIndex,
               paymentMethod: get().cart.paymentMethod,
             })),
           },

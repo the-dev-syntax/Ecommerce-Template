@@ -13,7 +13,9 @@ import { formatError } from '@/lib/utils'
 export async function syncBrowsingHistory(items: BrowsingHistoryItem[]) {
   try {
     const session = await auth()
-    if (!session?.user?.id) return { success: false }
+    // Guests keep their history in localStorage only. Treat this as a
+    // successful no-op so the client does not retry forever.
+    if (!session?.user?.id) return { success: true, skipped: true }
 
     await mergeBrowsingHistory(session.user.id, items)
     return { success: true }

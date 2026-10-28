@@ -43,7 +43,7 @@ export default function ThemeSwitcher() {
           </div>
         ) : (
           <div className='flex items-center gap-1'>
-            <Sun className='h-4 w-4 text-primary' /> {t('Light')} <ChevronDownIcon />
+            <Sun className='h-4 w-4' /> {t('Light')} <ChevronDownIcon />
           </div>
         )}
       </DropdownMenuTrigger>

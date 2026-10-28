@@ -12,10 +12,12 @@ import { SelectValue } from '@radix-ui/react-select'
 import { useLocale, useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/i18n/routing'
 import { i18n } from '@/i18n-config'
+import { useTheme } from 'next-themes'
 
 export default function Footer() {
   const router = useRouter()
   const pathname = usePathname()
+  const { resolvedTheme } = useTheme()
   const {
     setting: { site, availableCurrencies, currency, brand, navigation },
     setCurrency,
@@ -24,13 +26,20 @@ export default function Footer() {
   const { locales } = i18n
   const locale = useLocale()
   const t = useTranslations()
+  // Some footer messages are parameterised (e.g. "Sell products on {name}").
+  // Always supply the values they may need so t() never throws.
+  const navValues = { name: site.name, siteName: site.name }
+
+  // Keep the logo readable on both the light and dark footer backgrounds.
+  const logoSrc =
+    resolvedTheme === 'dark' ? brand.logoDark || site.logo : site.logo
 
   return (
-    <footer className='bg-black  text-white underline-link'>
+    <footer className='bg-secondary text-secondary-foreground underline-link'>
       <div className='w-full'>
         <Button
           variant='ghost'
-          className='bg-gray-800 w-full  rounded-none '
+          className='w-full rounded-none bg-muted/60 hover:bg-muted'
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           <ChevronUp className='mr-2 h-4 w-4' />
@@ -40,14 +49,14 @@ export default function Footer() {
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto'>
         {navigation.footer.map((group) => (
           <div key={group.title}>
-            <h3 className='font-bold text-primary mb-2'>
-              {t.has(group.title) ? t(group.title) : group.title}
+            <h3 className='font-bold text-foreground mb-2'>
+              {t.has(group.title) ? t(group.title, navValues) : group.title}
             </h3>
             <ul className='space-y-2'>
               {group.links.map((link) => (
                 <li key={`${group.title}-${link.href}`}>
-                  <Link href={link.href}>
-                    {t.has(link.name) ? t(link.name) : link.name}
+                  <Link href={link.href} className='hover:text-primary'>
+                    {t.has(link.name) ? t(link.name, navValues) : link.name}
                   </Link>
                 </li>
               ))}
@@ -69,11 +78,11 @@ export default function Footer() {
           ))}
         </div>
       )}
-        <div className='border-t border-gray-800'>
+        <div className='border-t border-border'>
           <div className='max-w-7xl mx-auto py-8 px-4 flex flex-col items-center space-y-4'>
             <div className='flex items-center space-x-4 flex-wrap md:flex-nowrap'>
               <Image
-                src={brand.logoDark || site.logo}
+                src={logoSrc}
                 alt={`${site.name} logo`}
                 width={48}
                 height={48}
@@ -134,7 +143,7 @@ export default function Footer() {
         <div className='flex justify-center text-sm'>
           <p> © {site.copyright}</p>
         </div>
-        <div className='mt-8 flex justify-center text-sm text-gray-400'>
+        <div className='mt-8 flex justify-center text-sm text-muted-foreground'>
           {site.address} | {site.phone}
         </div>
       </div>

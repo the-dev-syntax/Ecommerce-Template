@@ -40,7 +40,8 @@ const emptyDraft: Draft = {
   includedWeightKg: 1,
   extraPerKg: 5,
   weightRoundingKg: 1,
-  freeShippingMinPrice: 200,
+  freeShippingEnabled: true,
+  freeShippingMinPrice: 0,
   codFee: 10,
   remoteSurcharge: 0,
   etaMinDays: 1,
@@ -56,7 +57,7 @@ const numberFields: { key: keyof IShippingRate; label: string; step?: string }[]
   { key: 'includedWeightKg', label: 'Included weight (kg)', step: '0.1' },
   { key: 'extraPerKg', label: 'Extra per kg', step: '0.01' },
   { key: 'weightRoundingKg', label: 'Weight rounding (kg)', step: '0.1' },
-  { key: 'freeShippingMinPrice', label: 'Free shipping threshold', step: '0.01' },
+  { key: 'freeShippingMinPrice', label: 'Free shipping threshold (0 = store default)', step: '0.01' },
   { key: 'codFee', label: 'COD fee', step: '0.01' },
   { key: 'remoteSurcharge', label: 'Remote surcharge', step: '0.01' },
   { key: 'etaMinDays', label: 'ETA min days', step: '1' },
@@ -158,9 +159,16 @@ export default function ShippingRateManager({
             ))}
           </div>
 
+          <p className='text-muted-foreground text-xs'>
+            {t(
+              'Free shipping per service and area help'
+            )}
+          </p>
+
           <div className='flex flex-wrap gap-4'>
             {(
               [
+                ['freeShippingEnabled', 'Free shipping enabled'],
                 ['pickupAvailable', 'Pickup available'],
                 ['codAvailable', 'COD available'],
                 ['isActive', 'Active'],
@@ -208,6 +216,7 @@ export default function ShippingRateManager({
                 <TableHead>{t('Carrier')}</TableHead>
                 <TableHead>{t('Service')}</TableHead>
                 <TableHead className='text-end'>{t('Rate')}</TableHead>
+                <TableHead className='text-end'>{t('Free Shipping')}</TableHead>
                 <TableHead className='text-end'>{t('ETA')}</TableHead>
                 <TableHead>{t('Actions')}</TableHead>
               </TableRow>
@@ -225,15 +234,45 @@ export default function ShippingRateManager({
                     {formatCurrency(rate.baseRate, 'SAR')}
                   </TableCell>
                   <TableCell className='text-end'>
+                    {rate.freeShippingEnabled === false
+                      ? '—'
+                      : rate.freeShippingMinPrice > 0
+                        ? `≥ ${formatCurrency(
+                            rate.freeShippingMinPrice,
+                            'SAR'
+                          )}`
+                        : t('Store default')}
+                  </TableCell>
+                  <TableCell className='text-end'>
                     {rate.etaMinDays}-{rate.etaMaxDays} {t('days')}
                   </TableCell>
                   <TableCell className='flex flex-wrap gap-1'>
                     <Button
                       size='sm'
                       variant='outline'
-                      onClick={() => setDraft(rate)}
+                      onClick={() =>
+                        setDraft({
+                          ...emptyDraft,
+                          ...rate,
+                          freeShippingEnabled:
+                            rate.freeShippingEnabled !== false,
+                        })
+                      }
                     >
                       {t('Edit')}
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      onClick={() =>
+                        setDraft({
+                          ...rate,
+                          _id: undefined,
+                          serviceName: `${rate.serviceName} copy`,
+                        })
+                      }
+                    >
+                      {t('Duplicate')}
                     </Button>
                     <Button
                       size='sm'

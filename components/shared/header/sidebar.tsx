@@ -38,7 +38,7 @@ export default async function Sidebar({
       <DrawerContent className='w-[350px] mt-0 top-0'>
         <div className='flex flex-col h-full'>
           {/* User Sign In Section */}
-          <div className='dark bg-gray-800 text-foreground flex items-center justify-between  '>
+          <div className='bg-primary text-primary-foreground flex items-center justify-between  '>
             <DrawerHeader>
               <DrawerTitle className='flex items-center'>
                 <UserCircle className='h-6 w-6 mr-2' />

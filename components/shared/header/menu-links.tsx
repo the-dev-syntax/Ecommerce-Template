@@ -39,7 +39,10 @@ export default function HeaderMenuLinks({ menus }: { menus: MenuItem[] }) {
         <Link
           key={menu.href}
           href={menu.href}
-          className={cn('header-button !p-2', isActive(menu.href) && 'text-sky-400')}
+          className={cn(
+            'header-button !p-2',
+            isActive(menu.href) && 'bg-black/20 font-semibold'
+          )}
         >
           {t.has(menu.name) ? t(menu.name) : menu.name}
         </Link>

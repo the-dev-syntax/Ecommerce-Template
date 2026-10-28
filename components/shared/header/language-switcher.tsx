@@ -41,7 +41,7 @@ export default function LanguageSwitcher() {
           <span className='text-lg mt-[-4px]'>
             {locales.find((l) => l.code === locale)?.icon}
           </span>
-          <span className='text-primary'>
+          <span className='font-semibold'>
             {locale.toUpperCase().slice(0, 2)}
             </span>
           <ChevronDownIcon />

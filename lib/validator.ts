@@ -251,6 +251,16 @@ export const CartSchema = z.object({
   paymentMethod: z.optional(z.string()),
   shippingAddress: z.optional(ShippingAddressSchema),
   deliveryDateIndex: z.optional(z.number()),
+  availableDeliveryDates: z
+    .array(
+      z.object({
+        name: z.string(),
+        daysToDeliver: z.number(),
+        shippingPrice: z.number(),
+        freeShippingMinPrice: z.number(),
+      })
+    )
+    .optional(),
   expectedDeliveryDate: z.optional(z.date()),
 })
 
@@ -489,6 +499,7 @@ export const ShippingRateSchema = z.object({
   includedWeightKg: z.coerce.number().min(0),
   extraPerKg: z.coerce.number().min(0),
   weightRoundingKg: z.coerce.number().min(0.1),
+  freeShippingEnabled: z.boolean().default(true),
   freeShippingMinPrice: z.coerce.number().min(0),
   codFee: z.coerce.number().min(0),
   remoteSurcharge: z.coerce.number().min(0),

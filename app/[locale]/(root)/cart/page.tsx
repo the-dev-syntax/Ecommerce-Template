@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/select'
 import useCartStore from '@/hooks/use-cart-store'
 import useSettingStore from '@/hooks/use-setting-store'
+import useIsMounted from '@/hooks/use-is-mounted'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 
 export default function CartPage() {
 
@@ -32,10 +34,33 @@ export default function CartPage() {
     cart: { items, itemsPrice },
     updateItem,
     removeItem,
+    refreshCart,
   } = useCartStore()
+
+  const isMounted = useIsMounted()
+  const hasRefreshed = useRef(false)
+
+  // Refresh persisted guest/user carts once on mount so prices, stock and
+  // shipping match the current database instead of an old localStorage copy.
+  useEffect(() => {
+    if (!isMounted || hasRefreshed.current) return
+    hasRefreshed.current = true
+    refreshCart()
+  }, [isMounted, refreshCart])
 
   const t = useTranslations()
   const router = useRouter()
+
+  if (!isMounted) {
+    return (
+      <Card className='rounded-none'>
+        <CardContent className='p-4 space-y-3'>
+          <Skeleton className='h-8 w-48' />
+          <Skeleton className='h-40 w-full' />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div>

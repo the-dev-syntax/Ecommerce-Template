@@ -46,7 +46,7 @@ export default function CartSidebar() {
             <div className='font-bold '>
               <ProductPrice price={itemsPrice} plain />
             </div>
-            {itemsPrice > freeShippingMinPrice && (
+            {itemsPrice >= freeShippingMinPrice && (
               <div className=' text-center text-xs'>
                  {t('Your order qualifies for FREE Shipping')}
               </div>

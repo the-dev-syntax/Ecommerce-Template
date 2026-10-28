@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   calculateShippingPrice,
+  resolveFreeShippingMinPrice,
   shippingCountryMatches,
   shippingLocationMatches,
 } from '../lib/shipping/rates'
@@ -32,6 +33,53 @@ test('shipping: a zero-weight legacy item only pays the base rate', () => {
 test('shipping: the free-shipping threshold waives the whole rate', () => {
   assert.equal(calculateShippingPrice(baseRate, 4, 200), 0)
   assert.equal(calculateShippingPrice(baseRate, 4, 199.99), 35)
+})
+
+test('shipping: a service can opt out of free shipping', () => {
+  assert.equal(
+    calculateShippingPrice(
+      { ...baseRate, freeShippingEnabled: false },
+      1,
+      500
+    ),
+    20
+  )
+  assert.equal(
+    calculateShippingPrice(
+      { ...baseRate, freeShippingEnabled: true },
+      1,
+      500
+    ),
+    0
+  )
+})
+
+test('shipping: a zero threshold inherits the store free-shipping limit', () => {
+  assert.equal(
+    resolveFreeShippingMinPrice(
+      { ...baseRate, freeShippingMinPrice: 0 },
+      150
+    ),
+    150
+  )
+  assert.equal(
+    resolveFreeShippingMinPrice(
+      { ...baseRate, freeShippingMinPrice: 250 },
+      150
+    ),
+    250
+  )
+  assert.equal(
+    resolveFreeShippingMinPrice(
+      {
+        ...baseRate,
+        freeShippingEnabled: false,
+        freeShippingMinPrice: 250,
+      },
+      150
+    ),
+    0
+  )
 })
 
 test('shipping: a remote surcharge is added to the rate', () => {

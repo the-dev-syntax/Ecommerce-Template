@@ -1,7 +1,8 @@
 'use client'
 import useSettingStore from '@/hooks/use-setting-store'
 import { cn, formatCurrency, round2 } from '@/lib/utils'
-import { useTranslations } from 'next-intl'
+import { getDirection } from '@/i18n-config'
+import { useLocale, useTranslations } from 'next-intl'
 
 const ProductPrice = ({
   price,
@@ -28,6 +29,10 @@ const ProductPrice = ({
       setting.availableCurrencies.find((c) => c.code === currencyCode)) ||
     getCurrency()
   const t = useTranslations()
+  const locale = useLocale()
+  // In RTL layouts the currency symbol is rendered after the amount so it
+  // appears on the left of the number.
+  const isRtl = getDirection(locale) === 'rtl'
   const rate = convert === false ? 1 : currency.convertRate
   const convertedPrice = round2(rate * price)
   const convertedListPrice = round2(rate * listPrice)
@@ -40,6 +45,27 @@ const ProductPrice = ({
   const [intValue, floatValue] = stringValue.includes('.')
     ? stringValue.split('.')
     : [stringValue, '']
+
+  const symbolNode = (
+    <span className='text-xs align-super'>{currency.symbol}</span>
+  )
+  const amountNode = (
+    <span dir='ltr'>
+      {intValue}
+      <span className='text-xs align-super'>{floatValue}</span>
+    </span>
+  )
+  const priceNode = isRtl ? (
+    <>
+      {amountNode}
+      {symbolNode}
+    </>
+  ) : (
+    <>
+      {symbolNode}
+      {amountNode}
+    </>
+  )
 
   // If the 'plain' prop is true...
   // Otherwise, if there is no listprice [listprice is 0] (meaning no discount)...(no new price , the original price only)
@@ -55,9 +81,7 @@ const ProductPrice = ({
     )
   ) : convertedListPrice == 0 ? (
     <div className={cn('text-3xl', className)}>
-      <span className='text-xs align-super'>{currency.symbol}</span>
-      {intValue}
-      <span className='text-xs align-super'>{floatValue}</span>
+      {priceNode}
     </div>
   ) : isDeal ? (
     <div className='space-y-2'>
@@ -73,9 +97,7 @@ const ProductPrice = ({
         className={`flex ${forListing && 'justify-center'} items-center gap-2`}
       >
         <div className={cn('text-3xl', className)}>
-          <span className='text-xs align-super'>{currency.symbol}</span>
-          {intValue}
-          <span className='text-xs align-super'>{floatValue}</span>
+          {priceNode}
         </div>
         <div className='text-muted-foreground text-xs py-2'>
           {t('Was')}:{' '}
@@ -95,9 +117,7 @@ const ProductPrice = ({
       <div className='flex justify-center gap-3'>
         <div className='text-3xl text-orange-700'>-{discountPercent}%</div>
         <div className={cn('text-3xl', className)}>
-          <span className='text-xs align-super'>{currency.symbol}</span>
-          {intValue}
-          <span className='text-xs align-super'>{floatValue}</span>
+          {priceNode}
         </div>
       </div>
       <div className='text-muted-foreground text-xs py-2'>

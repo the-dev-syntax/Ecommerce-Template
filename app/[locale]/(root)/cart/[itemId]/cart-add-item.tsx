@@ -12,14 +12,27 @@ import useCartStore from '@/hooks/use-cart-store'
 import { notFound } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import useSettingStore from '@/hooks/use-setting-store'
+import useIsMounted from '@/hooks/use-is-mounted'
+import { Skeleton } from '@/components/ui/skeleton'
 
 
 export default function CartAddItem({ itemId }: { itemId: string }) {
   const { cart: { items, itemsPrice }  } = useCartStore()
   const { setting: { common: { freeShippingMinPrice } } } = useSettingStore()
   const t = useTranslations()  
+  const isMounted = useIsMounted()
 
   const item = items.find((x) => x.clientId === itemId)
+
+  // The cart is persisted in localStorage, so it is empty during SSR. Wait for
+  // the client store to hydrate before deciding the line does not exist.
+  if (!isMounted) {
+    return (
+      <div className='p-4'>
+        <Skeleton className='h-40 w-full' />
+      </div>
+    )
+  }
   if (!item) return notFound()
 
 

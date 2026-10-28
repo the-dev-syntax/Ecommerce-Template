@@ -90,6 +90,8 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
     products.map((product) => [product._id.toString(), product])
   )
 
+  const usedClientIds = new Set<string>()
+
   return clientItems.map((item) => {
     const product = productsById.get(item.product)
     if (!product)
@@ -143,8 +145,17 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
     if (!variant && color && !(product.colors ?? []).includes(color))
       throw new Error(`Invalid color for ${product.name}`)
 
+    // Keep the cart line stable across recalculations so persisted guest carts
+    // and /cart/[itemId] links still point at the same line. Generate a new id
+    // only when the client did not provide one or sent a duplicate.
+    const clientId =
+      item.clientId && !usedClientIds.has(item.clientId)
+        ? item.clientId
+        : generateId()
+    usedClientIds.add(clientId)
+
     return {
-      clientId: generateId(),
+      clientId,
       product: product._id.toString(),
       name: product.name,
       slug: product.slug,
@@ -217,7 +228,11 @@ export const createOrderFromCart = async (
     defaultCurrency,
     seller,
     features,
-    common: { taxRate, taxInclusive },
+    common: {
+      taxRate,
+      taxInclusive,
+      freeShippingMinPrice: storeFreeShippingMinPrice,
+    },
   } = await getSetting()
 
   const paymentMethod = clientSideCart.paymentMethod
@@ -247,6 +262,7 @@ export const createOrderFromCart = async (
         city: shippingAddress.city,
         items: pricedItems,
         itemsPrice,
+        freeShippingMinPrice: storeFreeShippingMinPrice,
         pickupLocation,
       })
     : []
@@ -256,7 +272,9 @@ export const createOrderFromCart = async (
           name: quote.name,
           daysToDeliver: quote.etaMaxDays,
           shippingPrice: quote.shippingPrice,
-          freeShippingMinPrice: 0,
+          freeShippingMinPrice: quote.freeShippingEnabled
+            ? quote.freeShippingMinPrice
+            : 0,
         }))
       : settingDeliveryDates
 
@@ -747,7 +765,7 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
 }
 
 
-// RECALCULATE CART PRICES FROM THE DATABASE - PRIVATE
+// RECALCULATE CART PRICES FROM THE DATABASE - PUBLIC (guests may build a cart)
 export const calcDeliveryDateAndPrice = async ({
   items: clientItems,
   shippingAddress,
@@ -759,9 +777,9 @@ export const calcDeliveryDateAndPrice = async ({
   shippingAddress?: ShippingAddress
   paymentMethod?: string
 }) => {
-  const session = await auth()
-  if (!session?.user?.id) throw new Error('User not authenticated')
-
+  // Guests must be able to build a cart too, so this cannot require a session.
+  // It only reads public product/settings data and returns prices; placing the
+  // order (createOrder/createOrderFromCart) still requires authentication.
   // Prices, stock and product details always come from the database.
   // An empty cart is valid while the customer is removing items.
   const items =
@@ -773,7 +791,11 @@ export const calcDeliveryDateAndPrice = async ({
   const {
     availableDeliveryDates: settingDeliveryDates,
     seller,
-    common: { taxRate, taxInclusive },
+    common: {
+      taxRate,
+      taxInclusive,
+      freeShippingMinPrice: storeFreeShippingMinPrice,
+    },
   } = await getSetting()
 
   const pricedItems = priceOrderItems(items, taxRate, taxInclusive)
@@ -796,6 +818,7 @@ export const calcDeliveryDateAndPrice = async ({
         city: parsedShippingAddress.city,
         items: pricedItems,
         itemsPrice,
+        freeShippingMinPrice: storeFreeShippingMinPrice,
         pickupLocation,
       })
     : []
@@ -805,7 +828,9 @@ export const calcDeliveryDateAndPrice = async ({
           name: quote.name,
           daysToDeliver: quote.etaMaxDays,
           shippingPrice: quote.shippingPrice,
-          freeShippingMinPrice: 0,
+          freeShippingMinPrice: quote.freeShippingEnabled
+            ? quote.freeShippingMinPrice
+            : 0,
         }))
       : settingDeliveryDates
   const availableDeliveryDates = deliveryOptions

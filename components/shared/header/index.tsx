@@ -24,13 +24,13 @@ export default async function Header() {
   const logoSrc = brand.logoDark || site.logo
 
   return (
-    <header className='bg-black  text-white'>
+    <header className='bg-primary text-primary-foreground'>
       <div className='px-2'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center'>
             <Link
               href='/'
-              className='flex items-center header-button font-bold text-2xl m-1 text-primary'
+              className='flex items-center header-button font-bold text-2xl m-1'
             >
               <Image
                 src={logoSrc}
@@ -51,7 +51,7 @@ export default async function Header() {
         </div>
       </div>
       
-      <div className='flex items-center px-3 mb-[1px]  bg-gray-800'>
+      <div className='flex items-center px-3 mb-[1px] bg-black/20'>
       <Sidebar categories={categories} />
         <div className='flex items-center flex-wrap gap-3 overflow-hidden   max-h-[42px]'>
           <Suspense fallback={null}>

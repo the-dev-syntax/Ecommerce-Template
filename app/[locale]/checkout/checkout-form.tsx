@@ -73,7 +73,7 @@ const CheckoutForm = () => {
 
   const { setting: {
     site,
-    availableDeliveryDates,
+    availableDeliveryDates: settingDeliveryDates,
     availablePaymentMethods,
     availableCurrencies,
     defaultCurrency,
@@ -108,6 +108,7 @@ const CheckoutForm = () => {
       shippingAddress,
       deliveryDateIndex,
       paymentMethod: storedPaymentMethod,
+      availableDeliveryDates: cartDeliveryDates,
     },
     updateItem,
     removeItem,
@@ -123,15 +124,44 @@ const CheckoutForm = () => {
       ? storedPaymentMethod
       : defaultEnabledPaymentMethod
 
-  const selectedDelivery =
+  // The cart store recalculates delivery options from the shipping rates for
+  // the entered address. Always prefer them over the global defaults, otherwise
+  // the options shown here can differ from the option the cart actually priced.
+  const availableDeliveryDates =
+    cartDeliveryDates && cartDeliveryDates.length > 0
+      ? cartDeliveryDates
+      : settingDeliveryDates
+
+  const selectedDeliveryIndex =
     availableDeliveryDates &&
       deliveryDateIndex !== undefined &&
       deliveryDateIndex >= 0 &&
       deliveryDateIndex < availableDeliveryDates.length
-      ? availableDeliveryDates[deliveryDateIndex]
-      : availableDeliveryDates?.[0] || null // Fallback to first item or null
+      ? deliveryDateIndex
+      : availableDeliveryDates && availableDeliveryDates.length > 0
+        ? 0
+        : -1
+
+  const selectedDelivery =
+    selectedDeliveryIndex >= 0
+      ? availableDeliveryDates[selectedDeliveryIndex]
+      : null
 
   const isMounted = useIsMounted()
+
+  // Compute the cutoff countdown on the client only (avoids hydration
+  // mismatches) and keep it fresh while the customer is on the page.
+  const [timeLeft, setTimeLeft] = useState<{
+    hours: number
+    minutes: number
+  } | null>(null)
+
+  useEffect(() => {
+    const update = () => setTimeLeft(timeUntilMidnight())
+    update()
+    const timer = window.setInterval(update, 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const shippingAddressForm = useForm<ShippingAddress>({
     resolver: zodResolver(ShippingAddressSchema),
@@ -691,8 +721,29 @@ const CheckoutForm = () => {
                           <span className="animate-pulse">...</span> // Loading state
                         )}
                       </span>{' '}
-                      {t('If you order in the next')} {timeUntilMidnight().hours} {t('hours')}
-                      and {timeUntilMidnight().minutes} {t('minutes')}.
+                      {timeLeft && (
+                        <>
+                          {t('If you order in the next')}{' '}
+                          {timeLeft.hours > 0 && (
+                            <>
+                              {timeLeft.hours}{' '}
+                              {timeLeft.hours === 1 ? t('hour') : t('hours')}
+                            </>
+                          )}
+                          {timeLeft.hours > 0 && timeLeft.minutes > 0 && (
+                            <> {t('and')} </>
+                          )}
+                          {timeLeft.minutes > 0 && (
+                            <>
+                              {timeLeft.minutes}{' '}
+                              {timeLeft.minutes === 1
+                                ? t('minute')
+                                : t('minutes')}
+                            </>
+                          )}
+                          .
+                        </>
+                      )}
                     </p>
                     <div className='grid md:grid-cols-2 gap-6'>
                       <div>
@@ -753,26 +804,34 @@ const CheckoutForm = () => {
 
                           <ul>
                             <RadioGroup
-                              value={selectedDelivery?.name} // Use the derived state name
+                              value={
+                                selectedDeliveryIndex >= 0
+                                  ? String(selectedDeliveryIndex)
+                                  : ''
+                              }
                               onValueChange={(value) => {
-                                const index = availableDeliveryDates.findIndex((d) => d.name === value)
-                                if (index !== -1) setDeliveryDateIndex(index)
+                                const index = Number(value)
+                                if (Number.isInteger(index)) {
+                                  setDeliveryDateIndex(index)
+                                }
                               }}
                             >
                               {availableDeliveryDates.map((dd, index) => (
                                 <div key={`${dd.name}-${index}`} className='flex'>
                                   <RadioGroupItem
-                                    value={dd.name}
-                                    id={`address-${index}`}
+                                    value={String(index)}
+                                    id={`shipping-speed-${index}`}
                                   />
                                   <Label
                                     className='pl-2 space-y-2 cursor-pointer'
-                                    htmlFor={`address-${index}`}
+                                    htmlFor={`shipping-speed-${index}`}
                                   >
                                     <div className='font-medium'>
                                       {dd.name === 'Pickup from store'
                                         ? t('Pickup from store')
-                                        : dd.name}
+                                        : t.has(dd.name)
+                                          ? t(dd.name)
+                                          : dd.name}
                                     </div>
                                     <div className='text-green-700 font-semibold'>
                                       {

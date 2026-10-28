@@ -1,6 +1,7 @@
 import { usePathname } from 'next/navigation'
 import useDeviceType from './use-device-type'
 import useCartStore from './use-cart-store'
+import useIsMounted from './use-is-mounted'
 import { i18n } from '@/i18n-config'
 
 
@@ -20,9 +21,13 @@ function useCartSidebar() {
   const { cart: { items } } = useCartStore()  
   const deviceType = useDeviceType()
   const currentPath = usePathname()
+  const isMounted = useIsMounted()
 
   return (
-    items.length > 0 && deviceType === 'desktop' && isNotInPaths(currentPath)
+    isMounted &&
+    items.length > 0 &&
+    deviceType === 'desktop' &&
+    isNotInPaths(currentPath)
   )
 }
 // return is true or false here

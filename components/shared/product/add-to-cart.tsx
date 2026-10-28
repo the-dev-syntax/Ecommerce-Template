@@ -36,9 +36,9 @@ export default function AddToCart({
   return minimal ? (
     <Button
       className='rounded-full w-auto'
-      onClick={() => {
+      onClick={async () => {
         try {
-          addItem(item, 1)
+          await addItem(item, 1)
           toast({
             description: t('Added to Cart'),
             action: (
@@ -100,9 +100,9 @@ export default function AddToCart({
       </Button>
       <Button
         variant='secondary'
-        onClick={() => {
+        onClick={async () => {
           try {
-            addItem(item, quantity)
+            await addItem(item, quantity)
             router.push(`/checkout`)
           } catch (error: any) {
             toast({

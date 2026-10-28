@@ -19,6 +19,7 @@ export interface ShippingQuote {
   isPickup: boolean
   pickupLocation?: string
   codFee: number
+  freeShippingEnabled: boolean
   freeShippingMinPrice: number
 }
 
@@ -42,19 +43,33 @@ export function shippingCountryMatches(value: string, target: string) {
   )
 }
 
+export function resolveFreeShippingMinPrice(
+  rate: { freeShippingEnabled?: boolean; freeShippingMinPrice: number },
+  storeFreeShippingMinPrice = 0
+) {
+  if (rate.freeShippingEnabled === false) return 0
+  if (rate.freeShippingMinPrice > 0) return rate.freeShippingMinPrice
+  return storeFreeShippingMinPrice > 0 ? storeFreeShippingMinPrice : 0
+}
+
 export function calculateShippingPrice(
   rate: {
     baseRate: number
     includedWeightKg: number
     extraPerKg: number
     weightRoundingKg: number
+    freeShippingEnabled?: boolean
     freeShippingMinPrice: number
     remoteSurcharge: number
   },
   weight: number,
   itemsPrice: number
 ) {
-  if (rate.freeShippingMinPrice > 0 && itemsPrice >= rate.freeShippingMinPrice) {
+  if (
+    rate.freeShippingEnabled !== false &&
+    rate.freeShippingMinPrice > 0 &&
+    itemsPrice >= rate.freeShippingMinPrice
+  ) {
     return 0
   }
   const rounding = rate.weightRoundingKg > 0 ? rate.weightRoundingKg : 1
@@ -74,11 +89,12 @@ export async function getShippingRates(input: {
   city: string
   items: ShippingItem[]
   itemsPrice: number
+  freeShippingMinPrice?: number
   pickupLocation?: string
 }): Promise<ShippingQuote[]> {
   await connectToDatabase()
   const rates = await ShippingRate.find({ isActive: true })
-    .sort({ priority: -1, baseRate: 1 })
+    .sort({ priority: -1, baseRate: 1, serviceName: 1 })
     .lean()
 
   const matched = rates
@@ -113,19 +129,32 @@ export async function getShippingRates(input: {
     0
   )
 
-  const quotes: ShippingQuote[] = bestRates.map((rate) => ({
-    id: String(rate._id),
-    name: `${rate.carrier} ${rate.serviceName}`,
-    zoneName: rate.zoneName,
-    carrier: rate.carrier,
-    serviceName: rate.serviceName,
-    shippingPrice: calculateShippingPrice(rate, weight, input.itemsPrice),
-    etaMinDays: rate.etaMinDays,
-    etaMaxDays: rate.etaMaxDays,
-    isPickup: false,
-    codFee: rate.codFee,
-    freeShippingMinPrice: rate.freeShippingMinPrice,
-  }))
+  const quotes: ShippingQuote[] = bestRates.map((rate) => {
+    const freeShippingEnabled = rate.freeShippingEnabled !== false
+    const freeShippingMinPrice = resolveFreeShippingMinPrice(
+      rate,
+      input.freeShippingMinPrice
+    )
+
+    return {
+      id: String(rate._id),
+      name: `${rate.carrier} ${rate.serviceName}`,
+      zoneName: rate.zoneName,
+      carrier: rate.carrier,
+      serviceName: rate.serviceName,
+      shippingPrice: calculateShippingPrice(
+        { ...rate, freeShippingEnabled, freeShippingMinPrice },
+        weight,
+        input.itemsPrice
+      ),
+      etaMinDays: rate.etaMinDays,
+      etaMaxDays: rate.etaMaxDays,
+      isPickup: false,
+      codFee: rate.codFee,
+      freeShippingEnabled,
+      freeShippingMinPrice,
+    }
+  })
 
   if (bestRates.some((rate) => rate.pickupAvailable)) {
     quotes.push({
@@ -140,6 +169,7 @@ export async function getShippingRates(input: {
       isPickup: true,
       pickupLocation: input.pickupLocation,
       codFee: 0,
+      freeShippingEnabled: false,
       freeShippingMinPrice: 0,
     })
   }

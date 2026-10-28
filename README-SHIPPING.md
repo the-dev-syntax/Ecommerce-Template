@@ -86,6 +86,7 @@ baseRate
 includedWeightKg
 extraPerKg
 weightRoundingKg
+freeShippingEnabled
 freeShippingMinPrice
 codFee
 codFeePercent
@@ -181,11 +182,11 @@ The variant model already stores `weight`, but order items do not currently snap
 - Shipping tax treatment: **non-taxable**, as currently implemented
 - Pickup: **yes**, offered at the store/seller address
 - Default values until SMSA provides its commercial rate card:
-  - Riyadh: **20 SAR**, ETA 1–2 days
-  - Jeddah: **25 SAR**, ETA 2–3 days
+  - Riyadh: **Tomorrow**, **20 SAR**, ETA **1 day**, free when the basket reaches the store-wide free-shipping limit
+  - Outside Riyadh: **Tomorrow** (paid), **Next 3 Days** (paid), **Next 5 Days** (free when the basket reaches the store-wide free-shipping limit)
   - Included weight: **1 kg**
   - Extra per kg: **5 SAR**
-  - Free-shipping threshold: **200 SAR**
+  - Free-shipping limit: **Settings → Common → Free Shipping Minimum Price** (per-service override available)
   - COD fee: **10 SAR**
   - Remote-area surcharge: **0 SAR**
   - Pickup: **0 SAR**
@@ -194,8 +195,19 @@ The variant model already stores `weight`, but order items do not currently snap
 
 The admin table is implemented as one `ShippingRate` collection with zone fields (`zoneName`, `country`, `region`, `city`) rather than separate zone and rate documents. This keeps flat per-city rates editable in one screen while still supporting a default `*` region/city fallback.
 
+Free shipping is configured **per service and per area**:
+
+- `freeShippingEnabled` turns free shipping on or off for that service. Disabled services stay paid even when the basket is above the limit.
+- `freeShippingMinPrice` is an optional per-service basket threshold. Leave it at `0` to use the store-wide limit from **Settings → Common → Free Shipping Minimum Price**. Enter a positive amount to override the limit for this service only.
+- `country`, `region` and `city` decide which area the rule applies to.
+- Create one row per delivery speed. For example:
+  - Riyadh / Riyadh / Tomorrow / freeShippingEnabled = true / threshold 0 (uses the store-wide limit).
+  - Jeddah / Makkah / Tomorrow / freeShippingEnabled = false.
+  - Jeddah / Makkah / Next 3 Days / freeShippingEnabled = false.
+  - Jeddah / Makkah / Next 5 Days / freeShippingEnabled = true / threshold 0 (uses the store-wide limit).
+
 - Admin: `/admin/shipping`
-- Seed defaults: `npm run migrate:shipping`
+- Seed defaults: `npm run migrate:shipping` (add `--force` to replace existing rows)
 - Checkout: country → active region/city rate → cart weight/free-shipping threshold → selected quote snapshot on the order
 - Order snapshot: `shippingRateId`, `shippingZone`, `shippingCarrier`, `shippingService`, `shippingEtaMin/Max`, `isPickup`, `pickupLocation`, `codFee`
 

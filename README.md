@@ -338,7 +338,7 @@ Known limits:
 - Added a `ShippingRate` collection and `/admin/shipping` to manage country/region/city zones, carrier, service, flat base rate, included/extra weight, free-shipping threshold, COD fee, remote surcharge, ETA and pickup. City rules take priority over region rules, then country defaults.
 - Checkout resolves the active rate from the entered Saudi address and cart weight, applies the free-shipping threshold, offers store pickup when enabled, and falls back to the existing delivery-date settings when no zone matches.
 - Orders snapshot the selected rate id, zone, carrier, service, ETA, pickup location, COD fee and shipping price. Order items now snapshot variant weight for stable historical calculations.
-- Added `npm run migrate:shipping` to seed SMSA flat per-city defaults (Riyadh 20 SAR, Jeddah 25 SAR, other major cities 25 SAR, 30 SAR fallback); the admin table overrides them when the commercial rate card arrives.
+- Added `npm run migrate:shipping` to seed SMSA flat per-city defaults (Riyadh next-day 20 SAR; outside Riyadh paid next-day/3-day and free 5-day above the store free-shipping limit); the admin table overrides them when the commercial rate card arrives. Each rate has a `freeShippingEnabled` switch, an optional basket threshold, and its own country/region/city so free shipping can differ by area and delivery speed.
 - Shipping remains non-taxable. COD fees are added only for cash-on-delivery orders.
 - Added `README-SHIPPING.md` with the carrier data/API checklist, rate-table shape and confirmed starting decisions.
 - Verification: `npx tsc --noEmit`, `npm run lint`, `npm run i18n:check` (733 keys), `npm test` (49 tests), `npm run build` - PASS.
@@ -995,4 +995,109 @@ Not applicable: **one store per deployment (white-label)** was chosen. Revisit o
 
 ### Open decisions
 None. Execution follows the confirmed implementation order above; only the final launch date remains open by design.
+
+## Phase 4 lifecycle follow-up questions (2026-10-22)
+
+### 1. What does “fixed COD reservations expiring after 30 minutes and losing stock” mean?
+
+Before the fix, every stock reservation expired after 30 minutes, including cash-on-delivery orders. A COD order is created as `pending_payment` and is not paid until delivery, so the expiry cron released its stock and put it back for sale. If the same goods were sold to another customer, the admin could later fail to mark the COD order paid because there was no longer enough stock. That also blocked the invoice and delivery flow.
+
+Now a COD reservation is created without an `expiresAt`. The expiry query only selects reservations whose `expiresAt` is a real date in the past, so a COD hold stays active until the order is paid, cancelled, deleted, or manually released.
+
+Trade-off: an abandoned COD order keeps its stock reserved until an admin cancels it. That is intentional; it prevents overselling.
+
+### 2. What does “made stock reserve/release transactional” mean?
+
+Stock reservation and release now use MongoDB transactions.
+
+- **Reserve:** all product stock decrements and the `StockReservation` document are written in one transaction. If any item lacks stock or any write fails, the whole transaction aborts, so no stock is deducted without a reservation record.
+- **Release:** the reservation is claimed as `held → releasing`, every item is restocked, and the reservation is set to `released` in one transaction. If the process crashes, the transaction aborts and the reservation remains `held` for a later retry.
+- **Double-release protection:** the transactional claim prevents the expiry cron and an admin cancellation from restocking the same reservation twice.
+- Inventory audit rows are written only after the transaction commits.
+
+This requires MongoDB transactions, which means a replica set or MongoDB Atlas-style deployment.
+
+### 3. What is the webhook retry-recovery scenario?
+
+A payment gateway can capture money successfully, but the database step can fail because of a transient MongoDB error, a stock conflict, or another temporary failure. The webhook route returns HTTP 500 so the provider retries the same event.
+
+Previously, the second delivery found the existing `PaymentEvent` row and immediately returned HTTP 200, even when the first attempt had failed. The provider then stopped retrying, leaving a captured payment on an unpaid order.
+
+Now, when a duplicate event arrives:
+
+- if the existing event is `failed`, it is atomically reset to `received` and processed again;
+- if the existing event is `received` and older than five minutes, it is also treated as stale and retried;
+- if it is already `processed` or `ignored`, the duplicate is acknowledged without reprocessing.
+
+Fulfillment remains idempotent because an already-paid order returns `alreadyPaid`, invoices are unique, and stock reservations are committed once.
+
+This only helps when the provider actually retries. If it never retries, the failed event remains for investigation; there is no automatic replay job or admin replay button.
+
+### 4. What does “blocked in-transit cancellations and duplicate delivery/refund actions” mean?
+
+**In-transit cancellation:** if `order.shipment.status === 'in_transit'`, the server rejects cancellation and the admin UI hides the cancel action. The goods have already been handed to the carrier. Cancelling at that point would restock goods that are still moving and could still be delivered to the customer.
+
+**Duplicate delivery:** `deliverOrder` now returns “already delivered” when the order is already delivered. It also requires the order to be paid, not cancelled, and either a shipment tracking number or a pickup order. The review email is wrapped so an email failure cannot make a successfully saved delivery look like a failure.
+
+**Duplicate refunds:**
+
+- The same refund request is protected by a unique `(orderId, idempotencyKey)` index. A repeated request with the same key is rejected before a second gateway refund is attempted.
+- The UI disables the submit button while a refund is processing.
+- Remaining item quantities and `refundedAmount` are revalidated before writing.
+
+This is not a distributed lock for two completely different refund requests. Two different requests still rely on transaction revalidation, remaining quantities, and the gateway’s refund rules.
+
+### 5. What are “legacy carts”?
+
+Older carts persisted in the browser’s Zustand store may contain a product, size, and color but no `variantId`. After the per-variant migration, checkout initially rejected those lines because every product now has variants.
+
+Checkout now resolves the line safely:
+
+1. match the requested size/color to a real variant;
+2. otherwise use the default variant;
+3. otherwise use the first available variant.
+
+The resolved variant supplies the real price, stock, SKU, weight, and image, so a legacy cart cannot buy a variant at the product-level base price. An explicitly supplied but unknown `variantId` is still rejected.
+
+### 6. What did “fixed pickup delivery-date validation” mean?
+
+A pickup quote has `etaMaxDays = 0`. `calculateFutureDate(0)` returned the current time, while the order schema requires `expectedDeliveryDate` to be in the future. By the time validation ran a few milliseconds later, the value was already in the past, so pickup checkout failed.
+
+Order creation now clamps the delivery estimate to at least one day:
+
+`calculateFutureDate(Math.max(1, etaMaxDays))`
+
+The order therefore validates successfully. The checkout display can still show pickup as “ready today” because the quote itself has an ETA of zero; the stored expected-delivery snapshot is the next day. If desired, the pickup UI can separately display “ready today” while keeping that safe stored date.
+
+### 7. What was fixed in admin email verification?
+
+There were two independent bugs.
+
+- The admin edit form received `emailVerified` as a JSON string because `getUserById` serializes the MongoDB date. The form schema expected a `Date`, so submitting an edit for any verified user failed silently. The form now converts the value to `Date` or `null` before validation.
+- The server aggregation compared the submitted value to `true`. A real `Date` is never equal to `true`, so every admin edit cleared verification. The update now checks whether the submitted value is non-null: checked preserves the existing verification date or sets the current date; unchecked sets it to `null`.
+
+This prevents an admin edit from accidentally un-verifying a customer and blocking their checkout/account access.
+
+### 8. What refund references are required, and how are they validated?
+
+A manual refund reference is required when the refund is not performed automatically through Moyasar.
+
+Required cases:
+
+- Stripe refunds;
+- PayPal refunds;
+- COD refunds after cash was collected;
+- a second or later Moyasar refund after the first automatic refund has already been used;
+- cancellation of a paid order that must be refunded manually.
+
+The first automatic Moyasar refund does not require a manual reference because Moyasar returns its own refund identifier.
+
+Validation today:
+
+- **Returns/refunds:** the UI requires a non-empty reference when the refund is manual. The validator trims it and enforces a maximum of 200 characters. The server rejects an empty reference before recording the refund.
+- **Cancellations:** the UI requires a non-empty reference for paid manual-refund cases and limits input to 200 characters. The server requires a non-empty trimmed value before recording the cancellation refund.
+
+The reference is currently free-form. It is stored in `refundHistory.reference` and `OrderReturn.refundReference` for the audit trail. It is not verified against the payment gateway, because Stripe, PayPal, bank transfers, and cash payouts use different reference formats.
+
+Possible future hardening: enforce the 200-character maximum server-side for cancellation references too, and optionally validate provider-specific prefixes only when the provider API can confirm the reference.
 

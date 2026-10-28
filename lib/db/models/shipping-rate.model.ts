@@ -12,6 +12,7 @@ export interface IShippingRate extends Omit<Document, '_id'> {
   includedWeightKg: number
   extraPerKg: number
   weightRoundingKg: number
+  freeShippingEnabled: boolean
   freeShippingMinPrice: number
   codFee: number
   remoteSurcharge: number
@@ -38,6 +39,7 @@ const shippingRateSchema = new Schema<IShippingRate>(
     includedWeightKg: { type: Number, required: true, default: 1 },
     extraPerKg: { type: Number, required: true, default: 5 },
     weightRoundingKg: { type: Number, required: true, default: 1 },
+    freeShippingEnabled: { type: Boolean, required: true, default: true },
     freeShippingMinPrice: { type: Number, required: true, default: 200 },
     codFee: { type: Number, required: true, default: 10 },
     remoteSurcharge: { type: Number, required: true, default: 0 },
