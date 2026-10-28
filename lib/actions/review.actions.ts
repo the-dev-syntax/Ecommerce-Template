@@ -4,6 +4,7 @@ import mongoose from 'mongoose'
 import { auth } from '@/auth'
 import { connectToDatabase } from '../db'
 import Product from '../db/models/product.model'
+import Order from '../db/models/order.model'
 import Review, { IReview } from '../db/models/review.model'
 import { clampLimit, clampPage, formatError } from '../utils'
 import { ReviewInputSchema } from '../validator'
@@ -36,6 +37,16 @@ export async function createUpdateReview({
     })
 
     await connectToDatabase()
+
+    // Never trust the client's "verified purchase" flag: derive it from a paid
+    // order that contains this product.
+    const purchased = await Order.exists({
+      user: session.user.id,
+      isPaid: true,
+      'items.product': review.product,
+    })
+    review.isVerifiedPurchase = !!purchased
+
     const existReview = await Review.findOne({
       product: review.product,
       user: review.user,
@@ -45,6 +56,7 @@ export async function createUpdateReview({
       existReview.comment = review.comment
       existReview.rating = review.rating
       existReview.title = review.title
+      existReview.isVerifiedPurchase = review.isVerifiedPurchase
       await existReview.save()
       await updateProductReview(review.product)
       await revalidateAllLocales(path)

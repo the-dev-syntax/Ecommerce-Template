@@ -53,6 +53,8 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
     returnId?: string
     reference?: string
   }[]
+  // Server-computed idempotency key for order creation (see createOrderFromCart).
+  cartFingerprint?: string
 }
 
 export type OrderWithUser = Omit<IOrder, 'user'> & {
@@ -209,11 +211,18 @@ const orderSchema = new Schema<IOrder>(
       },
     ],
     createdAt: { type: Date, default: Date.now },
+    cartFingerprint: { type: String, index: true },
   },
   {
     timestamps: true,
   }
 )
+
+// Hot paths: customer order lists, admin dashboards and the idempotency lookup.
+orderSchema.index({ user: 1, createdAt: -1 })
+orderSchema.index({ createdAt: -1 })
+orderSchema.index({ user: 1, cartFingerprint: 1, status: 1, createdAt: -1 })
+
 // this is a mongoos method call by ==> import Order ==> Order.create(zod-Validated-Order-Obj)
 const Order =
   (models.Order as Model<IOrder>) || model<IOrder>('Order', orderSchema)

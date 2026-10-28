@@ -55,6 +55,16 @@ const shippingRateSchema = new Schema<IShippingRate>(
 )
 
 shippingRateSchema.index({ region: 1, city: 1, isActive: 1, priority: -1 })
+// Used by the duplicate-service pre-check in upsertShippingRate. Kept
+// non-unique so an existing database with duplicate rows can still start;
+// the action prevents new duplicates.
+shippingRateSchema.index({
+  country: 1,
+  region: 1,
+  city: 1,
+  carrier: 1,
+  serviceName: 1,
+})
 
 const ShippingRate =
   (models.ShippingRate as Model<IShippingRate>) ||

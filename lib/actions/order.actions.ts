@@ -1,5 +1,6 @@
 'use server'
 
+import crypto from 'crypto'
 import { Cart, IOrderList, OrderItem, ShippingAddress } from '@/types'
 import {
   calculateFutureDate,
@@ -31,6 +32,7 @@ import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
 import { cancelOrderById, processOrderReturn } from '../orders/refund-order'
 import {
+  extendStockReservation,
   releaseExpiredReservations,
   releaseStockReservation,
   reserveStockForOrder,
@@ -48,7 +50,7 @@ import {
   retrieveStripeIntent,
 } from '../payments/stripe'
 import { getShippingProvider } from '../shipping'
-import { getShippingRates } from '../shipping/rates'
+import { getShippingRates, hasActiveShippingRates } from '../shipping/rates'
 import { getLowStockCount } from './inventory.actions'
 
 
@@ -266,6 +268,18 @@ export const createOrderFromCart = async (
         pickupLocation,
       })
     : []
+
+  // If the store has configured shipping zones, an address outside every
+  // zone must be rejected instead of silently quoting the legacy global
+  // fallback (which also waived the COD fee).
+  if (
+    shippingAddress &&
+    shippingQuotes.length === 0 &&
+    (await hasActiveShippingRates())
+  ) {
+    throw new Error('Shipping is not available for this address')
+  }
+
   const deliveryOptions =
     shippingQuotes.length > 0
       ? shippingQuotes.map((quote) => ({
@@ -295,6 +309,15 @@ export const createOrderFromCart = async (
   const deliveryDate = deliveryOptions[deliveryDateIndex]
   if (!deliveryDate) throw new Error('Delivery date is not available')
   const selectedQuote = shippingQuotes[deliveryDateIndex]
+
+  if (
+    paymentMethod === 'Cash On Delivery' &&
+    selectedQuote?.codAvailable === false
+  ) {
+    throw new Error(
+      'Cash on delivery is not available for the selected shipping option'
+    )
+  }
 
   const shippingPrice = selectedQuote
     ? selectedQuote.shippingPrice
@@ -341,8 +364,39 @@ export const createOrderFromCart = async (
     ),
   })
 
+  // Idempotency: a double-submit or Back → "Place order" click with the same
+  // server-rebuilt cart and address returns the existing pending order instead
+  // of creating a second order and stock reservation.
+  const cartFingerprint = crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        user: userId,
+        items: order.items.map((item) => ({
+          product: item.product,
+          variantId: item.variantId ?? '',
+          quantity: item.quantity,
+        })),
+        shippingAddress: order.shippingAddress ?? null,
+        paymentMethod: order.paymentMethod,
+        shippingPrice: order.shippingPrice,
+        totalPrice: order.totalPrice,
+      })
+    )
+    .digest('hex')
+
+  const duplicate = await Order.findOne({
+    user: userId,
+    cartFingerprint,
+    status: 'pending_payment',
+    isCancelled: { $ne: true },
+    createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
+  }).sort({ createdAt: -1 })
+  if (duplicate) return duplicate
+
   const created = await Order.create({
     ...order,
+    cartFingerprint,
     status: 'pending_payment',
     statusHistory: [
       { status: 'pending_payment', at: new Date(), note: 'Order created' },
@@ -399,6 +453,9 @@ export async function createPayPalOrder(orderId: string) {
     if (!isPaymentProvider(order.paymentMethod, 'paypal'))
       throw new Error('Order is not payable by PayPal')
     if (order.totalPrice <= 0) throw new Error('Order total is invalid')
+
+    // Refresh the stock hold while the customer completes PayPal's redirect.
+    await extendStockReservation(order._id)
 
     const adapter = getPaymentAdapter('paypal')
     if (!adapter?.createOrder) throw new Error('PayPal adapter is unavailable')
@@ -716,6 +773,9 @@ export async function createStripePaymentIntent(orderId: string): Promise<{ clie
       return { error: 'Not payable via Stripe' }
     if (order.isCancelled) return { error: 'Order is cancelled' }
     if (order.totalPrice <= 0) return { error: 'Order total is invalid' }
+
+    // Refresh the stock hold while the customer completes 3-D Secure/redirect.
+    await extendStockReservation(order._id)
 
     const currency = (order.currency || 'USD').toLowerCase()
     let paymentIntent: Awaited<ReturnType<typeof retrieveStripeIntent>> | null =

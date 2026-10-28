@@ -19,6 +19,7 @@ export interface ShippingQuote {
   isPickup: boolean
   pickupLocation?: string
   codFee: number
+  codAvailable: boolean
   freeShippingEnabled: boolean
   freeShippingMinPrice: number
 }
@@ -151,6 +152,7 @@ export async function getShippingRates(input: {
       etaMaxDays: rate.etaMaxDays,
       isPickup: false,
       codFee: rate.codFee,
+      codAvailable: rate.codAvailable !== false,
       freeShippingEnabled,
       freeShippingMinPrice,
     }
@@ -169,10 +171,21 @@ export async function getShippingRates(input: {
       isPickup: true,
       pickupLocation: input.pickupLocation,
       codFee: 0,
+      codAvailable: true,
       freeShippingEnabled: false,
       freeShippingMinPrice: 0,
     })
   }
 
   return quotes
+}
+
+/**
+ * True when the store has at least one active shipping rule. Used to decide
+ * whether an address with no matching quote should be rejected (configured
+ * zones) or fall back to the legacy global delivery dates (no rules at all).
+ */
+export async function hasActiveShippingRates(): Promise<boolean> {
+  await connectToDatabase()
+  return !!(await ShippingRate.exists({ isActive: true }))
 }

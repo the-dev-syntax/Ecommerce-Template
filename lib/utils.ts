@@ -103,13 +103,29 @@ export const formatError = (error: any): string => {
     })
     return fieldErrors.join('. ')
   } else if (error.code === 11000) {
-    const duplicateField = Object.keys(error.keyValue)[0]
+    const duplicateField = Object.keys(error.keyValue ?? {})[0] ?? 'Value'
     return `${duplicateField} already exists`
   } else {
-    // return 'Something went wrong. please try again'
-    return typeof error.message === 'string'
-      ? error.message
-      : JSON.stringify(error.message)
+    // Never return raw driver/ORM/vendor text to the browser. Domain errors
+    // ("Not enough stock", "Shipping is not available…") are short and
+    // single-line, so keep those actionable; driver/vendor internals are
+    // logged and replaced with a generic message.
+    const message =
+      typeof error?.message === 'string' ? error.message.trim() : ''
+    const looksInternal =
+      !message ||
+      message.length > 180 ||
+      /[\r\n]/.test(message) ||
+      /(cast to objectid|mongodb|mongo server|mongoerror|e11000|duplicate key|econn|enotfound|socket hang up|stack trace|at\s+\S+\s+\(.*:\d+:\d+\))/i.test(
+        message
+      )
+
+    if (looksInternal) {
+      console.error('Unhandled action error:', error)
+      return 'Something went wrong. Please try again.'
+    }
+
+    return message
   }
 }
 // checkout cart utility fns:

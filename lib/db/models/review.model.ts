@@ -41,6 +41,10 @@ const reviewSchema = new Schema<IReview>(
   }
 )
 
+// Product pages load reviews by product; the upsert check also filters by user.
+reviewSchema.index({ product: 1, createdAt: -1 })
+reviewSchema.index({ product: 1, user: 1 })
+
 const Review =
   (models.Review as Model<IReview>) || model<IReview>('Review', reviewSchema)
 

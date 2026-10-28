@@ -20,12 +20,33 @@ export async function upsertShippingRate(input: IShippingRate & { _id?: string }
   try {
     requireAdmin(await auth())
     await connectToDatabase()
+
+    const parsed = input._id
+      ? ShippingRateUpdateSchema.parse(input)
+      : ShippingRateSchema.parse(input)
+
+    // Two identical service/area rows create duplicate checkout options and
+    // make the persisted delivery index ambiguous.
+    const duplicate = await ShippingRate.findOne({
+      ...(input._id ? { _id: { $ne: input._id } } : {}),
+      country: parsed.country,
+      region: parsed.region,
+      city: parsed.city,
+      carrier: parsed.carrier,
+      serviceName: parsed.serviceName,
+    }).collation({ locale: 'en', strength: 2 })
+    if (duplicate) {
+      return {
+        success: false,
+        message:
+          'A rate for this carrier, service and area already exists. Edit that rate instead.',
+      }
+    }
+
     if (input._id) {
-      const parsed = ShippingRateUpdateSchema.parse(input)
-      const { _id, ...values } = parsed
+      const { _id, ...values } = parsed as IShippingRateUpdate
       await ShippingRate.findByIdAndUpdate(_id, values)
     } else {
-      const parsed = ShippingRateSchema.parse(input)
       await ShippingRate.create(parsed)
     }
     await revalidateAllLocales('/admin/shipping')

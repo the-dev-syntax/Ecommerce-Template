@@ -5,11 +5,18 @@ import StockReservation, {
   type IStockReservationItem,
 } from '@/lib/db/models/stock-reservation.model'
 import Product from '@/lib/db/models/product.model'
+import Order from '@/lib/db/models/order.model'
 import { connectToDatabase } from '@/lib/db'
 import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
 import type { InventoryAdjustmentSource } from '@/lib/db/models/inventory-adjustment.model'
 
-export const RESERVATION_TTL_MS = 30 * 60 * 1000
+// Online payments may legitimately take a while (3-D Secure, bank redirects).
+// The reservation is refreshed when a payment intent/order is created, and the
+// cron releases whatever is still unpaid after this window.
+export const RESERVATION_TTL_MS = 60 * 60 * 1000
+// COD has no gateway deadline, but an abandoned COD order must not hold stock
+// forever. The cron releases it after three days unless it is paid/cancelled.
+export const COD_RESERVATION_TTL_MS = 72 * 60 * 60 * 1000
 
 function stockIncrement(item: IStockReservationItem, direction: 1 | -1) {
   return {
@@ -153,12 +160,12 @@ export async function reserveStockForOrder(order: {
             orderId: String(order._id),
             items,
             status: 'held',
-            // COD has no gateway deadline; the hold stays until the order is
-            // paid, cancelled, or an admin releases it.
-            expiresAt:
-              order.paymentMethod === 'Cash On Delivery'
-                ? undefined
-                : new Date(Date.now() + RESERVATION_TTL_MS),
+            expiresAt: new Date(
+              Date.now() +
+                (order.paymentMethod === 'Cash On Delivery'
+                  ? COD_RESERVATION_TTL_MS
+                  : RESERVATION_TTL_MS)
+            ),
           },
         ],
         { session }
@@ -188,6 +195,21 @@ export async function commitStockReservation(orderId: string) {
   await StockReservation.updateOne(
     { orderId: String(orderId), status: 'held' },
     { $set: { status: 'committed' } }
+  )
+}
+
+/**
+ * Keep an unpaid order's stock hold alive while the customer works through a
+ * gateway (intent creation / redirect). No-op for paid, committed or released
+ * reservations.
+ */
+export async function extendStockReservation(
+  orderId: string,
+  ttlMs = RESERVATION_TTL_MS
+) {
+  await StockReservation.updateOne(
+    { orderId: String(orderId), status: 'held' },
+    { $set: { expiresAt: new Date(Date.now() + ttlMs) } }
   )
 }
 
@@ -261,6 +283,7 @@ export async function releaseExpiredReservations() {
     const session = await mongoose.connection.startSession()
     let claimedReservation: IStockReservation | null = null
     let committed = false
+    let skippedPaid = false
 
     try {
       await session.withTransaction(async () => {
@@ -271,6 +294,21 @@ export async function releaseExpiredReservations() {
         )
         const claimed = claimedReservation
         if (!claimed) return
+
+        // A payment may have completed between the query above and this claim.
+        // Never restock a paid order: fulfillment owns the held stock. Keep the
+        // reservation committed instead, otherwise the stock would be
+        // decremented twice or restored while an order is paid.
+        const order = await Order.findById(claimed.orderId).session(session)
+        if (order?.isPaid) {
+          await StockReservation.updateOne(
+            { _id: claimed._id },
+            { $set: { status: 'committed' } },
+            { session }
+          )
+          skippedPaid = true
+          return
+        }
 
         for (const item of claimed.items) {
           await changeStock(item, 1, session)
@@ -298,6 +336,8 @@ export async function releaseExpiredReservations() {
         'Stock reservation expired'
       )
       releasedCount += 1
+    } else if (skippedPaid) {
+      console.info(`Skipped expiry for paid order ${candidate.orderId}`)
     }
   }
 

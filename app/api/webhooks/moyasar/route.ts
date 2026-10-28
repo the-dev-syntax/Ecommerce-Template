@@ -7,6 +7,7 @@ import Order from '@/lib/db/models/order.model'
 import { getMoyasarWebhookSecret } from '@/lib/env'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
+import { restockFullyRefundedOrder } from '@/lib/orders/refund-order'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
 import {
   attachPaymentEventOrder,
@@ -123,6 +124,11 @@ export async function POST(req: NextRequest) {
       for (let attempt = 0; attempt < 3; attempt++) {
         const previousRefunded = round2(current.refundedAmount ?? 0)
         if (refundedAmount <= previousRefunded) {
+          // A retry of a fully refunded event must still be able to finish a
+          // restock that failed on the first attempt.
+          if (refundedAmount >= round2(current.totalPrice) - 0.01) {
+            await restockFullyRefundedOrder(orderId)
+          }
           return respond('ignored', 'Refund already recorded')
         }
         if (refundedAmount > round2(current.totalPrice) + 0.01) {
@@ -181,6 +187,12 @@ export async function POST(req: NextRequest) {
         current = reloaded
         if (attempt === 2)
           throw new Error('Moyasar refund reconciliation contention')
+      }
+
+      // Dashboard refunds do not pass through the return/cancel pipelines;
+      // restock the un-restocked units of a full refund (idempotent).
+      if (refundedAmount >= round2(current.totalPrice) - 0.01) {
+        await restockFullyRefundedOrder(orderId)
       }
 
       try {

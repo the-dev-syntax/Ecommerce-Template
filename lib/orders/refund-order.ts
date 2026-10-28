@@ -611,6 +611,14 @@ export async function cancelOrderById(
               source: 'order_cancelled',
               orderId: String(fresh._id),
             })
+
+            // Track restocked units on the order as well, so a later
+            // dashboard refund cannot restock the same items again.
+            await Order.updateOne(
+              { _id: fresh._id, 'items.clientId': item.clientId },
+              { $set: { 'items.$.restockedQuantity': item.quantity } },
+              { session }
+            )
           }
         }
         const previouslyRefunded = fresh.refundedAmount ?? 0
@@ -761,5 +769,108 @@ export async function cancelOrderById(
     order: cancelledOrder ?? order,
     alreadyCancelled,
     refundedAmount,
+  }
+}
+
+/**
+ * Restock the units of a fully refunded order that have not been restocked
+ * yet. Dashboard refunds (e.g. a refund issued in the Moyasar dashboard)
+ * bypass the normal return/cancel pipelines, so without this the stock stays
+ * decremented forever. Idempotent per line via `items[].restockedQuantity`,
+ * which makes it safe to call on webhook retries and after a return.
+ */
+export async function restockFullyRefundedOrder(orderId: string) {
+  await connectToDatabase()
+  const session = await mongoose.connection.startSession()
+  const restockAudit: {
+    product: string
+    productName: string
+    variantId?: string
+    sku?: string
+    variantLabel?: string
+    previousStock: number
+    newStock: number
+    quantityChange: number
+    source: 'return_restocked'
+    orderId: string
+  }[] = []
+
+  try {
+    await session.withTransaction(async () => {
+      restockAudit.length = 0
+      const order = await Order.findById(orderId).session(session)
+      if (!order) return
+
+      for (const item of order.items) {
+        const alreadyRestocked = item.restockedQuantity ?? 0
+        const remaining = item.quantity - alreadyRestocked
+        if (remaining <= 0) continue
+
+        // Claim the line atomically so a concurrent webhook/return cannot
+        // restock the same units twice.
+        const claimed = await Order.findOneAndUpdate(
+          {
+            _id: order._id,
+            items: {
+              $elemMatch: {
+                clientId: item.clientId,
+                $or: [
+                  { restockedQuantity: { $exists: false } },
+                  { restockedQuantity: { $lt: item.quantity } },
+                ],
+              },
+            },
+          },
+          { $set: { 'items.$.restockedQuantity': item.quantity } },
+          { new: true, session }
+        )
+        if (!claimed) continue
+
+        const product = await Product.findOneAndUpdate(
+          item.variantId
+            ? { _id: item.product, 'variants.id': item.variantId }
+            : { _id: item.product },
+          {
+            $inc: {
+              countInStock: remaining,
+              numSales: -remaining,
+              ...(item.variantId
+                ? { 'variants.$.countInStock': remaining }
+                : {}),
+            },
+          },
+          { new: true, session }
+        )
+        if (!product) continue
+
+        const variant = item.variantId
+          ? product.variants?.find((entry) => entry.id === item.variantId)
+          : undefined
+        const newStock = variant ? variant.countInStock : product.countInStock
+        restockAudit.push({
+          product: String(product._id),
+          productName: product.name,
+          variantId: variant?.id,
+          sku: variant?.sku,
+          variantLabel: variant
+            ? [variant.size, variant.color].filter(Boolean).join(' / ')
+            : '',
+          previousStock: newStock - remaining,
+          newStock,
+          quantityChange: remaining,
+          source: 'return_restocked',
+          orderId,
+        })
+      }
+    })
+  } finally {
+    await session.endSession()
+  }
+
+  for (const entry of restockAudit) {
+    await recordInventoryAdjustment({
+      ...entry,
+      reason: 'Full refund restocked',
+    })
   }
 }
