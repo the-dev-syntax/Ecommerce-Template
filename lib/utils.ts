@@ -247,6 +247,20 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+/**
+ * Only allow same-origin relative paths as post-auth redirect targets.
+ * `redirect()` accepts absolute URLs, so an unchecked `callbackUrl` is an
+ * open redirect. Reject protocol-relative (`//evil.com`), absolute, and
+ * backslash-tricks (`/\evil.com`) values.
+ */
+export function safeCallbackUrl(callbackUrl?: string | null): string {
+  if (!callbackUrl) return '/'
+  if (!callbackUrl.startsWith('/')) return '/'
+  if (callbackUrl.startsWith('//')) return '/'
+  if (callbackUrl.includes('\\')) return '/'
+  return callbackUrl
+}
+
 export function generateVerificationToken() {
   const token = crypto.randomBytes(32).toString('hex') // raw token to email
   const hashedToken = crypto.createHash('sha256').update(token).digest('hex') // store in DB
@@ -276,7 +290,9 @@ export async function generateOtp(): Promise<OtpResult> {
     let attempts = 0;
     
     do {
-      digit = Math.floor(Math.random() * 10).toString();
+      // crypto.randomInt is a CSPRNG; Math.random is predictable and must not
+      // be used for a credential that unlocks checkout/account access.
+      digit = crypto.randomInt(0, 10).toString();
       attempts++;
     } while (
       (isSequential(digit, previousDigit) || isRepeated(digit, previousDigit)) &&

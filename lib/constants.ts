@@ -28,6 +28,9 @@ export const PRICE_RANGES = [
 
 export const EMAIL_EXPIRATION_TIME = 3 * 60 * 1000;
 export const PASSWORD_RESET_EXPIRATION_TIME = 30 * 60 * 1000;
+// Per-account OTP protection (independent of the IP-based limiter).
+export const MAX_OTP_ATTEMPTS = 5;
+export const OTP_LOCKOUT_TIME = 15 * 60 * 1000;
 
 export const MAX_BROWSING_HISTORY = 50;
 export const DATE_RANGE_KEY = 'admin-overview-date-range'

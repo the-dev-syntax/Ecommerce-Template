@@ -767,5 +767,8 @@ export const SettingInputSchemaNoDefaults = z.object({
 })
 
 export const UserEmailSchema = z.object({
-  email: Email
+  email: Email,
+  // Re-authentication for a sensitive account change. Without this, anyone
+  // holding a stolen session could move the account to their own mailbox.
+  currentPassword: z.string().min(1, 'Current password is required'),
 })

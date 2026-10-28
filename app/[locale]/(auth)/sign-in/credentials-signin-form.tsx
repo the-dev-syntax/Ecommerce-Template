@@ -22,6 +22,7 @@ import { UserSignInSchema } from '@/lib/validator'
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import useSettingStore from '@/hooks/use-setting-store'
 import { useTranslations } from 'next-intl'
+import { safeCallbackUrl } from '@/lib/utils'
 import { Suspense } from 'react'
 
 const signInDefaultValues =
@@ -51,7 +52,7 @@ function VerificationMessage( {isVerified} : {isVerified: boolean} ) {
 
 export default function CredentialsSignInForm() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
   const isVerified = searchParams.get('verified') === 'true';
 
 

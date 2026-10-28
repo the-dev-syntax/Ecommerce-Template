@@ -125,18 +125,41 @@ const ipTokenAttemptLimit = new Ratelimit({
 
 // ua = user-agent (browser id) as a fallback when IP is not found.
 async function getIP() {
-  const h = await headers();
+  const h = await headers()
 
-  const ip =
-    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    h.get('x-real-ip');
+  // Only trust a header that the deployment's edge/proxy sets (or
+  // overwrites). The left-most X-Forwarded-For entry is client-controlled:
+  // anyone can prepend an arbitrary address there, which defeats every
+  // limiter in this file. Set TRUSTED_IP_HEADER when the deployment uses a
+  // proxy/header this code does not know about (e.g. cf-connecting-ip).
+  const configuredHeader = process.env.TRUSTED_IP_HEADER?.trim().toLowerCase()
+  const candidates = [
+    configuredHeader,
+    'x-vercel-forwarded-for',
+    'x-real-ip',
+    'cf-connecting-ip',
+  ].filter(Boolean) as string[]
 
-  if (!ip) {
-    const ua = h.get('user-agent') ?? 'unknown';
-    return `fallback:${ua}`;
+  for (const headerName of candidates) {
+    const value = h.get(headerName)
+    if (!value) continue
+    const first = value.split(',')[0]?.trim()
+    if (first) return first
   }
 
-  return ip;
+  const forwardedFor = h.get('x-forwarded-for')
+  if (forwardedFor) {
+    // The right-most value is the one added by the nearest proxy; without an
+    // explicit TRUSTED_IP_HEADER this is the safest available fallback.
+    const parts = forwardedFor
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length) return parts[parts.length - 1]
+  }
+
+  const ua = h.get('user-agent') ?? 'unknown'
+  return `fallback:${ua}`
 }
 
 export async function checkAndSetEmailRateLimit(email: string) {

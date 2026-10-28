@@ -9,6 +9,7 @@ const HASHED_PASSWORDS = {
   admin: '$2b$12$hNtUKLP1CFK8BLqe1YlHvOONaaV/piBnwNjvOqLhpO9YSnqkQ3FlC', // totalena#1And4 the.dev-jane-arrow
   user1: '$2a$12$K5.qJL7YNu9RG5r3nEL5UOoD9qZB1qYpNNtVYr5xVJH0.q8R3OdKa', // 12345678
   user: '$2a$12$wQfPEw.AkCNV9J5vS.4XRONc8qZqD.TqFJH8UxNYvKqXjL8.Nq.3W', // 123456
+  jack: '$2b$12$f4m84swOoNyGy2UJdLLW3.qm.DhLZOENr0upics2ARyDRistwQiGy', // totalena#1And4
 }
 
 const users: IUserInput[] = [
@@ -55,7 +56,7 @@ const users: IUserInput[] = [
     name: 'Jack',
     email: 'jack@example.com',
 
-    password: `totalena#1And4`,
+    password: HASHED_PASSWORDS.jack,
 
     role: 'user',
     address: {

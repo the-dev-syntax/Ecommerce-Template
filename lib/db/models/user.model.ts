@@ -13,6 +13,13 @@ export interface IUser extends Omit<Document, '_id'>, IUserInput {
   passwordResetExpires?: Date;
   passwordChangedAt?: Date;
   tokenVersion?: number;
+  // Pending email change: the account email stays untouched until the OTP
+  // sent to the new address is verified.
+  pendingEmail?: string | null;
+  pendingEmailToken?: string | null;
+  pendingEmailExpires?: Date | null;
+  failedOtpAttempts?: number;
+  otpLockedUntil?: Date | null;
 }
 
 // 2. Interface for statics
@@ -29,6 +36,11 @@ const UserSchema = new Schema<IUser, IUserModel>({
   emailVerified: { type: Date, default: null },
   verificationToken: { type: String, select: false },
   verificationTokenExpires: { type: Date, select: false },
+  pendingEmail: { type: String, default: null, select: false },
+  pendingEmailToken: { type: String, select: false },
+  pendingEmailExpires: { type: Date, select: false },
+  failedOtpAttempts: { type: Number, default: 0 },
+  otpLockedUntil: { type: Date, default: null },
   passwordResetToken: { type: String, select: false },
   passwordResetExpires: { type: Date, select: false },
   passwordChangedAt: { type: Date },
@@ -41,6 +53,16 @@ const UserSchema = new Schema<IUser, IUserModel>({
     },
   ],
 }, { timestamps: true });
+
+// Hash on every save path. Flows that already hash (registerUser,
+// resetPassword) pass a value with a bcrypt prefix, so they are skipped and
+// never double-hashed.
+UserSchema.pre('save', async function () {
+  if (!this.isModified('password')) return
+  if (typeof this.password !== 'string') return
+  if (/^\$2[aby]\$/.test(this.password)) return
+  this.password = await bcrypt.hash(this.password, 12)
+});
 
 // 4. Static method implementation
 UserSchema.statics.authenticate = async function (

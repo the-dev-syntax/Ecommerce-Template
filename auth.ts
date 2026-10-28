@@ -7,6 +7,7 @@ import { clientPromise } from './lib/db/client'  // Cached MongoClient promise f
 import User from './lib/db/models/user.model' 
 // import bcrypt from 'bcryptjs'
 import Google from 'next-auth/providers/google'
+import { isValidObjectId } from 'mongoose'
 import { UserSignInSchema } from './lib/validator'
 import { UserRole } from './types'
 import { limitSignInAttempts } from './lib/rate-limit'
@@ -37,7 +38,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     Google({
-      allowDangerousEmailAccountLinking: true,
+      // Do NOT auto-link a Google identity onto an existing same-email
+      // account. With this enabled, an attacker who registers a victim's
+      // email first (before it is verified) can take over the account when
+      // the real owner later clicks "Continue with Google".
+      allowDangerousEmailAccountLinking: false,
     }),
     CredentialsProvider({
       // id: "domain-login",
@@ -107,12 +112,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       try {
         await connectToDatabase()
-        const freshUser = await User.findById(userId)
+        // The MongoDB adapter and the Mongoose model share the same `users`
+        // collection, so an ObjectId is normally sufficient. Fall back to the
+        // token email for legacy/OAuth ids that are not ObjectIds, and pin
+        // `sub` to the Mongoose id so order/user actions can use it.
+        const userQuery = isValidObjectId(userId)
+          ? User.findById(userId)
+          : User.findOne({ email: token.email ?? '' })
+        const freshUser = await userQuery
           .select('name email role emailVerified passwordChangedAt tokenVersion')
           .lean()
 
         // The account was deleted: returning null clears the session cookie.
         if (!freshUser) return null
+
+        token.sub = String(freshUser._id)
 
         // Bump-on-write session revocation. A role change, password change or
         // reset increments tokenVersion, so every existing token for that

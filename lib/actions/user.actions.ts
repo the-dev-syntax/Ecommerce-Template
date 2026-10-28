@@ -12,7 +12,7 @@ import { sendPasswordResetEmail, sendVerificationEmail } from '@/emails'
 import { incrementIPEmailTokenAttempt, resetIPAttempt, checkAndSetEmailRateLimit, limitAuthActionsByIP, limitPasswordResetRequests, limitPasswordResetConfirm } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { revalidateAllLocales } from '../utils-serverOnly'
-import { EMAIL_EXPIRATION_TIME, PASSWORD_RESET_EXPIRATION_TIME } from '../constants'
+import { EMAIL_EXPIRATION_TIME, MAX_OTP_ATTEMPTS, OTP_LOCKOUT_TIME, PASSWORD_RESET_EXPIRATION_TIME } from '../constants'
 // import { getToken } from 'next-auth/jwt';
 
 
@@ -65,9 +65,43 @@ export async function registerUser(userSignUp: IUserSignUp) {
       .collation({ locale: 'en', strength: 2 })
 
     if (existingUser) {
-      return { success: false, message: 'Email is already in use' }
-
+      // Enumeration-safe: always report success. If the address belongs to an
+      // unverified account, re-send the code to its owner (the caller cannot
+      // tell whether the account exists). Verified accounts get no email.
+      if (!existingUser.emailVerified) {
+        try {
+          await checkAndSetEmailRateLimit(normalizedEmail)
+          const { otp, hashedOtp } = await generateOtp()
+          await User.updateOne(
+            { _id: existingUser._id },
+            {
+              $set: {
+                verificationToken: hashedOtp,
+                verificationTokenExpires: new Date(
+                  Date.now() + EMAIL_EXPIRATION_TIME
+                ),
+              },
+            }
+          )
+          await sendVerificationEmail({
+            name: existingUser.name,
+            email: normalizedEmail,
+            token: otp,
+            update: false,
+          })
+        } catch (error) {
+          // Never turn a mail/limiter failure into an account-existence oracle.
+          console.error('Unable to resend verification email', error)
+        }
+      }
+      return {
+        success: true,
+        message: 'If this email can be used, a verification code has been sent.',
+      }
     }
+
+    // Check the per-email limiter BEFORE creating the account and sending mail.
+    await checkAndSetEmailRateLimit(normalizedEmail)
 
     const { otp, hashedOtp } = await generateOtp()
 
@@ -76,18 +110,16 @@ export async function registerUser(userSignUp: IUserSignUp) {
       password: await bcrypt.hash(user.password, 12),
       emailVerified: null,
       verificationToken: hashedOtp,
-      verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME, 
+      verificationTokenExpires: new Date(Date.now() + EMAIL_EXPIRATION_TIME),
     })
 
     const verificationProps: VerificationPropsType = {
       name: createdUser.name,
       email: normalizedEmail,
       token: otp,
-      update: false,     
+      update: false,
     }
     await sendVerificationEmail(verificationProps)
-
-    await checkAndSetEmailRateLimit(normalizedEmail);   
 
     return { success: true, message: 'User created successfully' }
   } catch (error) {
@@ -512,7 +544,7 @@ export async function updateUserEmail(values: IUserEmail) {
   if (!validatedFields.success) {
     return { success: false, message: 'Invalid data provided.' }
   }
-  const { email } = validatedFields.data
+  const { email, currentPassword } = validatedFields.data
 
   const normalizedEmail = normalizeEmail(email)
 
@@ -522,35 +554,61 @@ export async function updateUserEmail(values: IUserEmail) {
     
     await connectToDatabase()
 
-    // Check if the new email is already in use by another user
-    const existingUser = await User.findOne({ email: normalizedEmail })
-      .collation({ locale: 'en', strength: 2 })
-    if (existingUser && existingUser._id.toString() !== userId) {
-      return { success: false, message: 'This email is already in use' };
-    }
-
-    const currentUser = await User.findById(userId).select('email').lean()
+    const currentUser = await User.findById(userId)
+      .select('name email +password')
+      .lean()
     if (!currentUser) throw new Error('User not found')  
 
-    if (currentUser.email === normalizedEmail ) {
+    if (normalizeEmail(currentUser.email) === normalizedEmail) {
       return { success: false, message: 'New email is the same as current email' };
     }
 
+    // A stolen session must not be able to move the account to another
+    // mailbox: require the current password before starting the change.
+    if (!currentUser.password) {
+      return {
+        success: false,
+        message:
+          'This account does not use a password. Please contact support to change its email.',
+      }
+    }
+    const passwordMatches = await bcrypt.compare(
+      currentPassword,
+      currentUser.password
+    )
+    if (!passwordMatches) {
+      return { success: false, message: 'Current password is incorrect' }
+    }
+
+    // Do not reveal whether the address is taken, and never email an address
+    // controlled by someone else.
+    const existingUser = await User.findOne({ email: normalizedEmail })
+      .collation({ locale: 'en', strength: 2 })
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return {
+        success: true,
+        message: 'If this email can be used, a verification code has been sent.',
+      };
+    }
+
+    await checkAndSetEmailRateLimit(normalizedEmail)
+
     const { token, hashedToken } = generateVerificationToken()
 
-    await User.findOneAndUpdate(
+    // Keep the current email active until the new address proves ownership.
+    await User.updateOne(
       { _id: userId },
-      { $set: { 
-              email : normalizedEmail,
-              emailVerified: null, 
-              verificationToken: hashedToken,
-              verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME, 
-            } }, // The update operation
-      { new: true } // Return the updated document
+      {
+        $set: {
+          pendingEmail: normalizedEmail,
+          pendingEmailToken: hashedToken,
+          pendingEmailExpires: new Date(Date.now() + EMAIL_EXPIRATION_TIME),
+        },
+      }
     )
 
     const verificationProps = {
-      name: currentUser.name,
+      name: currentUser.name || 'User',
       email: normalizedEmail,
       token,
       update: true
@@ -558,15 +616,13 @@ export async function updateUserEmail(values: IUserEmail) {
 
     await sendVerificationEmail(verificationProps)
 
-    await checkAndSetEmailRateLimit(normalizedEmail);
-   
-     await revalidateAllLocales('/');
- 
+    await revalidateAllLocales('/');
 
     return {
       success: true,
-      message: 'Your email has been updated successfully. Please check your inbox to verify the new address',
-      data: { email },
+      message:
+        'Check your new inbox to verify the address before it becomes active',
+      data: { email: normalizedEmail },
     }
 
   } catch (error) {
@@ -587,9 +643,10 @@ export async function verifyEmailOtp(otp: string) {
     if (!session) {
       throw new Error('User is not authenticated')
     }
-   
-    if (session.user.emailVerified) {    
-      return { success: false, message: 'Email is already verified' }      
+
+    const userId = session.user.id
+    if (!userId) {
+      return { success: false, message: 'Authentication required' }
     }
   
 if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
@@ -605,35 +662,144 @@ if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
 
     await connectToDatabase();
 
-    const user = await User.findOneAndUpdate(
-      {
-        _id: session.user.id,
-        verificationToken: hashedOtp,
-        verificationTokenExpires: { $gt: Date.now() },
-      },
-      {       
-        $set: {
-          emailVerified: new Date(),
-          verificationToken: null,
-          verificationTokenExpires: null,
-        },
-      },
-      { new: true } // Return the updated document
-    );
+    const user = await User.findById(userId)
+      .select(
+        'email emailVerified failedOtpAttempts otpLockedUntil' +
+          ' +pendingEmail +pendingEmailToken +pendingEmailExpires' +
+          ' +verificationToken +verificationTokenExpires'
+      )
+      .lean();
 
-   if (!user) {
-      return { success: false, message: 'Token is invalid or has expired' };
+    if (!user) {
+      return { success: false, message: 'User not found' };
     }
-    
- 
-    await revalidateAllLocales('/');    
-    await revalidateAllLocales('/account');
-    await revalidateAllLocales('/checkout');
-    await revalidateAllLocales('/Admin');
 
-    await resetIPAttempt();
+    // Verified accounts with no pending email change have nothing to do.
+    if (user.emailVerified && !user.pendingEmail) {
+      return { success: false, message: 'Email is already verified' };
+    }
 
-    return { success: true, message: 'Email verified successfully! You can now log in' };
+    // Per-account lockout: the IP limiter alone can be bypassed with rotating
+    // addresses, so count failures against the account as well.
+    if (
+      user.otpLockedUntil &&
+      new Date(user.otpLockedUntil).getTime() > Date.now()
+    ) {
+      return {
+        success: false,
+        message: 'Too many invalid attempts. Please try again later.',
+      };
+    }
+
+    const now = Date.now();
+    const pendingEmail = user.pendingEmail;
+    const pendingEmailValid =
+      !!pendingEmail &&
+      user.pendingEmailToken === hashedOtp &&
+      !!user.pendingEmailExpires &&
+      new Date(user.pendingEmailExpires).getTime() > now;
+    const verificationValid =
+      user.verificationToken === hashedOtp &&
+      !!user.verificationTokenExpires &&
+      new Date(user.verificationTokenExpires).getTime() > now;
+
+    const recordFailedAttempt = async () => {
+      const updated = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { failedOtpAttempts: 1 } },
+        { new: true, projection: { failedOtpAttempts: 1 } }
+      ).lean();
+      if ((updated?.failedOtpAttempts ?? 0) >= MAX_OTP_ATTEMPTS) {
+        await User.updateOne(
+          { _id: userId },
+          {
+            $set: {
+              otpLockedUntil: new Date(Date.now() + OTP_LOCKOUT_TIME),
+              failedOtpAttempts: 0,
+            },
+          }
+        );
+      }
+    };
+
+    if (pendingEmailValid && pendingEmail) {
+      // Swap the address only after the token matches (single use). Until this
+      // point the old email stays active and the account is not locked out.
+      const swapped = await User.findOneAndUpdate(
+        {
+          _id: userId,
+          pendingEmailToken: hashedOtp,
+          pendingEmailExpires: { $gt: new Date() },
+        },
+        {
+          $set: {
+            email: pendingEmail,
+            emailVerified: new Date(),
+            failedOtpAttempts: 0,
+          },
+          $unset: {
+            pendingEmail: 1,
+            pendingEmailToken: 1,
+            pendingEmailExpires: 1,
+            verificationToken: 1,
+            verificationTokenExpires: 1,
+            otpLockedUntil: 1,
+          },
+        },
+        { new: true }
+      );
+
+      if (!swapped) {
+        await recordFailedAttempt();
+        return { success: false, message: 'Token is invalid or has expired' };
+      }
+
+      await revalidateAllLocales('/');
+      await revalidateAllLocales('/account');
+      await revalidateAllLocales('/checkout');
+      await resetIPAttempt();
+
+      return {
+        success: true,
+        message: 'Email updated and verified successfully!',
+      };
+    }
+
+    if (verificationValid) {
+      const verified = await User.findOneAndUpdate(
+        {
+          _id: userId,
+          verificationToken: hashedOtp,
+          verificationTokenExpires: { $gt: new Date() },
+        },
+        {
+          $set: { emailVerified: new Date(), failedOtpAttempts: 0 },
+          $unset: {
+            verificationToken: 1,
+            verificationTokenExpires: 1,
+            otpLockedUntil: 1,
+          },
+        },
+        { new: true }
+      );
+
+      if (!verified) {
+        await recordFailedAttempt();
+        return { success: false, message: 'Token is invalid or has expired' };
+      }
+
+      await revalidateAllLocales('/');
+      await revalidateAllLocales('/account');
+      await revalidateAllLocales('/checkout');
+      await revalidateAllLocales('/Admin');
+
+      await resetIPAttempt();
+
+      return { success: true, message: 'Email verified successfully! You can now log in' };
+    }
+
+    await recordFailedAttempt();
+    return { success: false, message: 'Token is invalid or has expired' };
   } catch (error) {
     return { success: false, message: formatError(error) };
   }
@@ -647,8 +813,8 @@ export async function sendVerifyEmailAgain() {
     throw new Error('User is not authenticated')
   }
 
-  const { id: userId, email: userEmail, name: userName } = session.user;
-  if (!userId || !userEmail) {
+  const { id: userId, name: userName } = session.user;
+  if (!userId) {
     return { success: false, message:'User Data is Missing' };
   } 
 
@@ -656,41 +822,72 @@ export async function sendVerifyEmailAgain() {
     // 1. FIRST DEFENSE: Stop bots/spam by IP (No DB connection yet)
     await limitAuthActionsByIP();
     
-    const { otp, hashedOtp } = await generateOtp()
     await connectToDatabase()
     
-    const DBUser = await User.findById(userId).select('emailVerified').lean()
-    if (DBUser?.emailVerified) {     
-      revalidateAllLocales('/');
-      return { success: false, message: 'Email is already verified' }
-    }
-    // (find, update, return)
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      {     
-        verificationToken: hashedOtp,
-        verificationTokenExpires: Date.now() + EMAIL_EXPIRATION_TIME,
-      },
-      { new: true } 
-    );
-
-    if (!updatedUser) {
+    const DBUser = await User.findById(userId)
+      .select(
+        'name email emailVerified +pendingEmail +pendingEmailToken +pendingEmailExpires'
+      )
+      .lean()
+    if (!DBUser) {
       return { success: false, message: 'User not found' };
     }
-    const verificationProps: VerificationPropsType = {
-      name: userName || 'User',
-      email: userEmail, 
-      token: otp,
-      update : true,
+
+    const pendingEmail = DBUser.pendingEmail
+
+    // Enumeration-neutral: verified accounts have nothing to resend.
+    if (!pendingEmail && DBUser.emailVerified) {
+      return {
+        success: true,
+        message: 'If your email needs verification, a new code has been sent.',
+      }
     }
 
-    await sendVerificationEmail(verificationProps)
+    const targetEmail = pendingEmail || DBUser.email
+    if (!targetEmail) {
+      return { success: false, message: 'User Data is Missing' };
+    }
 
-    await checkAndSetEmailRateLimit(userEmail);  
+    // Check the per-email limiter BEFORE sending.
+    await checkAndSetEmailRateLimit(targetEmail)
+
+    const { otp, hashedOtp } = await generateOtp()
+
+    if (pendingEmail) {
+      await User.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            pendingEmailToken: hashedOtp,
+            pendingEmailExpires: new Date(Date.now() + EMAIL_EXPIRATION_TIME),
+          },
+        }
+      )
+    } else {
+      await User.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            verificationToken: hashedOtp,
+            verificationTokenExpires: new Date(Date.now() + EMAIL_EXPIRATION_TIME),
+          },
+        }
+      )
+    }
+
+    await sendVerificationEmail({
+      name: DBUser.name || userName || 'User',
+      email: targetEmail,
+      token: otp,
+      update: !!pendingEmail,
+    })
 
     await revalidateAllLocales('/');
   
-    return { success: true, message: 'Verification email sent successfully - Please check your inbox' };
+    return {
+      success: true,
+      message: 'If your email needs verification, a new code has been sent.',
+    };
 
   } catch (error) {
     return { success: false, message: formatError(error) };

@@ -168,7 +168,7 @@ export default function SignUpForm() {
           <Separator className='mb-4' />
           <div className='text-sm'>
             {tForm('Already have an account')}?{' '}
-            <Link className='link' href={`/sign-in?callbackUrl=${callbackUrl}`}>
+            <Link className='link' href={`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
               {tForm('Sign In')}
             </Link>
           </div>

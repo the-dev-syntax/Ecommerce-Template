@@ -18,6 +18,21 @@ loadEnvConfig(cwd())
 
 const main = async () => {
   try {
+    // Destructive: this wipes settings, web pages, users, products, reviews
+    // and orders. Refuse to run in production/Vercel unless the operator
+    // explicitly confirms with --force (or SEED_ALLOW_DESTRUCTIVE=true).
+    const destructiveConfirmed =
+      process.argv.includes('--force') ||
+      process.env.SEED_ALLOW_DESTRUCTIVE === 'true'
+    const looksLikeProduction =
+      process.env.NODE_ENV === 'production' || !!process.env.VERCEL
+    if (looksLikeProduction && !destructiveConfirmed) {
+      console.error(
+        'Refusing to seed: this script deletes all data. Re-run with --force (or SEED_ALLOW_DESTRUCTIVE=true) only if you are certain.'
+      )
+      process.exit(1)
+    }
+
     // console.log("Seeding DB:", process.env.MONGODB_URI);
     const { products , users , reviews, webPages, settings } = data
 

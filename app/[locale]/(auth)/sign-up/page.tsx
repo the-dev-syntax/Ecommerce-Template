@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import SignUpForm from './signup-form'
 import { getTranslations } from 'next-intl/server'
+import { safeCallbackUrl } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Sign Up',
@@ -15,11 +16,12 @@ export default async function SignUpPage(props: { searchParams: Promise<{ callba
 
   const t = await getTranslations()
 
-  const { callbackUrl } = searchParams
+  const { callbackUrl: rawCallbackUrl } = searchParams
+  const callbackUrl = safeCallbackUrl(rawCallbackUrl)
 
   const session = await auth()
   if (session) {
-    return redirect(callbackUrl || '/')
+    return redirect(callbackUrl)
   }
 
   return (

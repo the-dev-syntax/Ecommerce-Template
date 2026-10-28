@@ -10,6 +10,7 @@ import CredentialsSignInForm from './credentials-signin-form'
 import { Button } from '@/components/ui/button'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { GoogleSignInForm } from './google-signin-form'
+import { safeCallbackUrl } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Sign In',
@@ -19,7 +20,8 @@ export default async function SignIn(props: { searchParams: Promise<{ callbackUr
   
   const searchParams = await props.searchParams
 
-  const { callbackUrl = '/' } = searchParams
+  const { callbackUrl: rawCallbackUrl = '/' } = searchParams
+  const callbackUrl = safeCallbackUrl(rawCallbackUrl)
 
   const session = await auth()
   // if session true , the user is already logged in , just redirect to wherever came from (callbackUrl).

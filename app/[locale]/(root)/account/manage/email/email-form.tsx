@@ -27,13 +27,14 @@ export const EmailForm = () => {
   const tForm = useTranslations()
   const tProduct = useTranslations()
   const router = useRouter()
-  const { data: session, update } = useSession()
+  const { data: session } = useSession()
   const { toast } = useToast()
   
   const form = useForm<IUserEmail>({
     resolver: zodResolver(UserEmailSchema),
     defaultValues: {
       email: session?.user?.email ?? '',
+      currentPassword: '',
     },
   })
 
@@ -53,21 +54,14 @@ export const EmailForm = () => {
       })
     }
 
-    const { data, message } = res
-    // Update the session in the client to reflect the change immediately
-        const newSession = {
-      ...session,
-      user: {
-        ...session?.user,
-        email: data?.email,
-      },
-    }
-    await update(newSession)
-        toast({
+    const { message } = res
+    toast({
       description: message,
     })
-    
-    router.push('/account/manage')
+
+    // The email only changes after the OTP sent to the new address is
+    // verified, so send the user to the verification screen.
+    router.push('/verify-email')
   }
 
   return (
@@ -87,6 +81,26 @@ export const EmailForm = () => {
                   <Input
                     type='email'
                     placeholder={tForm('Email')}
+                    {...field}
+                    className='input-field'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='currentPassword'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='font-bold'>
+                  {tForm('Current Password')}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type='password'
+                    placeholder={tForm('Current Password')}
                     {...field}
                     className='input-field'
                   />
