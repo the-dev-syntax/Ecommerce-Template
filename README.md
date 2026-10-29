@@ -2,6 +2,10 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P2-D — MC1-bugs: single site-URL source (2026-10-28)
+
+- Added `getSiteUrl()` in `lib/env.ts` and used it in `app/sitemap.ts`, `app/robots.ts` and the locale layout's `metadataBase`. It accepts `NEXT_PUBLIC_SITE_URL`, the legacy `NEXT_PUBLIC_SERVER_URL`/`SITE_URL` names, Vercel's production URL, then the store setting, and strips trailing slashes. `.env.example` documents the precedence. Why: the sitemap read `NEXT_PUBLIC_SITE_URL` while robots read `NEXT_PUBLIC_SERVER_URL`, so a deployment could advertise the real domain in one file and `localhost` in the other; the layout had a third, slightly different fallback chain. Added `tests/site-url.test.ts`.
+
 ## P2-C — MC1-bugs: address book, public API hardening, currency and public limits (2026-10-28)
 
 - **Saved address book (29):** `User.addresses[]` stores entries with opaque server-generated ids, validated by `UserAddressSchema`. `lib/actions/address.actions.ts` lists/saves/deletes/sets-default (max 10, exactly one default, deleting the default promotes another), and `/account/addresses` provides the editor. Checkout pre-fills the default address and offers a saved-address selector. Why: the account hub linked to a page that did not exist, and every checkout re-typed the address.

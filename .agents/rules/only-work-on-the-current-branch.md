@@ -8,4 +8,4 @@ trigger: always_on
 - NEVER push changes to the `main` branch.
 - All commits and pushes must be made to the current feature branch only.
 - always specify and mention which file and line in the file the suggested code change should be applied to.
-
+- NEVER READ any .env files

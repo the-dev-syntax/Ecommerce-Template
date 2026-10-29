@@ -84,3 +84,34 @@ export function getMoyasarPublishableKey(): string {
     ''
   )
 }
+
+/**
+ * Canonical public origin used by metadata, the sitemap and robots.
+ *
+ * A single resolver prevents one file from emitting the real domain while
+ * another falls back to localhost. `NEXT_PUBLIC_SITE_URL` wins; the legacy
+ * `NEXT_PUBLIC_SERVER_URL` / `SITE_URL` names and Vercel's production URL are
+ * accepted so existing deployments keep working.
+ */
+export function getSiteUrl(fallback?: string): string {
+  const explicit =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    process.env.SITE_URL
+
+  const vercel =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL
+
+  const raw =
+    explicit ||
+    fallback ||
+    (vercel ? `https://${vercel}` : 'http://localhost:3000')
+
+  if (process.env.NODE_ENV === 'production' && raw.includes('localhost')) {
+    console.warn(
+      'getSiteUrl: no public site URL is configured; metadata, sitemap and robots will point at localhost.'
+    )
+  }
+
+  return raw.replace(/\/+$/, '')
+}

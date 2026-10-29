@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { i18n } from '@/i18n-config' 
 import { getAllProductsForSitemap } from '@/lib/actions/product.actions';
 import { getAllWebPagesForSitemap } from '@/lib/actions/web-page.actions';
+import { getSiteUrl } from '@/lib/env';
 
 
 
@@ -9,7 +10,7 @@ import { getAllWebPagesForSitemap } from '@/lib/actions/web-page.actions';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const locales = i18n.locales.map((locale) => locale.code);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const siteUrl = getSiteUrl()
 
   const products = await getAllProductsForSitemap()
 

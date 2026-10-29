@@ -11,6 +11,7 @@ import { cookies } from 'next/headers'
 import { Metadata } from 'next/types'
 import CookieConsentBanner from '@/components/shared/cookie-consent-banner'
 import { fontStack, hexForeground, hexToHsl } from '@/lib/colors'
+import { getSiteUrl } from '@/lib/env'
 
 // Force dynamic rendering - required because layout uses database calls and cookies
 export const dynamic = 'force-dynamic'
@@ -52,7 +53,7 @@ export async function generateMetadata(props: {
     },
     description: seoDescription,
     // metadataBase: new URL(url),
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || url ||'http://localhost:3000'),
+    metadataBase: new URL(getSiteUrl(url)),
     icons: { icon },
     robots: {
       index: true,

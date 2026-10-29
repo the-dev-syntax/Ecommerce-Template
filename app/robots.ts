@@ -1,8 +1,9 @@
 import type { MetadataRoute } from 'next'
 import { i18n } from '@/i18n-config'
+import { getSiteUrl } from '@/lib/env'
 
 export default function robots(): MetadataRoute.Robots {
-    const siteUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+    const siteUrl = getSiteUrl()
     const locales = i18n.locales.map((locale) => locale.code);
     const disallowedPaths = [
         '/auth',
