@@ -32,6 +32,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import CheckoutFooter from './checkout-footer'
 import { ShippingAddress } from '@/types'
+import type { UserAddress } from '@/types'
 import useIsMounted from '@/hooks/use-is-mounted'
 import useCartStore from '@/hooks/use-cart-store'
 import ProductPrice from '@/components/shared/product/product-price'
@@ -66,7 +67,26 @@ const shippingAddressDefaultValues =
       postalCode: '',
       country: '',
     }
-const CheckoutForm = () => {
+
+function toShippingAddress(address: UserAddress): ShippingAddress {
+  return {
+    fullName: address.fullName,
+    street: address.street,
+    city: address.city,
+    province: address.province,
+    postalCode: address.postalCode,
+    country: address.country,
+    district: address.district,
+    nationalAddress: address.nationalAddress,
+    phone: address.phone,
+  }
+}
+
+const CheckoutForm = ({
+  savedAddresses = [],
+}: {
+  savedAddresses?: UserAddress[]
+}) => {
   const router = useRouter()
   const t = useTranslations()
 
@@ -165,7 +185,11 @@ const CheckoutForm = () => {
 
   const shippingAddressForm = useForm<ShippingAddress>({
     resolver: zodResolver(ShippingAddressSchema),
-    defaultValues: shippingAddress || shippingAddressDefaultValues,
+    defaultValues:
+      shippingAddress ||
+      savedAddresses.find((address) => address.isDefault) ||
+      savedAddresses[0] ||
+      shippingAddressDefaultValues,
   })
 
   const [isAddressSaving, setIsAddressSaving] = useState(false)
@@ -460,6 +484,35 @@ const CheckoutForm = () => {
                   <span className='w-8'>1 </span>
                   <span>{t('Enter shipping address')}</span>
                 </div>
+                {savedAddresses.length > 0 && (
+                  <div className='md:ml-8 mb-2'>
+                    <Select
+                      value=''
+                      onValueChange={(id) => {
+                        const address = savedAddresses.find(
+                          (candidate) => candidate.id === id
+                        )
+                        if (address)
+                          shippingAddressForm.reset(toShippingAddress(address))
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('Use a saved address')} />
+                      </SelectTrigger>
+                      <SelectContent position='popper'>
+                        {savedAddresses.map((address) => (
+                          <SelectItem
+                            key={address.id}
+                            value={address.id ?? ''}
+                          >
+                            {address.fullName} — {address.street},{' '}
+                            {address.city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <Form {...shippingAddressForm}>
                   <form
                     method='post'

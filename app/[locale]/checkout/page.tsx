@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { localizedPath } from '@/lib/utils'
+import { getUserAddresses } from '@/lib/actions/address.actions'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,8 @@ export default async function CheckoutPage() {
       )
     )
   }
-  return <CheckoutForm />
+  const savedAddresses = await getUserAddresses()
+  return <CheckoutForm savedAddresses={savedAddresses} />
 }
 /*
 

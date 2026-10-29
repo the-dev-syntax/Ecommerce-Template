@@ -2,6 +2,41 @@ import ShippingRate from '@/lib/db/models/shipping-rate.model'
 import { connectToDatabase } from '@/lib/db'
 import { round2 } from '@/lib/utils'
 
+// Active rates change rarely (admin edits) but are read on every cart pricing
+// call. A 60-second in-process cache removes that query from the hot path;
+// admin writes clear it immediately on the instance that served the write.
+const RATES_CACHE_TTL_MS = 60_000
+
+async function loadActiveShippingRates() {
+  await connectToDatabase()
+  return ShippingRate.find({ isActive: true })
+    .sort({ priority: -1, baseRate: 1, serviceName: 1 })
+    .lean()
+}
+
+type ActiveShippingRate = Awaited<
+  ReturnType<typeof loadActiveShippingRates>
+>[number]
+
+const globalForShippingRates = global as unknown as {
+  activeShippingRates?: { at: number; rates: ActiveShippingRate[] }
+}
+
+async function getActiveShippingRates(): Promise<ActiveShippingRate[]> {
+  const cached = globalForShippingRates.activeShippingRates
+  if (cached && Date.now() - cached.at < RATES_CACHE_TTL_MS)
+    return cached.rates
+
+  const rates = await loadActiveShippingRates()
+  globalForShippingRates.activeShippingRates = { at: Date.now(), rates }
+  return rates
+}
+
+/** Drop the cached rate list after an admin create/update/delete. */
+export function clearShippingRatesCache() {
+  globalForShippingRates.activeShippingRates = undefined
+}
+
 export interface ShippingItem {
   quantity: number
   weight?: number
@@ -93,10 +128,7 @@ export async function getShippingRates(input: {
   freeShippingMinPrice?: number
   pickupLocation?: string
 }): Promise<ShippingQuote[]> {
-  await connectToDatabase()
-  const rates = await ShippingRate.find({ isActive: true })
-    .sort({ priority: -1, baseRate: 1, serviceName: 1 })
-    .lean()
+  const rates = await getActiveShippingRates()
 
   const matched = rates
     .filter(
@@ -186,6 +218,5 @@ export async function getShippingRates(input: {
  * zones) or fall back to the legacy global delivery dates (no rules at all).
  */
 export async function hasActiveShippingRates(): Promise<boolean> {
-  await connectToDatabase()
-  return !!(await ShippingRate.exists({ isActive: true }))
+  return (await getActiveShippingRates()).length > 0
 }

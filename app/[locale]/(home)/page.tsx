@@ -59,7 +59,7 @@ export default async function Page() {
       items: categories.map((category) => ({
         name: category,
         image: `/images/${slugify(category)}.jpg`,
-        href: `/search?category=${category}`,
+        href: `/search?category=${encodeURIComponent(category)}`,
       })),
     },
     {
@@ -75,7 +75,7 @@ export default async function Page() {
       items: bestSellers,
       link: {
         text: t('View All'),
-        href: '/search?tag=new-arrival',
+        href: '/search?tag=best-seller',
       },
     },
     {
@@ -83,7 +83,7 @@ export default async function Page() {
       items: featureds,
       link: {
         text: t('Shop Now'),
-        href: '/search?tag=new-arrival',
+        href: '/search?tag=featured',
       },
     },
   ]

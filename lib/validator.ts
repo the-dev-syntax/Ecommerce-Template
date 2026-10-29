@@ -180,6 +180,13 @@ export const ShippingAddressSchema = z.object({
     .max(100, 'Country is too long'),
 })
 
+// Saved-address book entry. `id` is assigned by the server; `isDefault`
+// marks the address pre-selected at checkout.
+export const UserAddressSchema = ShippingAddressSchema.extend({
+  id: z.string().max(100).optional(),
+  isDefault: z.boolean().optional(),
+})
+
 // place order page
 export const OrderInputSchema = z.object({
   user: MongoId,

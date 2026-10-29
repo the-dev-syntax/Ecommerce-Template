@@ -52,6 +52,7 @@ import {
 import { getShippingProvider } from '../shipping'
 import { getShippingRates, hasActiveShippingRates } from '../shipping/rates'
 import { getLowStockCount } from './inventory.actions'
+import { limitCartPricingByIP } from '../rate-limit'
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -889,6 +890,7 @@ export const calcDeliveryDateAndPrice = async ({
   // order (createOrder/createOrderFromCart) still requires authentication.
   // Prices, stock and product details always come from the database.
   // An empty cart is valid while the customer is removing items.
+  await limitCartPricingByIP()
   const items =
     clientItems.length === 0 ? [] : await buildOrderItems(clientItems)
   const parsedShippingAddress = shippingAddress

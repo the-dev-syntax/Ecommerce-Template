@@ -26,6 +26,39 @@ export async function limitAuthActionsByIP() {
   }
 }
 
+// Public, unauthenticated actions that still touch the database. These are
+// deliberately generous: they only need to stop scripted abuse, not normal
+// cart interaction.
+const cartPricingIpLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, '1 m'),
+  prefix: 'v1:ratelimit:cart-pricing',
+})
+
+/** Limit cart repricing triggered from the client store. */
+export async function limitCartPricingByIP() {
+  const ip = await getIP()
+  const { success } = await cartPricingIpLimit.limit(ip)
+
+  if (!success)
+    throw new Error('Too many cart updates. Please wait a moment.')
+}
+
+const currencyIpLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '1 m'),
+  prefix: 'v1:ratelimit:currency',
+})
+
+/** Limit currency-switch writes (one cookie write per change). */
+export async function limitCurrencyChangesByIP() {
+  const ip = await getIP()
+  const { success } = await currencyIpLimit.limit(ip)
+
+  if (!success)
+    throw new Error('Too many currency changes. Please wait a moment.')
+}
+
 // Credential sign-in limiters: slow down brute force and credential stuffing.
 // Per-IP catches distributed email guessing; per-email catches many IPs
 // targeting one account. Successful sign-ins count too, so keep the windows

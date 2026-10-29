@@ -2,6 +2,20 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P2-C — MC1-bugs: address book, public API hardening, currency and public limits (2026-10-28)
+
+- **Saved address book (29):** `User.addresses[]` stores entries with opaque server-generated ids, validated by `UserAddressSchema`. `lib/actions/address.actions.ts` lists/saves/deletes/sets-default (max 10, exactly one default, deleting the default promotes another), and `/account/addresses` provides the editor. Checkout pre-fills the default address and offers a saved-address selector. Why: the account hub linked to a page that did not exist, and every checkout re-typed the address.
+
+- **Browsing-history API (30):** ids are validated as 24-hex and capped at 50, categories at 20 entries / 100 chars; the endpoint honours `features.browsingHistory`, and returns only card fields (no SKUs or tax metadata). The client builds its query with `URLSearchParams` and renders only after mount. Why: raw comma splitting produced CastError 500s, an unbounded `$in`, full product documents on a public endpoint, and broken queries for values containing `,`, `&`, `%` or spaces; the persisted-store render also caused hydration mismatches.
+
+- **Currency (31):** `SettingsInitializer` applies the SSR-provided setting in an isomorphic layout effect (before paint), so server-rendered prices switch to the cookie currency without a visible flash. The footer currency switcher now persists through `setCurrencyOnServer`, like the header. Why: the store was hydrated in `useEffect` after paint (flash) and footer changes only lived in memory (lost on reload).
+
+- **Home banners (32):** Best Sellers and Featured links now use their real tags (`best-seller`, `featured`), and category links are `encodeURIComponent`-encoded on the home page and in the header sidebar. Why: both banners opened New Arrivals, and `&`/spaces in category names corrupted the query.
+
+- **Public limits and caches (33):** per-IP buckets for `calcDeliveryDateAndPrice` (60/min) and `setCurrencyOnServer` (10/min); 60-second in-process caches for active shipping rates (cleared on admin create/update/delete) and for product categories/tags (cleared on product writes). 
+
+- `getAllProducts` caps text to 100 chars, validates rating to 0–5 and price to `min-max` pairs. Why: every cart mutation re-queried products and shipping rates, popular public actions had no limiter, and search accepted unbounded strings and NaN/negative values. Per the agreed scope, `getAllProducts` is capped/cached rather than IP-limited so crawlers are not throttled.
+
 ## P2-B — MC1-bugs: middleware, checkout reliability and gallery fallback (2026-10-28)
 
 - Middleware now parses the locale as an exact first segment (`splitLocaleFromPathname` in `lib/locale-path.ts`) instead of `pathname.startsWith('/fr')`, which also matched `/friends-page` and `/archives`. Protected routes are an explicit list (`/account`, `/admin`, `/checkout`, `/invoice`); any other non-public path is passed to the intl middleware so unknown URLs render a 404 instead of redirecting guests to sign-in. Added locale-parsing tests to `tests/routing-sort.test.ts`.

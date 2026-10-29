@@ -13,6 +13,7 @@ import { Link, usePathname, useRouter } from '@/i18n/routing'
 import { useSearchParams } from 'next/navigation'
 import { i18n } from '@/i18n-config'
 import { useTheme } from 'next-themes'
+import { setCurrencyOnServer } from '@/lib/actions/setting.actions'
 
 export default function Footer() {
   const router = useRouter()
@@ -117,7 +118,10 @@ export default function Footer() {
               </Select>
               <Select
                 value={currency}
-                onValueChange={(value) => {
+                onValueChange={async (value) => {
+                  // Persist the choice like the header switcher does, otherwise
+                  // it only lives in the in-memory store and resets on reload.
+                  await setCurrencyOnServer(value)
                   setCurrency(value)
                   window.scrollTo(0, 0)
                 }}

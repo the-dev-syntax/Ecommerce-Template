@@ -8,6 +8,7 @@ import { ShippingRateSchema, ShippingRateUpdateSchema } from '@/lib/validator'
 import type { IShippingRate, IShippingRateUpdate } from '@/types'
 import { formatError } from '@/lib/utils'
 import { revalidateAllLocales } from '@/lib/utils-serverOnly'
+import { clearShippingRatesCache } from '@/lib/shipping/rates'
 
 export async function getShippingRatesAdmin() {
   requireAdmin(await auth())
@@ -49,6 +50,7 @@ export async function upsertShippingRate(input: IShippingRate & { _id?: string }
     } else {
       await ShippingRate.create(parsed)
     }
+    clearShippingRatesCache()
     await revalidateAllLocales('/admin/shipping')
     await revalidateAllLocales('/checkout')
     return { success: true, message: 'Shipping rate saved' }
@@ -62,6 +64,7 @@ export async function deleteShippingRate(id: string) {
     requireAdmin(await auth())
     await connectToDatabase()
     await ShippingRate.findByIdAndDelete(id)
+    clearShippingRatesCache()
     await revalidateAllLocales('/admin/shipping')
     await revalidateAllLocales('/checkout')
     return { success: true, message: 'Shipping rate deleted' }

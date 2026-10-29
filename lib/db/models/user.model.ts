@@ -1,6 +1,7 @@
 import { Schema, Model, model, models } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { IUserInput } from '@/types'; 
+import type { UserAddress } from '@/types';
 import { AuthenticatedUser } from '@/types/next-auth';
 
 
@@ -20,6 +21,7 @@ export interface IUser extends Omit<Document, '_id'>, IUserInput {
   pendingEmailExpires?: Date | null;
   failedOtpAttempts?: number;
   otpLockedUntil?: Date | null;
+  addresses?: UserAddress[];
 }
 
 // 2. Interface for statics
@@ -50,6 +52,24 @@ const UserSchema = new Schema<IUser, IUserModel>({
       product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
       category: { type: String, required: true },
       viewedAt: { type: Date, default: Date.now },
+    },
+  ],
+  // Saved address book. `id` is a server-generated opaque id so the client can
+  // address an entry without exposing Mongo subdocument ids.
+  addresses: [
+    {
+      _id: false,
+      id: { type: String, required: true },
+      fullName: { type: String, required: true },
+      street: { type: String, required: true },
+      city: { type: String, required: true },
+      province: { type: String, required: true },
+      postalCode: { type: String, required: true },
+      country: { type: String, required: true },
+      district: { type: String, default: '' },
+      nationalAddress: { type: String, default: '' },
+      phone: { type: String, required: true },
+      isDefault: { type: Boolean, default: false },
     },
   ],
 }, { timestamps: true });

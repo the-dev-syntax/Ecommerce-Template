@@ -1,5 +1,6 @@
 'use client'
 import useBrowsingHistory from '@/hooks/use-browsing-history'
+import useIsMounted from '@/hooks/use-is-mounted'
 import { useEffect, useState } from 'react'
 import ProductSlider from './product/product-slider'
 import { Separator } from '../ui/separator'
@@ -16,7 +17,11 @@ export default function BrowsingHistoryList({
 }) {
   const { products } = useBrowsingHistory()
   const { setting: { features } } = useSettingStore()
+  const isMounted = useIsMounted()
   const t = useTranslations()
+  // The history lives in localStorage, so anything derived from it must wait
+  // for the client render to avoid a hydration mismatch.
+  if (!isMounted) return null
   if (!features.browsingHistory) return null
   return (
     products.length !== 0 && (
@@ -56,10 +61,23 @@ function ProductList({
   useEffect(() => {
     const fetchProducts = async () => {
     try {
+        // URLSearchParams keeps commas, ampersands and spaces inside values
+        // from breaking the query (the old string concatenation did).
+        const query = new URLSearchParams({ type, excludeId })
+        if (products.length > 0) {
+          query.set(
+            'categories',
+            Array.from(
+              new Set(products.map((product) => product.category).filter(Boolean))
+            ).join(',')
+          )
+          query.set(
+            'ids',
+            products.map((product) => product.id).join(',')
+          )
+        }
         const res = await fetch(
-          `/api/products/browsing-history?type=${type}&excludeId=${excludeId}&categories=${products
-            .map((product) => product.category)
-            .join(',')}&ids=${products.map((product) => product.id).join(',')}`
+          `/api/products/browsing-history?${query.toString()}`
         )
         if (!res.ok) {
             throw new Error('Failed to fetch browsing history')

@@ -14,11 +14,32 @@ import { auth } from '@/auth'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'  
 
+// Categories/tags are read on every header/search render but only change when
+// an admin edits a product. Cache them briefly per server instance.
+const FACET_CACHE_TTL_MS = 60_000
+
+type FacetCacheEntry<T> = { at: number; value: T }
+
+const globalForProductFacets = global as unknown as {
+  categories?: FacetCacheEntry<string[]>
+  tags?: FacetCacheEntry<string[]>
+}
+
+function clearProductFacetCache() {
+  globalForProductFacets.categories = undefined
+  globalForProductFacets.tags = undefined
+}
+
 
 //* GET ALL CATEGORIES
 export async function getAllCategories() {
+  const cached = globalForProductFacets.categories
+  if (cached && Date.now() - cached.at < FACET_CACHE_TTL_MS)
+    return cached.value
+
   await connectToDatabase()
   const categories = await Product.find({ isPublished: true }).distinct('category')
+  globalForProductFacets.categories = { at: Date.now(), value: categories }
   return categories
 }
 
@@ -138,41 +159,70 @@ export async function getAllProducts({
 
   await connectToDatabase()
 
+  // Cap every public input: this action is reachable from the unauthenticated
+  // search page, so unbounded strings and NaN numbers must not reach Mongo.
+  const MAX_TEXT_LENGTH = 100
+
+  const queryText =
+    typeof query === 'string' ? query.trim().slice(0, MAX_TEXT_LENGTH) : ''
+  const categoryValue =
+    typeof category === 'string'
+      ? category.trim().slice(0, MAX_TEXT_LENGTH)
+      : ''
+  const tagValue =
+    typeof tag === 'string' ? tag.trim().slice(0, MAX_TEXT_LENGTH) : ''
+
+  const ratingValue = Number(rating)
+  const ratingIsValid =
+    typeof rating === 'string' &&
+    rating !== 'all' &&
+    Number.isFinite(ratingValue) &&
+    ratingValue >= 0 &&
+    ratingValue <= 5
+
+  const priceMatch =
+    typeof price === 'string'
+      ? price.match(/^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/)
+      : null
+  const priceMin = priceMatch ? Number(priceMatch[1]) : NaN
+  const priceMax = priceMatch ? Number(priceMatch[2]) : NaN
+  const priceIsValid =
+    priceMatch !== null &&
+    Number.isFinite(priceMin) &&
+    Number.isFinite(priceMax) &&
+    priceMin <= priceMax
+
   const queryFilter =
-    query && query !== 'all' // all is the default value given.
+    queryText && queryText !== 'all' // all is the default value given.
       ? {
           name: {
-            $regex: escapeRegExp(query),
+            $regex: escapeRegExp(queryText),
             $options: 'i',
           },
         }
       : {}
 
+  const categoryFilter =
+    categoryValue && categoryValue !== 'all' ? { category: categoryValue } : {}
 
-  const categoryFilter = category && category !== 'all' ? { category } : {}
+  const tagFilter = tagValue && tagValue !== 'all' ? { tags: tagValue } : {}
 
-  const tagFilter = tag && tag !== 'all' ? { tags: tag } : {}
+  const ratingFilter = ratingIsValid
+    ? {
+        avgRating: {
+          $gte: ratingValue,
+        },
+      }
+    : {}
 
-  const ratingFilter =
-    rating && rating !== 'all'
-      ? {
-          avgRating: {
-            $gte: Number(rating),
-          },
-        }
-      : {}
-
-  // 10-50 = more than index0 , less than index1 , the check fields give for its values:   
-  // value: '21-50'==> split the string into array then access it and covert it to number.
-  const priceFilter =
-    price && price !== 'all'
-      ? {
-          price: {
-            $gte: Number(price.split('-')[0]),
-            $lte: Number(price.split('-')[1]),
-          },
-        }
-      : {}
+  const priceFilter = priceIsValid
+    ? {
+        price: {
+          $gte: priceMin,
+          $lte: priceMax,
+        },
+      }
+    : {}
 
   const order: Record<string, 1 | -1> =
     PRODUCT_SORT_QUERY[sort ?? ''] ??
@@ -214,6 +264,10 @@ export async function getAllProducts({
 
 // GET ALL TAGS
 export async function getAllTags() {
+  const cached = globalForProductFacets.tags
+  if (cached && Date.now() - cached.at < FACET_CACHE_TTL_MS)
+    return cached.value
+
   await connectToDatabase()
   const tags = await Product.aggregate([
     { $unwind: '$tags' },
@@ -221,16 +275,18 @@ export async function getAllTags() {
     { $project: { _id: 0, uniqueTags: 1 } },
   ])
   
-  return (
-    (tags[0]?.uniqueTags
+  const value =
+    ((tags[0]?.uniqueTags
       .sort((a: string, b: string) => a.localeCompare(b))
       .map((x: string) =>
         x
           .split('-')
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ')
-      ) as string[]) || []
-  )
+      ) as string[]) || [])
+
+  globalForProductFacets.tags = { at: Date.now(), value }
+  return value
 }
 
 
@@ -264,6 +320,7 @@ export async function deleteProduct(id: string) {
     if (!res) throw new Error('Product not found')
       //success ==> refresh the page
   
+    clearProductFacetCache()
     await revalidateAllLocales(`/admin/products`)
 
     return {
@@ -352,6 +409,7 @@ export async function createProduct(data: IProductInput) {
     const product = ProductInputSchema.parse(data)
     await Product.create(normalizeProductVariants(product))
  
+    clearProductFacetCache()
     await revalidateAllLocales(`/admin/products`)
 
     return {
@@ -529,6 +587,7 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
       })
     }
 
+    clearProductFacetCache()
     await revalidateAllLocales(`/admin/products`)
     await revalidateAllLocales(`/admin/inventory`)
 

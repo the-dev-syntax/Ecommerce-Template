@@ -8,6 +8,7 @@ import { cookies } from 'next/headers'
 import { auth } from '@/auth'
 import { withSettingDefaults } from '../settings-defaults'
 import { SettingInputSchema } from '../validator'
+import { limitCurrencyChangesByIP } from '../rate-limit'
 
 const SETTINGS_CACHE_TTL_MS = 30_000
 const globalForSettings = global as unknown as {
@@ -97,6 +98,7 @@ export const updateSetting = async (newSetting: ISettingInput) => {
 export const setCurrencyOnServer = async (newCurrency: string) => {
   'use server'
 
+  await limitCurrencyChangesByIP()
   const setting = await getSetting()
   const isAvailable = setting.availableCurrencies.some(
     (currency) => currency.code === newCurrency

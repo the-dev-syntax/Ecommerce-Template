@@ -7,6 +7,7 @@ import {
   OrderReturnSelectionSchema,
   ProductInputSchema,
   ShippingAddressSchema,
+  UserAddressSchema,
   UserInputSchema,
   UserSignInSchema,
   UserSignUpSchema,
@@ -90,6 +91,7 @@ export type IOrderReturnInput = z.infer<typeof OrderReturnInputSchema>
 export type IOrderReturnSelection = z.infer<typeof OrderReturnSelectionSchema>
 export type Cart = z.infer<typeof CartSchema>
 export type ShippingAddress = z.infer<typeof ShippingAddressSchema>
+export type UserAddress = z.infer<typeof UserAddressSchema>
 
 export type {
   RefundReason,
