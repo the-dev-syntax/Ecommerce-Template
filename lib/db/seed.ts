@@ -166,6 +166,38 @@ const main = async () => {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toSeedOrderItem(product: any, quantity: number) {
+  const variant =
+    product.variants?.find((candidate: { isDefault?: boolean }) => candidate.isDefault) ??
+    product.variants?.[0]
+
+  return {
+    clientId: generateId(),
+    product: product._id,
+    name: product.name,
+    slug: product.slug,
+    quantity,
+    image: variant?.image || product.images?.[0] || '',
+    category: product.category,
+    price: variant?.price ?? product.price,
+    countInStock: variant?.countInStock ?? product.countInStock,
+    size: variant?.size || undefined,
+    color: variant?.color || undefined,
+    variantId: variant?.id,
+    sku: variant?.sku,
+    variantLabel: variant
+      ? [variant.size, variant.color].filter(Boolean).join(' / ')
+      : undefined,
+    weight: variant?.weight || product.weight || 0,
+    taxCategory: product.taxCategory ?? 'S',
+    exemptionReasonCode: product.exemptionReasonCode ?? '',
+    returnPolicy: product.returnPolicy ?? 'return_and_refund',
+    refundedQuantity: 0,
+    restockedQuantity: 0,
+  }
+}
+
 const generateOrder = async (
   i: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,60 +224,72 @@ const generateOrder = async (
 
   if (!product1 || !product2 || !product3) throw new Error('Product not found')
 
+  const user = data.users[i % users.length]
   const items = [
-    {
-      clientId: generateId(),
-      product: product1._id,
-      name: product1.name,
-      slug: product1.slug,
-      quantity: 1,
-      image: product1.images[0],
-      category: product1.category,
-      price: product1.price,
-      countInStock: product1.countInStock,
-    },
-    {
-      clientId: generateId(),
-      product: product2._id,
-      name: product2.name,
-      slug: product2.slug,
-      quantity: 2,
-      image: product2.images[0],
-      category: product1.category,
-      price: product2.price,
-      countInStock: product1.countInStock,
-    },
-    {
-      clientId: generateId(),
-      product: product3._id,
-      name: product3.name,
-      slug: product3.slug,
-      quantity: 3,
-      image: product3.images[0],
-      category: product1.category,
-      price: product3.price,
-      countInStock: product1.countInStock,
-    },
+    toSeedOrderItem(product1, 1),
+    toSeedOrderItem(product2, 2),
+    toSeedOrderItem(product3, 3),
   ]
+  const priced = calcDeliveryDateAndPriceForSeed({
+    items,
+    shippingAddress: user.address,
+    deliveryDateIndex: i % 2,
+  })
+  const codFee = user.paymentMethod === 'Cash On Delivery' ? 10 : 0
+  const totalPrice = round2(priced.totalPrice + codFee)
+  const createdAt = calculatePastDate(i + 2)
+  const paidAt = calculatePastDate(i + 1)
+  const deliveredAt = calculatePastDate(i)
+  const deliveryOption =
+    priced.availableDeliveryDates[priced.deliveryDateIndex]
 
   const order = {
     user: users[i % users.length],
-    shippingAddress: data.users[i % users.length].address,
-    paymentMethod: data.users[i % users.length].paymentMethod,
+    shippingAddress: user.address,
+    paymentMethod: user.paymentMethod,
     currency: data.settings[0].defaultCurrency,
+    items: priced.items,
+    itemsPrice: priced.itemsPrice,
+    shippingPrice: priced.shippingPrice,
+    taxPrice: priced.taxPrice,
+    totalPrice,
+    taxInclusive: priced.taxInclusive,
+    taxRate: priced.taxRate,
+    codFee,
+    shippingRateId: `seed-rate-${priced.deliveryDateIndex}`,
+    shippingZone: user.address.city,
+    shippingCarrier: 'Manual',
+    shippingService: deliveryOption?.name,
+    shippingEtaMin: deliveryOption?.daysToDeliver,
+    shippingEtaMax: deliveryOption?.daysToDeliver,
     isPaid: true,
     isDelivered: true,
-    paidAt: calculatePastDate(i),
-    deliveredAt: calculatePastDate(i),
-    createdAt: calculatePastDate(i),
+    paidAt,
+    deliveredAt,
+    createdAt,
     expectedDeliveryDate: calculateFutureDate(i % 2),
-    ...calcDeliveryDateAndPriceForSeed({
-      items: items,
-      shippingAddress: data.users[i % users.length].address,
-      deliveryDateIndex: i % 2,
-    }),
+    paymentResult: {
+      id: `seed-payment-${i}`,
+      status: 'COMPLETED',
+      email_address: user.email,
+      pricePaid: totalPrice.toFixed(2),
+    },
+    status: 'delivered',
+    statusHistory: [
+      { status: 'pending_payment', at: createdAt, note: 'Order created' },
+      { status: 'paid', at: paidAt, note: `Paid via ${user.paymentMethod}` },
+      { status: 'delivered', at: deliveredAt, note: 'Order delivered' },
+    ],
+    shipment: {
+      provider: 'Manual',
+      trackingNumber: `EV-SEED-${100000 + i}`,
+      trackingUrl: '',
+      shippedAt: paidAt,
+      deliveredAt,
+      status: 'delivered',
+    },
   }
-  return order
+  return order as IOrderInput
 }
 
 export const calcDeliveryDateAndPriceForSeed = ({

@@ -23,7 +23,9 @@ export function normalizeProductVariants(
       countInStock: Math.max(0, Math.floor(variant.countInStock)),
       image: variant.image || product.images?.[index] || product.images?.[0] || '',
       barcode: variant.barcode ?? '',
-      weight: variant.weight ?? 0,
+      // Fall back to the product-level weight so a legacy product without
+      // variant weights still pays the correct per-kg shipping surcharge.
+      weight: variant.weight ?? product.weight ?? 0,
       isDefault: variant.isDefault,
     })
   )
@@ -39,7 +41,7 @@ export function normalizeProductVariants(
       countInStock: Math.max(0, Math.floor(product.countInStock)),
       image: product.images?.[0] ?? '',
       barcode: '',
-      weight: 0,
+      weight: product.weight ?? 0,
       isDefault: true,
     })
   }

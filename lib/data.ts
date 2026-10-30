@@ -1,6 +1,71 @@
-import { Data, IProductInput, IUserInput, IWebPageInput, ISettingInput } from '@/types'
+import {
+  Data,
+  IProductInput,
+  IUserInput,
+  IWebPageInput,
+  ISettingInput,
+  ShippingAddress,
+} from '@/types'
 import { slugify } from './utils'
 import { i18n } from '@/i18n-config'
+
+// The development seed uses the same shape as registration plus the fields
+// added later: phone verification and the saved-address book. Keeping a local
+// type avoids widening UserInputSchema (which validates untrusted forms).
+type SeedUser = Omit<IUserInput, 'address'> & {
+  address: ShippingAddress
+  phone: string
+  phoneVerified: boolean
+  phoneVerifiedAt: Date
+  verifiedPhones: { phone: string; verifiedAt: Date }[]
+  addresses: (ShippingAddress & { id: string; isDefault: boolean })[]
+}
+
+const SEED_VERIFIED_AT = new Date('2025-01-01T00:00:00.000Z')
+
+// Realistic Saudi delivery locations for the development accounts.
+const saudiLocations = [
+  {
+    street: 'King Fahd Road, Al Olaya',
+    city: 'Riyadh',
+    province: 'Riyadh',
+    postalCode: '12211',
+    district: 'Al Olaya',
+    nationalAddress: 'RFKB4744',
+  },
+  {
+    street: 'Prince Sultan Road, Al Zahra',
+    city: 'Jeddah',
+    province: 'Makkah',
+    postalCode: '23425',
+    district: 'Al Zahra',
+    nationalAddress: 'JEDD2233',
+  },
+  {
+    street: 'King Saud Road, Al Faisaliyah',
+    city: 'Dammam',
+    province: 'Eastern Province',
+    postalCode: '32241',
+    district: 'Al Faisaliyah',
+    nationalAddress: 'DMMM1122',
+  },
+  {
+    street: 'Al Hizam Al Akhdar, Al Malqa',
+    city: 'Riyadh',
+    province: 'Riyadh',
+    postalCode: '13521',
+    district: 'Al Malqa',
+    nationalAddress: 'RFKB8899',
+  },
+  {
+    street: 'Al Madinah Road, Al Rawdah',
+    city: 'Jeddah',
+    province: 'Makkah',
+    postalCode: '23434',
+    district: 'Al Rawdah',
+    nationalAddress: 'JEDD5566',
+  },
+]
 
 // Pre-hashed passwords to avoid bcrypt.hashSync() at module load time.
 // Generate replacements with `ADMIN_PASSWORD=... npm run hash:password`.
@@ -12,7 +77,7 @@ const HASHED_PASSWORDS = {
   jack: '$2b$12$f4m84swOoNyGy2UJdLLW3.qm.DhLZOENr0upics2ARyDRistwQiGy',
 }
 
-const users: IUserInput[] = [
+const userSeed: IUserInput[] = [
   {
     name: 'deca',
     email: 'admin@example.com',
@@ -299,10 +364,71 @@ const users: IUserInput[] = [
     paymentMethod: 'PayPal',
     emailVerified: null,
   },
+  {
+    name: 'Operations',
+    email: 'ops@example.com',
+    password: HASHED_PASSWORDS.admin,
+    role: 'admin',
+    address: {
+      fullName: 'Operations Admin',
+      street: 'Olaya Street',
+      city: 'Riyadh',
+      province: 'Riyadh',
+      postalCode: '12211',
+      country: 'SA',
+      phone: '+966500000015',
+    },
+    paymentMethod: 'Cash On Delivery',
+    emailVerified: new Date('2025-01-01T00:00:00.000Z'),
+    verificationToken: null,
+    verificationTokenExpires: null,
+  },
 ]
 
+// Enrich every development account with the Saudi phone-verification and
+// saved-address fields added after the original seed was written.
+const users: SeedUser[] = userSeed.map((user, index) => {
+  const location = saudiLocations[index % saudiLocations.length]
+  const national = `5${String(index + 1).padStart(8, '0')}`
+  const phone = `+966${national}`
+  const address: ShippingAddress = {
+    fullName: user.address.fullName,
+    street: location.street,
+    city: location.city,
+    province: location.province,
+    postalCode: location.postalCode,
+    country: 'SA',
+    district: location.district,
+    nationalAddress: location.nationalAddress,
+    phone,
+  }
 
-const products: IProductInput[] = [
+  return {
+    ...user,
+    address,
+    phone,
+    phoneVerified: true,
+    phoneVerifiedAt: SEED_VERIFIED_AT,
+    verifiedPhones: [{ phone, verifiedAt: SEED_VERIFIED_AT }],
+    addresses: [
+      {
+        ...address,
+        id: `seed-address-${index + 1}`,
+        isDefault: true,
+      },
+    ],
+  }
+})
+
+const productDefaults: Partial<IProductInput> = {
+  taxCategory: 'S',
+  exemptionReasonCode: '',
+  returnPolicy: 'return_and_refund',
+  weight: 0.25,
+  lowStockThreshold: 5,
+}
+
+const productSeed: IProductInput[] = [
   // T-Shirt
   {
     name: 'Nike Mens Slim-fit Long-Sleeve T-Shirt',
@@ -1007,7 +1133,326 @@ const products: IProductInput[] = [
 
     reviews: [],
   },
+  // Supplement examples: variant pricing/stock/weight, tax categories and
+  // return policies that the original clothing seed did not exercise.
+  {
+    name: 'Essential Vital Vitamin D3 2000 IU',
+    slug: slugify('Essential Vital Vitamin D3 2000 IU'),
+    category: 'Vitamins',
+    brand: 'Essential Vital',
+    images: ['/images/p11-1.jpg', '/images/p11-2.jpg'],
+    tags: ['new-arrival', 'featured'],
+    isPublished: true,
+    price: 59,
+    listPrice: 79,
+    avgRating: 4.7,
+    numReviews: 12,
+    ratingDistribution: [
+      { rating: 1, count: 0 },
+      { rating: 2, count: 0 },
+      { rating: 3, count: 1 },
+      { rating: 4, count: 4 },
+      { rating: 5, count: 7 },
+    ],
+    numSales: 24,
+    countInStock: 120,
+    description:
+      'Vitamin D3 2000 IU in a softgel, supporting bone, muscle and immune health. Two bottle sizes for daily use.',
+    sizes: ['60', '120'],
+    colors: [],
+    weight: 0.12,
+    lowStockThreshold: 10,
+    taxCategory: 'S',
+    exemptionReasonCode: '',
+    returnPolicy: 'return_and_refund',
+    variants: [
+      {
+        id: 'vitd3-60',
+        sku: 'EV-VITD3-60',
+        size: '60',
+        color: '',
+        price: 59,
+        listPrice: 79,
+        countInStock: 80,
+        image: '/images/p11-1.jpg',
+        barcode: '6281000000011',
+        weight: 0.1,
+        isDefault: true,
+      },
+      {
+        id: 'vitd3-120',
+        sku: 'EV-VITD3-120',
+        size: '120',
+        color: '',
+        price: 99,
+        listPrice: 129,
+        countInStock: 40,
+        image: '/images/p11-2.jpg',
+        barcode: '6281000000028',
+        weight: 0.18,
+        isDefault: false,
+      },
+    ],
+    reviews: [],
+  },
+  {
+    name: 'Essential Vital Omega-3 Fish Oil 1000mg',
+    slug: slugify('Essential Vital Omega-3 Fish Oil 1000mg'),
+    category: 'Supplements',
+    brand: 'Essential Vital',
+    images: ['/images/p13-1.jpg', '/images/p13-2.jpg'],
+    tags: ['new-arrival'],
+    isPublished: true,
+    price: 89,
+    listPrice: 109,
+    avgRating: 4.5,
+    numReviews: 8,
+    ratingDistribution: [
+      { rating: 1, count: 0 },
+      { rating: 2, count: 0 },
+      { rating: 3, count: 1 },
+      { rating: 4, count: 2 },
+      { rating: 5, count: 5 },
+    ],
+    numSales: 16,
+    countInStock: 90,
+    description:
+      'Molecularly distilled omega-3 with EPA and DHA to support heart and brain health. Softgels.',
+    sizes: ['90', '180'],
+    colors: [],
+    weight: 0.2,
+    lowStockThreshold: 8,
+    taxCategory: 'S',
+    exemptionReasonCode: '',
+    returnPolicy: 'return_and_refund',
+    variants: [
+      {
+        id: 'omega3-90',
+        sku: 'EV-OMEGA3-90',
+        size: '90',
+        color: '',
+        price: 89,
+        listPrice: 109,
+        countInStock: 60,
+        image: '/images/p13-1.jpg',
+        barcode: '6281000000035',
+        weight: 0.17,
+        isDefault: true,
+      },
+      {
+        id: 'omega3-180',
+        sku: 'EV-OMEGA3-180',
+        size: '180',
+        color: '',
+        price: 149,
+        listPrice: 189,
+        countInStock: 30,
+        image: '/images/p13-2.jpg',
+        barcode: '6281000000042',
+        weight: 0.3,
+        isDefault: false,
+      },
+    ],
+    reviews: [],
+  },
+  {
+    name: 'Essential Vital Magnesium Glycinate',
+    slug: slugify('Essential Vital Magnesium Glycinate'),
+    category: 'Minerals',
+    brand: 'Essential Vital',
+    images: ['/images/p14-1.jpg', '/images/p14-2.jpg'],
+    tags: ['featured'],
+    isPublished: true,
+    price: 69,
+    listPrice: 89,
+    avgRating: 4.4,
+    numReviews: 6,
+    ratingDistribution: [
+      { rating: 1, count: 0 },
+      { rating: 2, count: 0 },
+      { rating: 3, count: 1 },
+      { rating: 4, count: 2 },
+      { rating: 5, count: 3 },
+    ],
+    numSales: 11,
+    countInStock: 75,
+    description:
+      'Highly absorbable magnesium glycinate for muscle, nerve and sleep support. Sealed bottles are final sale once opened.',
+    sizes: ['60', '120'],
+    colors: [],
+    weight: 0.15,
+    lowStockThreshold: 8,
+    taxCategory: 'S',
+    exemptionReasonCode: '',
+    returnPolicy: 'final_sale',
+    variants: [
+      {
+        id: 'mag-60',
+        sku: 'EV-MAG-60',
+        size: '60',
+        color: '',
+        price: 69,
+        listPrice: 89,
+        countInStock: 50,
+        image: '/images/p14-1.jpg',
+        barcode: '6281000000059',
+        weight: 0.12,
+        isDefault: true,
+      },
+      {
+        id: 'mag-120',
+        sku: 'EV-MAG-120',
+        size: '120',
+        color: '',
+        price: 119,
+        listPrice: 149,
+        countInStock: 25,
+        image: '/images/p14-2.jpg',
+        barcode: '6281000000066',
+        weight: 0.22,
+        isDefault: false,
+      },
+    ],
+    reviews: [],
+  },
+  {
+    name: 'Essential Vital Multivitamin Gummies',
+    slug: slugify('Essential Vital Multivitamin Gummies'),
+    category: 'Vitamins',
+    brand: 'Essential Vital',
+    images: ['/images/p15-1.jpg', '/images/p15-2.jpg'],
+    tags: ['todays-deal'],
+    isPublished: true,
+    price: 49,
+    listPrice: 65,
+    avgRating: 4.2,
+    numReviews: 5,
+    ratingDistribution: [
+      { rating: 1, count: 0 },
+      { rating: 2, count: 1 },
+      { rating: 3, count: 0 },
+      { rating: 4, count: 2 },
+      { rating: 5, count: 2 },
+    ],
+    numSales: 9,
+    countInStock: 50,
+    description:
+      'Mixed-berry multivitamin gummies with 12 essential vitamins. Refund-only if the seal is unbroken.',
+    sizes: ['30', '60'],
+    colors: [],
+    weight: 0.18,
+    lowStockThreshold: 6,
+    taxCategory: 'S',
+    exemptionReasonCode: '',
+    returnPolicy: 'refund_only',
+    variants: [
+      {
+        id: 'multi-30',
+        sku: 'EV-MULTI-30',
+        size: '30',
+        color: '',
+        price: 49,
+        listPrice: 65,
+        countInStock: 30,
+        image: '/images/p15-1.jpg',
+        barcode: '6281000000073',
+        weight: 0.14,
+        isDefault: true,
+      },
+      {
+        id: 'multi-60',
+        sku: 'EV-MULTI-60',
+        size: '60',
+        color: '',
+        price: 85,
+        listPrice: 110,
+        countInStock: 20,
+        image: '/images/p15-2.jpg',
+        barcode: '6281000000080',
+        weight: 0.24,
+        isDefault: false,
+      },
+    ],
+    reviews: [],
+  },
+  {
+    name: 'Essential Vital Gift Card',
+    slug: slugify('Essential Vital Gift Card'),
+    category: 'Gift Cards',
+    brand: 'Essential Vital',
+    images: ['/images/p16-1.jpg'],
+    tags: ['featured'],
+    isPublished: true,
+    price: 100,
+    listPrice: 100,
+    avgRating: 0,
+    numReviews: 0,
+    ratingDistribution: [
+      { rating: 1, count: 0 },
+      { rating: 2, count: 0 },
+      { rating: 3, count: 0 },
+      { rating: 4, count: 0 },
+      { rating: 5, count: 0 },
+    ],
+    numSales: 0,
+    countInStock: 999,
+    description:
+      'A digital gift card delivered by email. Not taxable and non-returnable.',
+    sizes: [],
+    colors: [],
+    weight: 0.01,
+    lowStockThreshold: 0,
+    taxCategory: 'O',
+    exemptionReasonCode: 'GIFT-CARD',
+    returnPolicy: 'final_sale',
+    reviews: [],
+  },
 ]
+
+// Apply the fields added after the original catalogue (tax category, return
+// policy, weight, low-stock threshold). Individual products can override any
+// of them; the new supplement examples below do.
+//
+// Legacy products only listed sizes/colors. Generate the cartesian variants
+// the newer checkout/admin flow expects, so the seed exercises real variant
+// ids, SKUs, per-variant stock and weights instead of collapsing to one option.
+const products: IProductInput[] = productSeed.map((product) => {
+  const merged = { ...productDefaults, ...product }
+  if (merged.variants?.length) return merged
+
+  const sizes = merged.sizes?.length ? merged.sizes : ['']
+  const colors = merged.colors?.length ? merged.colors : ['']
+  if (sizes.length === 1 && sizes[0] === '' && colors.length === 1 && colors[0] === '') {
+    return merged
+  }
+
+  const combinations = sizes.flatMap((size) =>
+    colors.map((color) => ({ size, color }))
+  )
+  const totalStock = Math.max(0, Math.floor(merged.countInStock ?? 0))
+  const baseStock = Math.floor(totalStock / combinations.length)
+  const remainder = totalStock % combinations.length
+
+  const variants = combinations.map(({ size, color }, index) => {
+    const sizePart = slugify(size || 'default')
+    const colorPart = slugify(color || 'default')
+    return {
+      id: `${merged.slug}-${sizePart}-${colorPart}`.slice(0, 100),
+      sku: `${merged.slug}-${sizePart}-${colorPart}`.slice(0, 100),
+      size,
+      color,
+      price: merged.price,
+      listPrice: merged.listPrice,
+      countInStock: baseStock + (index < remainder ? 1 : 0),
+      image: merged.images?.[index % Math.max(1, merged.images?.length ?? 1)] ?? '',
+      barcode: '',
+      weight: merged.weight ?? 0,
+      isDefault: index === 0,
+    }
+  })
+
+  return { ...merged, variants }
+})
 
 const reviews  = [
   {
@@ -1100,6 +1545,24 @@ const reviews  = [
     comment:
       "Love this product! It's durable, stylish, and works great. Would buy again without hesitation.",
   },
+  {
+    rating: 4,
+    title: 'Good value',
+    comment:
+      'Works as described and arrived well packed. Docking one star because the packaging could be smaller.',
+  },
+  {
+    rating: 5,
+    title: 'Great daily supplement',
+    comment:
+      'Easy to take and I noticed a difference after a few weeks. The larger bottle is better value.',
+  },
+  {
+    rating: 3,
+    title: 'Decent but pricey',
+    comment:
+      'Quality is fine, but I expected a larger bottle for the price. Shipping was fast.',
+  },
 ]
 
 
@@ -1113,7 +1576,11 @@ const reviews  = [
         primaryColor: '#eab308',
         accentColor: '#0ea5e9',
         fontFamily: 'geist',
-        socialLinks: [],
+        socialLinks: [
+          { name: 'Instagram', url: 'https://instagram.com/essentialvital' },
+          { name: 'X', url: 'https://x.com/essentialvital' },
+          { name: 'WhatsApp', url: 'https://wa.me/966500000000' },
+        ],
       },
       seo: {
         titleTemplate: '%s | Essential Vital',
@@ -1133,6 +1600,14 @@ const reviews  = [
           { name: 'New Arrivals', href: '/search?tag=new-arrival' },
           { name: 'Featured Products', href: '/search?tag=featured' },
           { name: 'Best Sellers', href: '/search?tag=best-seller' },
+          {
+            name: 'Vitamins',
+            href: `/search?category=${encodeURIComponent('Vitamins')}`,
+          },
+          {
+            name: 'Supplements',
+            href: `/search?category=${encodeURIComponent('Supplements')}`,
+          },
           {
             name: 'Browsing History',
             href: '/account/browsing-history',

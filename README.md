@@ -2,6 +2,16 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## Development seed refresh (2026-10-31)
+
+- **Users:** every seeded account now has a real Saudi delivery address (Riyadh/Jeddah/Dammam), an E.164 `+9665…` phone, `phoneVerified`, `phoneVerifiedAt`, a `verifiedPhones` entry and a default saved `addresses` entry. Added a second admin (`ops@example.com`) so multi-admin and last-admin behaviour can be exercised. The existing names, emails, roles and payment methods are preserved.
+- **Products:** `productDefaults` now supplies `taxCategory`, `exemptionReasonCode`, `returnPolicy`, `weight` and `lowStockThreshold` to every legacy product. Products that only listed sizes/colors get a generated cartesian variant list (unique ids/SKUs, per-variant stock, weight, image and one default) instead of collapsing to a single option; total stock is preserved. Added five supplement/gift-card examples covering multi-variant pricing, per-variant weights, `final_sale`/`refund_only` policies and an out-of-scope (`O`) tax category with an exemption code.
+- **Orders:** generated orders now snapshot variant id/SKU/label/size/colour/weight, tax category, exemption code and return policy on every line. They also store the priced VAT fields, COD fee, shipping service/zone/carrier/ETA, `paymentResult`, `status`/`statusHistory` and a delivered `shipment`. `createdAt`/`paidAt`/`deliveredAt` are ordered and previous-product/category/count bugs in the generated lines were fixed.
+- **Reviews:** added more rating-4/5 templates so the seeded review distributions remain varied.
+- `normalizeProductVariants` now falls back to the product-level weight when a variant has no weight (including the auto-created default variant), so the weight surcharge actually applies to legacy products.
+- Added `tests/seed-data.test.ts`, which validates every development setting, user, product (after variant normalization) and web page against the current Zod schemas before the destructive seed run.
+- `npm run seed` still performs the destructive development reset; run it when you are ready to rebuild the local data.
+
 ## P3-D — security hardening (2026-10-30)
 
 - **Removed credentials from the client bundle:** the development defaults in `credentials-signin-form.tsx` no longer contain an admin email/password, and the sign-up form no longer pre-fills a password. The plaintext seed-password comments were removed from `lib/data.ts`, the dev seed emails were moved to `example.com`, and the password was redacted from `README-DEBUGGING-1.md`. Why: even behind `NODE_ENV === 'development'`, those strings are source-controlled and can leak through a copied file, a misconfigured build or a repo archive. Added `npm run hash:password` (reads `ADMIN_PASSWORD` from the environment) so developers can generate a fresh bcrypt hash without putting the plaintext in the repo.
@@ -9,7 +19,7 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - **Case-insensitive email uniqueness:** `UserSchema` now declares a unique `email_ci_unique` index with `collation: { locale: 'en', strength: 2 }`, matching every lookup/registration path. Added `npm run migrate:email-index` (`scripts/migrate-email-index.ts`) to report existing case-variant duplicates and create the index. Why: the original field-level index was case-sensitive, so `Admin@x.com` and `admin@x.com` could coexist while authentication treated them as the same address.
 - **Rate-limit IP hardening:** extracted `pickClientIp()` (tested) which trusts `TRUSTED_IP_HEADER`, then platform headers, then the right-most `X-Forwarded-For` value. In production, no trusted IP now fails closed instead of using a shared user-agent bucket (which was both ineffective and usable to lock out other visitors). `resetIPAttempt` uses the limiter's reset API instead of Redis `KEYS`. `.env.example` documents `TRUSTED_IP_HEADER`.
 - **Smaller API hardening:** the mock payment webhook returns 404 in production, the cron route compares `CRON_SECRET` with `crypto.timingSafeEqual`, `formatError` no longer logs the full error object, and the CSP now also sets `object-src 'none'` and `base-uri 'self'`.
-- Added `tests/security-hardening.test.ts` for the client-IP extractor and the email index. Verified with `npx tsc --noEmit`, `npm run lint`, `npm test` (92 tests) and `npm run i18n:check`.
+- Added `tests/security-hardening.test.ts` for the client-IP extractor and the email index. Verified with `npx tsc --noEmit`, `npm run lint`, `npm test` (93 tests) and `npm run i18n:check`.
 - Residual: the removed seed password still exists in older git history. Rotate that development password if it was reused anywhere real; rewriting history is a separate decision. `README-DEBUGGING-1.md` is an internal audit note and should not be published with the site.
 
 ## Production seed template (2026-10-30)

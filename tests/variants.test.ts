@@ -27,11 +27,12 @@ const base = {
 
 describe('normalizeProductVariants', () => {
   it('creates a default variant when none exist', () => {
-    const product = normalizeProductVariants(base)
+    const product = normalizeProductVariants({ ...base, weight: 0.4 })
     assert.equal(product.variants?.length, 1)
     assert.equal(product.variants?.[0].countInStock, 5)
     assert.equal(product.variants?.[0].price, 115)
     assert.equal(product.variants?.[0].isDefault, true)
+    assert.equal(product.variants?.[0].weight, 0.4)
     assert.deepEqual(product.sizes, ['M'])
     assert.deepEqual(product.colors, ['Black'])
   })
