@@ -96,24 +96,6 @@ export default function PaymentMethodForm({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={control}
-                name={`availablePaymentMethods.${index}.commission`}
-                render={({ field }) => (
-                  <FormItem>
-                    {index == 0 && <FormLabel>{t('Commission')}</FormLabel>}
-                    <FormControl>
-                      <Input {...field} placeholder={t('Commission')} />
-                    </FormControl>
-                    <FormMessage>
-                      {
-                        errors.availablePaymentMethods?.[index]?.commission
-                          ?.message
-                      }
-                    </FormMessage>
-                  </FormItem>
-                )}
-              />
               <div>
                 {index == 0 && <div>{t('Action')}</div>}
                 <Button
@@ -134,7 +116,7 @@ export default function PaymentMethodForm({
           <Button
             type='button'
             variant={'outline'}
-            onClick={() => append({ name: '', commission: 0 })}
+            onClick={() => append({ name: '' })}
           >
             {t('Add Payment Method')}
           </Button>

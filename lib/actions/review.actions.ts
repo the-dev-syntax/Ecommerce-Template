@@ -2,6 +2,7 @@
 
 import mongoose from 'mongoose'
 import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/access'
 import { connectToDatabase } from '../db'
 import Product from '../db/models/product.model'
 import Order from '../db/models/order.model'
@@ -11,7 +12,6 @@ import { ReviewInputSchema } from '../validator'
 import { IReviewDetails, IReviewInput } from '@/types'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
-
 
 // CREATE OR UPDATE REVIEW - PRIVATE
 export async function createUpdateReview({
@@ -38,14 +38,15 @@ export async function createUpdateReview({
 
     await connectToDatabase()
 
-    // Never trust the client's "verified purchase" flag: derive it from a paid
-    // order that contains this product.
+    // Only customers with a paid order containing this product may review it.
+    // The client's "verified purchase" flag is never trusted.
     const purchased = await Order.exists({
       user: session.user.id,
       isPaid: true,
       'items.product': review.product,
     })
-    review.isVerifiedPurchase = !!purchased
+    if (!purchased)
+      throw new Error('Only customers who purchased this product can review it')
 
     const existReview = await Review.findOne({
       product: review.product,
@@ -56,24 +57,30 @@ export async function createUpdateReview({
       existReview.comment = review.comment
       existReview.rating = review.rating
       existReview.title = review.title
-      existReview.isVerifiedPurchase = review.isVerifiedPurchase
+      existReview.isVerifiedPurchase = true
+      // An edit needs a fresh approval, otherwise a user could get a harmless
+      // review approved and then replace its text.
+      existReview.isApproved = false
+      existReview.approvedAt = undefined
+      existReview.approvedBy = undefined
       await existReview.save()
       await updateProductReview(review.product)
       await revalidateAllLocales(path)
       return {
         success: true,
-        message: 'Review updated successfully',
-        // data: JSON.parse(JSON.stringify(existReview)),
+        message: 'Review updated and submitted for approval',
       }
-    } else {
-      await Review.create(review)
-      await updateProductReview(review.product)
-      await revalidateAllLocales(path)
-      return {
-        success: true,
-        message: 'Review created successfully',
-        // data: JSON.parse(JSON.stringify(newReview)),
-      }
+    }
+
+    await Review.create({
+      ...review,
+      isVerifiedPurchase: true,
+      isApproved: false,
+    })
+    await revalidateAllLocales(path)
+    return {
+      success: true,
+      message: 'Review submitted for approval',
     }
   } catch (error) {
     return {
@@ -85,15 +92,16 @@ export async function createUpdateReview({
 
 // HELPER FN TO UPDATE ONE REVIEW - PRIVATE
 const updateProductReview = async (productId: string) => {
-  // get all reviews to this product, then group them by the value of the rating field "one-star""two-stars", $sum is accumulator(count no.of docs in each group"120","85").
-  //? ex. return  result = [  { _id: 5, count: 120 },   { _id: 4, count: 85 }, ....] , think of it _id= star.
-   const session = await auth()
-    if (!session) {
-      throw new Error('User is not authenticated')
-    }
-
+  // Only published reviews contribute to the public rating and distribution.
+  // Reviews created before moderation existed have no isApproved field and are
+  // grandfathered as published; pending/edited reviews are explicitly false.
   const result = await Review.aggregate([
-    { $match: { product: new mongoose.Types.ObjectId(productId) } },
+    {
+      $match: {
+        product: new mongoose.Types.ObjectId(productId),
+        isApproved: { $ne: false },
+      },
+    },
     {
       $group: {
         _id: '$rating',
@@ -101,33 +109,33 @@ const updateProductReview = async (productId: string) => {
       },
     },
   ])
-  
-  // (sum, item) => sum + item.count ,destructuring { count }. 
-  //? ex. return  totalReviews=240
+
   const totalReviews = result.reduce((sum, { count }) => sum + count, 0)
-
-  // sum = accumulator. 
-  //? ex. return avgRating=(e.g., `(5*120) + (4*85) + (3*30) + (1*5) = 1035`) / 240 = 4.134
   const avgRating =
-    result.reduce((sum, { _id, count }) => sum + _id * count, 0) / totalReviews
+    totalReviews === 0
+      ? 0
+      : Number(
+          (
+            result.reduce((sum, { _id, count }) => sum + _id * count, 0) /
+            totalReviews
+          ).toFixed(1)
+        )
 
-  // Convert aggregation result to a map for easier lookup,
-  //?  ratingMap=[{5:120}, {4:85}, ...]
-  const ratingMap = result.reduce((map, { _id, count }) => {
-    map[_id] = count
-    return map
-  }, {})
+  const ratingMap = result.reduce<Record<string, number>>(
+    (map, { _id, count }) => {
+      map[_id] = count
+      return map
+    },
+    {}
+  )
 
-  // Ensure all ratings 1-5 are represented, with missing ones set to count: 0
-  //? ratingDistribution=[{rating:1, count:120}, {rating:2, count:0}, {rating:3, count:30}, ....] , it add {rating:2, count:0} 
   const ratingDistribution = []
   for (let i = 1; i <= 5; i++) {
     ratingDistribution.push({ rating: i, count: ratingMap[i] || 0 })
   }
 
-  //? findByIdAndUpdate is a Mongoose command, Update product fields with calculated values
   await Product.findByIdAndUpdate(productId, {
-    avgRating: avgRating.toFixed(1),
+    avgRating,
     numReviews: totalReviews,
     ratingDistribution,
   })
@@ -143,24 +151,27 @@ export async function getReviews({
   limit?: number
   page: number
 }) {
+  if (!mongoose.isValidObjectId(productId))
+    return { data: [] as IReviewDetails[], totalPages: 1 }
 
-    const {
+  const {
     common: { pageSize },
   } = await getSetting()
-  
+
   limit = clampLimit(limit, pageSize)
 
   await connectToDatabase()
   const skipAmount = (clampPage(page) - 1) * limit
-  const reviews = await Review.find({ product: productId })
-    .populate('user', 'name')
-    .sort({
-      createdAt: 'desc',
-    })
-    .skip(skipAmount)
-    .limit(limit)
-//   console.log(reviews)
-  const reviewsCount = await Review.countDocuments({ product: productId })
+  const query = { product: productId, isApproved: { $ne: false } }
+  const [reviews, reviewsCount] = await Promise.all([
+    Review.find(query)
+      .populate('user', 'name')
+      .sort({ createdAt: 'desc' })
+      .skip(skipAmount)
+      .limit(limit),
+    Review.countDocuments(query),
+  ])
+
   return {
     data: JSON.parse(JSON.stringify(reviews)) as IReviewDetails[],
     totalPages: reviewsCount === 0 ? 1 : Math.ceil(reviewsCount / limit),
@@ -178,10 +189,103 @@ export const getReviewByProductId = async ({
   if (!session) {
     throw new Error('User is not authenticated')
   }
-  
+
   const review = await Review.findOne({
     product: productId,
     user: session?.user?.id,
   })
   return review ? (JSON.parse(JSON.stringify(review)) as IReview) : null
+}
+
+// GET PENDING REVIEWS - ADMIN
+export async function getPendingReviews({
+  page = 1,
+  limit,
+}: {
+  page?: number
+  limit?: number
+}) {
+  const session = await auth()
+  requireAdmin(session)
+
+  const {
+    common: { pageSize },
+  } = await getSetting()
+  limit = clampLimit(limit, pageSize)
+
+  await connectToDatabase()
+  const skipAmount = (clampPage(page) - 1) * limit
+  // Only explicitly pending reviews. Legacy rows without the field were
+  // already public and are grandfathered as approved.
+  const query = { isApproved: false }
+
+  const [reviews, totalPending] = await Promise.all([
+    Review.find(query)
+      .populate('user', 'name email')
+      .populate('product', 'name slug')
+      .sort({ createdAt: 'asc' })
+      .skip(skipAmount)
+      .limit(limit)
+      .lean(),
+    Review.countDocuments(query),
+  ])
+
+  return {
+    data: JSON.parse(JSON.stringify(reviews)),
+    totalPages: totalPending === 0 ? 1 : Math.ceil(totalPending / limit),
+    totalPending,
+  }
+}
+
+async function revalidateReviewProduct(productId: string) {
+  const product = await Product.findById(productId).select('slug').lean()
+  if (product?.slug) await revalidateAllLocales(`/product/${product.slug}`)
+  await revalidateAllLocales('/admin/reviews')
+}
+
+// APPROVE REVIEW - ADMIN
+export async function approveReview(id: string) {
+  try {
+    const session = await auth()
+    requireAdmin(session)
+    if (!mongoose.isValidObjectId(id)) throw new Error('Invalid review id')
+
+    await connectToDatabase()
+    const review = await Review.findById(id)
+    if (!review) throw new Error('Review not found')
+
+    if (!review.isApproved) {
+      review.isApproved = true
+      review.approvedAt = new Date()
+      review.approvedBy = session?.user?.id
+      await review.save()
+    }
+
+    await updateProductReview(String(review.product))
+    await revalidateReviewProduct(String(review.product))
+
+    return { success: true, message: 'Review approved' }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+// DELETE REVIEW - ADMIN
+export async function deleteReview(id: string) {
+  try {
+    const session = await auth()
+    requireAdmin(session)
+    if (!mongoose.isValidObjectId(id)) throw new Error('Invalid review id')
+
+    await connectToDatabase()
+    const review = await Review.findByIdAndDelete(id)
+    if (!review) throw new Error('Review not found')
+
+    await updateProductReview(String(review.product))
+    await revalidateReviewProduct(String(review.product))
+
+    return { success: true, message: 'Review deleted' }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
 }

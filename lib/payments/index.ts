@@ -75,9 +75,10 @@ export function isPaymentProvider(name: string, id: PaymentProviderId) {
   return getPaymentProviderByName(name)?.id === id
 }
 
-export function getEnabledPaymentMethods<
-  T extends { name: string; commission: number },
->(methods: T[], options: { cashOnDelivery?: boolean } = {}): T[] {
+export function getEnabledPaymentMethods<T extends { name: string }>(
+  methods: T[],
+  options: { cashOnDelivery?: boolean } = {}
+): T[] {
   return methods.filter((method) => {
     const provider = getPaymentProviderByName(method.name)
     if (!provider) return true

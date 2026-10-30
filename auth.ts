@@ -19,6 +19,10 @@ import {
   revokeSession,
   SESSION_MAX_AGE_SECONDS,
 } from './lib/session-revocation'
+import {
+  isSessionRevokedInDatabase,
+  persistRevokedSession,
+} from './lib/session-revocation-db'
 // import { AuthenticatedUser } from './types/next-auth'
 
 
@@ -110,6 +114,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // A revoked device/session stops working on its next read.
       if (await isSessionRevoked(token.sid)) return null
 
+      // Redis may have been unavailable when the session was revoked, in which
+      // case only the Node-side mirror was written. Check it too so a Redis
+      // recovery cannot resurrect a signed-out device.
+      try {
+        if (await isSessionRevokedInDatabase(token.sid)) return null
+      } catch (error) {
+        console.error(
+          'Session revocation database check failed:',
+          error instanceof Error ? error.message : 'Unknown error'
+        )
+      }
+
       try {
         await connectToDatabase()
         // The MongoDB adapter and the Mongoose model share the same `users`
@@ -181,7 +197,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     async signOut(message) {
       if (!('token' in message)) return
-      await revokeSession(message.token?.sid, message.token?.exp)
+      const sid = message.token?.sid
+      const expiresAt = message.token?.exp
+      await revokeSession(sid, expiresAt)
+
+      // Mirror the revocation in MongoDB so it still applies during a Redis
+      // outage (and after Redis recovers).
+      try {
+        await persistRevokedSession(sid, expiresAt)
+      } catch (error) {
+        console.error(
+          'Failed to persist the revoked session:',
+          error instanceof Error ? error.message : 'Unknown error'
+        )
+      }
     },
   },
 })

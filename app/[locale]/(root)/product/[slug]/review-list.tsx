@@ -150,7 +150,6 @@ export default function ReviewList({
   const handleOpenForm = async () => {
     form.setValue('product', product._id)
     form.setValue('user', userId!)
-    form.setValue('isVerifiedPurchase', true)
 
     const review = await getReviewByProductId({ productId: product._id })
 
@@ -202,6 +201,9 @@ export default function ReviewList({
                         <DialogDescription>
                           {t('Share your thoughts with other customers')}
                         </DialogDescription>
+                        <p className='text-muted-foreground text-xs'>
+                          {t('Reviews are published after admin approval')}
+                        </p>
                       </DialogHeader>
                       <div className='grid gap-4 py-4'>
                         <div className='flex flex-col gap-5  '>

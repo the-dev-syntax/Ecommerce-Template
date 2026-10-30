@@ -1322,10 +1322,10 @@ const reviews  = [
       ],
       defaultCurrency: 'SAR',
       availablePaymentMethods: [
-        { name: 'Moyasar', commission: 0 },
-        { name: 'PayPal', commission: 0 },
-        { name: 'Stripe', commission: 0 },
-        { name: 'Cash On Delivery', commission: 0 },
+        { name: 'Moyasar' },
+        { name: 'PayPal' },
+        { name: 'Stripe' },
+        { name: 'Cash On Delivery' },
       ],
       defaultPaymentMethod: 'Moyasar',
       availableDeliveryDates: [

@@ -190,14 +190,6 @@ export async function reserveStockForOrder(order: {
   return reservation
 }
 
-/** Mark a paid order's reservation as committed without changing stock. */
-export async function commitStockReservation(orderId: string) {
-  await StockReservation.updateOne(
-    { orderId: String(orderId), status: 'held' },
-    { $set: { status: 'committed' } }
-  )
-}
-
 /**
  * Keep an unpaid order's stock hold alive while the customer works through a
  * gateway (intent creation / redirect). No-op for paid, committed or released

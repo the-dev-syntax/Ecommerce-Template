@@ -65,6 +65,10 @@ const main = async () => {
               x % reviews.filter((rev) => rev.rating === j + 1).length
             ],
             isVerifiedPurchase: true,
+            // Seeded demo reviews are pre-approved so the storefront starts
+            // with the ratings shipped in the seed data.
+            isApproved: true,
+            approvedAt: new Date(),
             product: createdProducts[i]._id,
             user: createdUser[x % createdUser.length]._id,
             updatedAt: Date.now(),

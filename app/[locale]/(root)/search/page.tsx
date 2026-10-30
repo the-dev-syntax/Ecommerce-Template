@@ -112,10 +112,7 @@ const [t, tCategory, tTags] = await Promise.all([
     }),
   ])
 
-  const noProducts = data.products.length === 0;
-  if (noProducts) {
-    return <div className='text-center'>{t('No product found')}</div>
-  }
+  const noProducts = data.products.length === 0
 
   const havingQueryValue = (q !== 'all' && q !== '') ||
               (category !== 'all' && category !== '') ||
@@ -250,13 +247,13 @@ const [t, tCategory, tTags] = await Promise.all([
                     {t('All')}
                   </Link>
                 </li>
-                {tags.map((t: string) => (
-                  <li key={t}>
+                {tags.map((tagItem: string) => (
+                  <li key={tagItem}>
                     <Link
-                      className={`${slugify(t) === tag && 'text-primary'}`}
-                      href={getFilterUrl({ tag: t, params })}
+                      className={`${slugify(tagItem) === tag && 'text-primary'}`}
+                      href={getFilterUrl({ tag: tagItem, params })}
                     >
-                      {tTags(t)}
+                      {tTags(tagItem)}
                     </Link>
                   </li>
                 ))}

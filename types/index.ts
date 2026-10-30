@@ -42,6 +42,9 @@ export type IReviewInput = z.infer<typeof ReviewInputSchema>
 export type IReviewDetails = IReviewInput & {
   _id: string
   createdAt: string
+  isVerifiedPurchase: boolean
+  isApproved: boolean
+  approvedAt?: string
   user: {
     name: string
   }

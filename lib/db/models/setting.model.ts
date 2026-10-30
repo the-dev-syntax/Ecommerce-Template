@@ -205,7 +205,6 @@ const settingSchema = new Schema<ISetting>(
     availablePaymentMethods: [
       {
         name: { type: String, required: true },
-        commission: { type: Number, required: true, default: 0 },
       },
     ],
     defaultPaymentMethod: { type: String, required: true },

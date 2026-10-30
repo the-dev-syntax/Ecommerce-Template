@@ -63,11 +63,10 @@ async function main() {
 
   const methods = (setting.availablePaymentMethods ?? []).map((method) => ({
     name: method.name,
-    commission: method.commission,
   }))
   for (const name of ['Moyasar', 'Stripe', 'PayPal', 'Cash On Delivery']) {
     if (!methods.some((method) => method.name === name)) {
-      methods.push({ name, commission: 0 })
+      methods.push({ name })
     }
   }
 

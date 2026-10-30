@@ -24,7 +24,6 @@ const Price = (field: string) =>
 export const ReviewInputSchema = z.object({
   product: MongoId,
   user: MongoId,
-  isVerifiedPurchase: z.boolean(),
   title: z.string().min(1, 'Title is required').max(120, 'Title is too long'),
   comment: z
     .string()
@@ -502,7 +501,6 @@ export const SiteCurrencySchema = z.object({
 
 export const PaymentMethodSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  commission: z.coerce.number().min(0, 'Commission must be at least 0'),
 })
 
 export const ShippingRateBaseSchema = z.object({
