@@ -1,4 +1,7 @@
-import data from '@/lib/data'
+import developmentData from '@/lib/data'
+import productionData, {
+  assertProductionDataReady,
+} from '@/lib/production-data'
 import { connectToDatabase } from '.'
 import Product from './models/product.model'
 import { cwd } from 'process'
@@ -15,6 +18,11 @@ import { normalizeProductVariants } from '../product-variants'
 
 // calling this function give you access to the .env file
 loadEnvConfig(cwd())
+
+// `npm run seed` uses the made-up development catalogue. `seed:production`
+// uses the real production-data.ts file and never creates demo orders/reviews.
+const useProduction = process.argv.includes('--production')
+const data = useProduction ? productionData : developmentData
 
 const main = async () => {
   try {
@@ -33,8 +41,12 @@ const main = async () => {
       process.exit(1)
     }
 
+    // The production file is a template until every placeholder is replaced.
+    // Refuse before deleting anything when it is still incomplete.
+    if (useProduction) assertProductionDataReady(productionData)
+
     // console.log("Seeding DB:", process.env.MONGODB_URI);
-    const { products , users , reviews, webPages, settings } = data
+    const { products, users, reviews, webPages, settings } = data
 
     await connectToDatabase(process.env.MONGODB_URI)
 
@@ -52,46 +64,54 @@ const main = async () => {
       products.map(normalizeProductVariants)
     )
 
-    await Review.deleteMany()
-    const rws = []
-    for (let i = 0; i < createdProducts.length; i++) {
-      let x = 0
-      const { ratingDistribution } = createdProducts[i]
-      for (let j = 0; j < ratingDistribution.length; j++) {
-        for (let k = 0; k < ratingDistribution[j].count; k++) {
-          x++
-          rws.push({ //[reviews][number]= one review object
-            ...reviews.filter((rev) => rev.rating === j + 1)[
-              x % reviews.filter((rev) => rev.rating === j + 1).length
-            ],
-            isVerifiedPurchase: true,
-            // Seeded demo reviews are pre-approved so the storefront starts
-            // with the ratings shipped in the seed data.
-            isApproved: true,
-            approvedAt: new Date(),
-            product: createdProducts[i]._id,
-            user: createdUser[x % createdUser.length]._id,
-            updatedAt: Date.now(),
-            createdAt: Date.now(),
-          })
+    // Demo reviews and 200 generated orders belong to the development seed
+    // only. A production run seeds the real catalogue and admin accounts and
+    // leaves orders/reviews to real customers.
+    let createdReviews: unknown[] = []
+    let createdOrders: unknown[] = []
+    if (!useProduction) {
+      await Review.deleteMany()
+      const rws = []
+      for (let i = 0; i < createdProducts.length; i++) {
+        let x = 0
+        const { ratingDistribution } = createdProducts[i]
+        for (let j = 0; j < ratingDistribution.length; j++) {
+          for (let k = 0; k < ratingDistribution[j].count; k++) {
+            x++
+            rws.push({
+              //[reviews][number]= one review object
+              ...reviews.filter((rev) => rev.rating === j + 1)[
+                x % reviews.filter((rev) => rev.rating === j + 1).length
+              ],
+              isVerifiedPurchase: true,
+              // Seeded demo reviews are pre-approved so the storefront starts
+              // with the ratings shipped in the seed data.
+              isApproved: true,
+              approvedAt: new Date(),
+              product: createdProducts[i]._id,
+              user: createdUser[x % createdUser.length]._id,
+              updatedAt: Date.now(),
+              createdAt: Date.now(),
+            })
+          }
         }
       }
-    }
-    const createdReviews = await Review.insertMany(rws)
+      createdReviews = await Review.insertMany(rws)
 
-    await Order.deleteMany()
-    
-    const orders = []
-    for (let i = 0; i < 200; i++) {
-      orders.push(
-        await generateOrder(
-          i,
-          createdUser.map((x) => x._id),
-          createdProducts.map((x) => x._id)
+      await Order.deleteMany()
+
+      const orders = []
+      for (let i = 0; i < 200; i++) {
+        orders.push(
+          await generateOrder(
+            i,
+            createdUser.map((x) => x._id),
+            createdProducts.map((x) => x._id)
+          )
         )
-      )
+      }
+      createdOrders = await Order.insertMany(orders)
     }
-    const createdOrders = await Order.insertMany(orders)
 
     console.log({
       createdUser,

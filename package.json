@@ -5,6 +5,7 @@
   "scripts": {
     "email": "email dev",
     "seed": "npx tsx ./lib/db/seed.ts",
+    "seed:production": "npx tsx ./lib/db/seed.ts --production",
     "migrate:sar": "npx tsx --env-file=.env.local ./scripts/migrate-sar-settings.ts",
     "migrate:saudi": "npx tsx --env-file=.env.local ./scripts/migrate-saudi-market.ts",
     "migrate:tax": "npx tsx --env-file=.env.local ./scripts/migrate-tax-snapshots.ts",
@@ -16,6 +17,7 @@
     "zatca:verify": "npx tsx --env-file=.env.local ./scripts/verify-zatca-sandbox.ts",
     "test": "tsx --test \"tests/**/*.test.ts\"",
     "check:production": "npx tsx ./scripts/check-production-env.ts",
+    "check:production-data": "npx tsx ./scripts/check-production-data.ts",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
