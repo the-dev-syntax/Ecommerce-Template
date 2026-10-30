@@ -130,7 +130,13 @@ export const formatError = (error: any): string => {
       )
 
     if (looksInternal) {
-      console.error('Unhandled action error:', error)
+      // Do not log the error object: driver errors and validation payloads can
+      // contain customer emails, addresses or query values. The name is enough
+      // to correlate the failure without storing PII.
+      console.error(
+        'Unhandled action error:',
+        error instanceof Error ? error.name : 'Unknown error'
+      )
       return 'Something went wrong. Please try again.'
     }
 

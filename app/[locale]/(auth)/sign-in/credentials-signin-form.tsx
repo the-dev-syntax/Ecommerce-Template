@@ -25,16 +25,13 @@ import { useTranslations } from 'next-intl'
 import { safeCallbackUrl } from '@/lib/utils'
 import { Suspense } from 'react'
 
-const signInDefaultValues =
-  process.env.NODE_ENV === 'development'
-    ? {
-        email: 'the.dev.syntax@gmail.com',
-        password: 'totalena#1And4',
-      }
-    : {
-        email: '',  
-        password: '',
-      }
+// Never ship default credentials in the client bundle, even behind a
+// development-only branch: the value is still present in the source and can
+// leak through a misconfigured build or a copied file.
+const signInDefaultValues = {
+  email: '',
+  password: '',
+}
 
 function VerificationMessage( {isVerified} : {isVerified: boolean} ) {
 

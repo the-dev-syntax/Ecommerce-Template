@@ -14,7 +14,15 @@ export async function POST(
   context: { params: Promise<{ provider: string }> }
 ) {
   const { provider } = await context.params
-  const handler = handlers[provider.toLowerCase()]
+  const normalized = provider.toLowerCase()
+
+  // The mock provider is a development/test helper only. Do not expose even a
+  // no-op webhook route in production.
+  if (normalized === 'mock' && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Unknown provider' }, { status: 404 })
+  }
+
+  const handler = handlers[normalized]
   if (!handler) {
     return NextResponse.json({ error: 'Unknown provider' }, { status: 404 })
   }

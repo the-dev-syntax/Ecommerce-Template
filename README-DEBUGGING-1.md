@@ -16,7 +16,7 @@ All four audits are done and I've personally re-verified the headline findings i
 - lib/utils.ts:270-292 (Math.floor(Math.random()*10), adjacent/repeat constraints shrink entropy); verifyEmailOtp (user.actions.ts:600-626) counts only IP attempts (rate-limit.ts), and IPs are forgeable (see 7).
 - Edit: crypto.randomInt(0, 1_000_000).toString().padStart(6,'0'); add failedOtpAttempts on the user doc with lockout/clear after N failures.
 5. Seed data: plaintext password in the collection + no hashing hook on UserSchema
-- lib/data.ts:58 (password: 'totalena#1And4' for a real seed account — can never log in since bcrypt.compare(plain, plain) fails), and user.model.ts has no pre('save') hash, so any future direct .save() path stores plaintext. Seed credentials also sit in comments (data.ts:9-11).
+- lib/data.ts:58 (a plaintext password for a real seed account — can never log in since bcrypt.compare(plain, plain) fails), and user.model.ts has no pre('save') hash, so any future direct .save() path stores plaintext. Seed credentials also sat in comments (data.ts:9-11).
 - Edit: seed with a bcrypt hash; add pre('save') hashing (skip when already $2b$); remove plaintext comments.
 6. Email enumeration oracles
 - Registration "Email is already in use" (user.actions.ts:64-70), same message on email change (526-530), and "Email is already verified" on resend (662-666) — while password reset deliberately uses neutral wording.

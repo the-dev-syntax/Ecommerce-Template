@@ -1,6 +1,13 @@
+import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { releaseExpiredReservations } from '@/lib/orders/stock-reservations'
+
+function timingSafeEqual(a: string, b: string) {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  return left.length === right.length && crypto.timingSafeEqual(left, right)
+}
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
@@ -10,7 +17,12 @@ export async function GET(req: NextRequest) {
       { status: 503 }
     )
   }
-  if (req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (
+    !timingSafeEqual(
+      req.headers.get('authorization') ?? '',
+      `Bearer ${secret}`
+    )
+  ) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

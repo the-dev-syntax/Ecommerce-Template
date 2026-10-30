@@ -2,20 +2,20 @@ import { Data, IProductInput, IUserInput, IWebPageInput, ISettingInput } from '@
 import { slugify } from './utils'
 import { i18n } from '@/i18n-config'
 
-// Pre-hashed passwords to avoid bcrypt.hashSync() at module load time
-// This prevents timeout issues on Vercel serverless functions
-// Generated with: bcrypt.hashSync('password', 12)
+// Pre-hashed passwords to avoid bcrypt.hashSync() at module load time.
+// Generate replacements with `ADMIN_PASSWORD=... npm run hash:password`.
+// Never commit plaintext passwords or credentials here.
 const HASHED_PASSWORDS = {
-  admin: '$2b$12$hNtUKLP1CFK8BLqe1YlHvOONaaV/piBnwNjvOqLhpO9YSnqkQ3FlC', // totalena#1And4 the.dev-jane-arrow
-  user1: '$2a$12$K5.qJL7YNu9RG5r3nEL5UOoD9qZB1qYpNNtVYr5xVJH0.q8R3OdKa', // 12345678
-  user: '$2a$12$wQfPEw.AkCNV9J5vS.4XRONc8qZqD.TqFJH8UxNYvKqXjL8.Nq.3W', // 123456
-  jack: '$2b$12$f4m84swOoNyGy2UJdLLW3.qm.DhLZOENr0upics2ARyDRistwQiGy', // totalena#1And4
+  admin: '$2b$12$hNtUKLP1CFK8BLqe1YlHvOONaaV/piBnwNjvOqLhpO9YSnqkQ3FlC',
+  user1: '$2a$12$K5.qJL7YNu9RG5r3nEL5UOoD9qZB1qYpNNtVYr5xVJH0.q8R3OdKa',
+  user: '$2a$12$wQfPEw.AkCNV9J5vS.4XRONc8qZqD.TqFJH8UxNYvKqXjL8.Nq.3W',
+  jack: '$2b$12$f4m84swOoNyGy2UJdLLW3.qm.DhLZOENr0upics2ARyDRistwQiGy',
 }
 
 const users: IUserInput[] = [
   {
     name: 'deca',
-    email: 'the.dev.syntax@gmail.com',
+    email: 'admin@example.com',
 
     password: HASHED_PASSWORDS.admin,
     role: 'admin',
@@ -35,7 +35,7 @@ const users: IUserInput[] = [
   },
   {
     name: 'Jane',
-    email: 'deca7200@gmail.com',
+    email: 'jane@example.com',
 
     password: HASHED_PASSWORDS.user1,
 

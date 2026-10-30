@@ -90,8 +90,12 @@ export async function registerUser(userSignUp: IUserSignUp) {
             update: false,
           })
         } catch (error) {
-          // Never turn a mail/limiter failure into an account-existence oracle.
-          console.error('Unable to resend verification email', error)
+          // Never turn a mail/limiter failure into an account-existence oracle,
+          // and never log the recipient address or error payload.
+          console.error(
+            'Unable to resend verification email:',
+            error instanceof Error ? error.name : 'Unknown error'
+          )
         }
       }
       return {

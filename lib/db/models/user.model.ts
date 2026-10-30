@@ -97,6 +97,18 @@ const UserSchema = new Schema<IUser, IUserModel>({
   phoneOtpExpires: { type: Date, default: null, select: false },
 }, { timestamps: true });
 
+// Case-insensitive uniqueness. The legacy field-level unique index is
+// case-sensitive, so Admin@example.com and admin@example.com could coexist
+// even though every lookup uses a strength-2 collation.
+UserSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    collation: { locale: 'en', strength: 2 },
+    name: 'email_ci_unique',
+  }
+)
+
 // Hash on every save path. Flows that already hash (registerUser,
 // resetPassword) pass a value with a bcrypt prefix, so they are skipped and
 // never double-hashed.

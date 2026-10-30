@@ -1,7 +1,8 @@
-import { redis } from './redis'; 
-import { Ratelimit } from '@upstash/ratelimit';
-import { headers } from 'next/headers';
-import { formatSeconds, normalizeEmail } from './utils';
+import { redis } from './redis'
+import { Ratelimit } from '@upstash/ratelimit'
+import { headers } from 'next/headers'
+import { formatSeconds, normalizeEmail } from './utils'
+import { pickClientIp } from './client-ip'
 
 
 
@@ -208,43 +209,24 @@ const ipTokenAttemptLimit = new Ratelimit({
   prefix: "v1:ratelimit:token-attempts",
 });
 
-// ua = user-agent (browser id) as a fallback when IP is not found.
 async function getIP() {
   const h = await headers()
+  const ip = pickClientIp(
+    (name) => h.get(name),
+    process.env.TRUSTED_IP_HEADER
+  )
+  if (ip) return ip
 
-  // Only trust a header that the deployment's edge/proxy sets (or
-  // overwrites). The left-most X-Forwarded-For entry is client-controlled:
-  // anyone can prepend an arbitrary address there, which defeats every
-  // limiter in this file. Set TRUSTED_IP_HEADER when the deployment uses a
-  // proxy/header this code does not know about (e.g. cf-connecting-ip).
-  const configuredHeader = process.env.TRUSTED_IP_HEADER?.trim().toLowerCase()
-  const candidates = [
-    configuredHeader,
-    'x-vercel-forwarded-for',
-    'x-real-ip',
-    'cf-connecting-ip',
-  ].filter(Boolean) as string[]
-
-  for (const headerName of candidates) {
-    const value = h.get(headerName)
-    if (!value) continue
-    const first = value.split(',')[0]?.trim()
-    if (first) return first
+  // A user-agent bucket is shared by every visitor with the same browser, so
+  // it is both useless as a limiter and usable to lock other people out. Fail
+  // closed in production instead of silently disabling rate limits.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Unable to determine the client IP. Set TRUSTED_IP_HEADER or run behind a proxy that sets x-real-ip/x-forwarded-for.'
+    )
   }
 
-  const forwardedFor = h.get('x-forwarded-for')
-  if (forwardedFor) {
-    // The right-most value is the one added by the nearest proxy; without an
-    // explicit TRUSTED_IP_HEADER this is the safest available fallback.
-    const parts = forwardedFor
-      .split(',')
-      .map((part) => part.trim())
-      .filter(Boolean)
-    if (parts.length) return parts[parts.length - 1]
-  }
-
-  const ua = h.get('user-agent') ?? 'unknown'
-  return `fallback:${ua}`
+  return `fallback:${h.get('user-agent') ?? 'unknown'}`
 }
 
 export async function checkAndSetEmailRateLimit(email: string) {
@@ -270,9 +252,19 @@ export async function incrementIPEmailTokenAttempt() {
 
 // optional: usually not needed
 export async function resetIPAttempt() {
-  const ip = await getIP();
-  const keys = await redis.keys(`v1:ratelimit:token-attempts:${ip}*`);
-  if (keys.length) await redis.del(...keys);
+  try {
+    const ip = await getIP()
+    // Use the library's reset instead of KEYS (which scans the whole keyspace
+    // and can block Redis on a busy deployment).
+    await ipTokenAttemptLimit.resetUsedTokens(ip)
+  } catch (error) {
+    // Best-effort cleanup: a successful verification must not be reported as
+    // failed because the limiter or the IP header is unavailable.
+    console.error(
+      'Unable to reset the IP attempt bucket:',
+      error instanceof Error ? error.name : 'Unknown error'
+    )
+  }
 }
 
 

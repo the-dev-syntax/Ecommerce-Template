@@ -19,7 +19,7 @@ import { normalizeSaudiPhone } from './phone'
  * - Every `TODO: ...` value must be replaced. The readiness guard rejects any
  *   remaining placeholder, so a half-filled file cannot be seeded by accident.
  * - Passwords are bcrypt hashes, never plaintext. Generate one with
- *   `bcrypt.hashSync('your-password', 12)` and paste the hash.
+ *   `ADMIN_PASSWORD=... npm run hash:password` and paste the hash.
  * - Product images must be real paths/URLs. Variants must use unique ids/SKUs
  *   and exactly one default variant per product.
  * - Prices are in the base currency (SAR) and must have two decimals.

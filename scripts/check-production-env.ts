@@ -124,6 +124,12 @@ async function main() {
     warnings.push('ZATCA_SANDBOX_OTP is still set; remove it after onboarding')
   }
 
+  if (!process.env.VERCEL && !process.env.TRUSTED_IP_HEADER) {
+    warnings.push(
+      'TRUSTED_IP_HEADER is not set; confirm the host sets x-real-ip or x-forwarded-for, otherwise rate-limited actions fail closed in production'
+    )
+  }
+
   for (const warning of warnings) console.warn('WARN:', warning)
 
   if (failures.length > 0) {

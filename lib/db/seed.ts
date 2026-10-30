@@ -50,6 +50,38 @@ const main = async () => {
 
     await connectToDatabase(process.env.MONGODB_URI)
 
+    // Production seeding is a first-run operation. Refuse to delete data that
+    // may already be referenced by real orders/reviews; use admin screens or a
+    // migration instead of re-seeding a live database.
+    if (useProduction) {
+      const [settingsCount, userCount, productCount, pageCount, reviewCount, orderCount] =
+        await Promise.all([
+          Setting.countDocuments(),
+          User.countDocuments(),
+          Product.countDocuments(),
+          WebPage.countDocuments(),
+          Review.countDocuments(),
+          Order.countDocuments(),
+        ])
+      const existing = (
+        [
+          ['settings', settingsCount],
+          ['users', userCount],
+          ['products', productCount],
+          ['web pages', pageCount],
+          ['reviews', reviewCount],
+          ['orders', orderCount],
+        ] as [string, number][]
+      ).filter(([, count]) => count > 0)
+      if (existing.length > 0) {
+        throw new Error(
+          `Production seed requires an empty database (found ${existing
+            .map(([name, count]) => `${count} ${name}`)
+            .join(', ')}). Use a fresh database or a migration instead.`
+        )
+      }
+    }
+
     await Setting.deleteMany()
     const createdSetting = await Setting.insertMany(settings)
 
@@ -113,18 +145,23 @@ const main = async () => {
       createdOrders = await Order.insertMany(orders)
     }
 
+    // Never log the inserted documents: user documents contain password
+    // hashes and verification fields. Counts are enough for the operator.
     console.log({
-      createdUser,
-      createdProducts,
-      createdReviews,
-      createdOrders,
-      createdSetting,
+      users: createdUser.length,
+      products: createdProducts.length,
+      reviews: createdReviews.length,
+      orders: createdOrders.length,
+      settings: createdSetting.length,
       message: 'Seeded database successfully',
     })
 
     process.exit(0)
   } catch (error) {
-    console.error(error)
+    console.error(
+      'Seeding failed:',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
     throw new Error('Failed to seed database')
   }
 }

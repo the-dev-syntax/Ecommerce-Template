@@ -2,6 +2,16 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P3-D — security hardening (2026-10-30)
+
+- **Removed credentials from the client bundle:** the development defaults in `credentials-signin-form.tsx` no longer contain an admin email/password, and the sign-up form no longer pre-fills a password. The plaintext seed-password comments were removed from `lib/data.ts`, the dev seed emails were moved to `example.com`, and the password was redacted from `README-DEBUGGING-1.md`. Why: even behind `NODE_ENV === 'development'`, those strings are source-controlled and can leak through a copied file, a misconfigured build or a repo archive. Added `npm run hash:password` (reads `ADMIN_PASSWORD` from the environment) so developers can generate a fresh bcrypt hash without putting the plaintext in the repo.
+- **Seed/log hygiene:** `lib/db/seed.ts` now logs counts only instead of the inserted user documents (which include bcrypt hashes and verification fields). The production seed additionally refuses to run unless Settings/Users/Products/WebPages/Reviews/Orders are all empty, so a re-run on a live database cannot delete products/users referenced by real orders. Errors are logged by name/message rather than dumping the full driver object.
+- **Case-insensitive email uniqueness:** `UserSchema` now declares a unique `email_ci_unique` index with `collation: { locale: 'en', strength: 2 }`, matching every lookup/registration path. Added `npm run migrate:email-index` (`scripts/migrate-email-index.ts`) to report existing case-variant duplicates and create the index. Why: the original field-level index was case-sensitive, so `Admin@x.com` and `admin@x.com` could coexist while authentication treated them as the same address.
+- **Rate-limit IP hardening:** extracted `pickClientIp()` (tested) which trusts `TRUSTED_IP_HEADER`, then platform headers, then the right-most `X-Forwarded-For` value. In production, no trusted IP now fails closed instead of using a shared user-agent bucket (which was both ineffective and usable to lock out other visitors). `resetIPAttempt` uses the limiter's reset API instead of Redis `KEYS`. `.env.example` documents `TRUSTED_IP_HEADER`.
+- **Smaller API hardening:** the mock payment webhook returns 404 in production, the cron route compares `CRON_SECRET` with `crypto.timingSafeEqual`, `formatError` no longer logs the full error object, and the CSP now also sets `object-src 'none'` and `base-uri 'self'`.
+- Added `tests/security-hardening.test.ts` for the client-IP extractor and the email index. Verified with `npx tsc --noEmit`, `npm run lint`, `npm test` (92 tests) and `npm run i18n:check`.
+- Residual: the removed seed password still exists in older git history. Rotate that development password if it was reused anywhere real; rewriting history is a separate decision. `README-DEBUGGING-1.md` is an internal audit note and should not be published with the site.
+
 ## Production seed template (2026-10-30)
 
 - Added `lib/production-data.ts`, separate from the made-up development catalogue in `lib/data.ts`. It contains a complete `ISettingInput` (Saudi market, seller/VAT/invoice fields, currencies, payment/delivery methods, email templates, navigation, carousel), plus copyable `productionAdminTemplate`, `productionProductTemplate` and `productionWebPageTemplate` objects covering every current field: product weight, tax category/exemption code, return policy, low-stock threshold, variants (id/SKU/size/colour/price/stock/image/barcode/weight/default flag), user address/phone and web-page publishing. The real arrays (`users`, `products`, `webPages`) start empty so placeholder demo content can never be seeded into production.
@@ -259,7 +269,7 @@ Audited every P0 change against the current code. Regressions found and fixed:
 Known gaps (not regressions; left as follow-ups):
 
 - Middleware runs `auth.config.ts`, whose JWT callback does not re-read the database. A demoted/deleted admin's role stays stale in middleware until the JWT expires, but every Node-side page/action re-checks the current role from the database.
-- The unique index on `email` is still case-sensitive (see P0-9 production note).
+- A case-insensitive unique `email_ci_unique` index is now declared; run `npm run migrate:email-index` during deployment after resolving any existing case-variant accounts.
 - Invalidation only works where `passwordChangedAt` is set; accounts that never changed/reset a password keep their normal JWT lifetime.
 
 ### Verification

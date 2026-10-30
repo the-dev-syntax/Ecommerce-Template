@@ -25,21 +25,12 @@ import { useLocale, useTranslations } from 'next-intl'
 import { localizedPath } from '@/lib/utils'
 
 
-const signUpDefaultValues =
-  process.env.NODE_ENV === 'development'
-    ? {
-        name: 'arrow',
-        email: 'the.arrow.of.time7@gmail.com',
-        password: 'Aa@123456',
-        confirmPassword: 'Aa@123456',
-      }
-    : {
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-      }
-      
+const signUpDefaultValues = {
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+}
 
 export default function SignUpForm() {
   const { setting: { site } } = useSettingStore()  
