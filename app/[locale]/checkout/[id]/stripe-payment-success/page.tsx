@@ -1,14 +1,14 @@
 'use client'
 
 import { Link } from '@/i18n/routing'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import useCartStore from '@/hooks/use-cart-store'
 import { CheckCircle, Loader2, XCircle } from 'lucide-react'
 import { updateOrderToPaidByStripe } from '@/lib/actions/order.actions'
 
-export default function StripePaymentSuccessPage({
+function StripePaymentSuccessContent({
   params,
 }: {
   params: Promise<{ id: string }>
@@ -119,5 +119,28 @@ export default function StripePaymentSuccessPage({
         </div>
       </div>
     </div>
+  )
+}
+
+// useSearchParams() suspends during prerendering; without a local boundary the
+// whole page bails out of static rendering (build error/warning).
+export default function StripePaymentSuccessPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl w-full mx-auto space-y-8">
+          <div className="flex flex-col gap-6 items-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p>Processing your payment...</p>
+          </div>
+        </div>
+      }
+    >
+      <StripePaymentSuccessContent params={params} />
+    </Suspense>
   )
 }

@@ -88,9 +88,11 @@ function toShippingAddress(address: UserAddress): ShippingAddress {
 const CheckoutForm = ({
   savedAddresses = [],
   verifiedPhones = [],
+  ownerId,
 }: {
   savedAddresses?: UserAddress[]
   verifiedPhones?: string[]
+  ownerId?: string
 }) => {
   const router = useRouter()
   const t = useTranslations()
@@ -140,6 +142,7 @@ const CheckoutForm = ({
     removeItem,
     // clearCart,
     refreshCart,
+    setCartOwner,
     setShippingAddress,
     setPaymentMethod,
     setDeliveryDateIndex,
@@ -268,13 +271,27 @@ const CheckoutForm = ({
 
   // Refresh the persisted cart once on mount so prices/stock/shipping match the
   // database (previously only /cart did this, so /checkout could use a stale
-  // localStorage copy until place-order failed).
+  // localStorage copy until place-order failed). Claim the cart for the signed
+  // in user first: a different account on the same browser must not inherit
+  // the previous customer's items, address or phone number.
   const hasRefreshedCart = useRef(false)
   useEffect(() => {
     if (!isMounted || hasRefreshedCart.current) return
     hasRefreshedCart.current = true
+    setCartOwner(ownerId)
     refreshCart()
-  }, [isMounted, refreshCart])
+  }, [isMounted, ownerId, refreshCart, setCartOwner])
+
+  // A persisted payment method can be disabled after the fact (COD off,
+  // provider unconfigured). Write the resolved fallback back to the store so
+  // the priced cart (COD fee etc.) matches the method actually submitted.
+  useEffect(() => {
+    if (!isMounted || !storedPaymentMethod) return
+    if (storedPaymentMethod === paymentMethod) return
+    setPaymentMethod(paymentMethod).catch((error) => {
+      console.error('Unable to update the payment method:', error)
+    })
+  }, [isMounted, paymentMethod, setPaymentMethod, storedPaymentMethod])
 
   const handlePlaceOrder = async () => {
     if (isPlacingOrder) return
@@ -296,7 +313,7 @@ const CheckoutForm = ({
       return
     }
 
-    if (!selectedDelivery) {
+    if (!selectedDelivery || selectedDeliveryIndex < 0) {
       toast({
         description: 'Please select a delivery date',
         variant: 'destructive',
@@ -310,7 +327,9 @@ const CheckoutForm = ({
         items,
         shippingAddress,
         expectedDeliveryDate: calculateFutureDate(selectedDelivery.daysToDeliver),
-        deliveryDateIndex: deliveryDateIndex ?? 0,
+        // Send the index the UI actually shows, not the raw store value; the
+        // store may still hold a stale index after the rate list changed.
+        deliveryDateIndex: selectedDeliveryIndex,
         paymentMethod,
         itemsPrice,
         shippingPrice,
@@ -506,9 +525,13 @@ const CheckoutForm = ({
                   <Button
                     variant={'outline'}
                     onClick={() => {
+                      // Editing the address invalidates the downstream
+                      // selections: payment/shipping were priced for the old
+                      // address, so collapse those steps instead of leaving
+                      // them open above the form.
                       setIsAddressSelected(false)
-                      setIsPaymentMethodSelected(true)
-                      setIsDeliveryDateSelected(true)
+                      setIsPaymentMethodSelected(false)
+                      setIsDeliveryDateSelected(false)
                     }}
                   >
                     {t('Change')}
@@ -758,7 +781,7 @@ const CheckoutForm = ({
                     variant='outline'
                     onClick={() => {
                       setIsPaymentMethodSelected(false)
-                      if (paymentMethod) setIsDeliveryDateSelected(true)
+                      setIsDeliveryDateSelected(false)
                     }}
                   >
                     {t('Change')}

@@ -33,6 +33,7 @@ export default async function CheckoutPage() {
     <CheckoutForm
       savedAddresses={savedAddresses}
       verifiedPhones={verifiedPhones}
+      ownerId={session.user.id}
     />
   )
 }

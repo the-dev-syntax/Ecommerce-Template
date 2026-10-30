@@ -6,7 +6,6 @@ import { beginPaymentEvent, finishPaymentEvent } from '@/lib/payments/events'
 import {
   constructStripeWebhook,
   retrieveStripeCharge,
-  retrieveStripeIntent,
 } from '@/lib/payments/stripe'
 import Order from '@/lib/db/models/order.model'
 
@@ -62,49 +61,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Backward-compatible fallback if the endpoint is still subscribed to charges.
-    if (event.type === 'charge.succeeded') {
-      const charge = event.data.object as Stripe.Charge
-      if (!charge.paid) {
-        await finishPaymentEvent(
-          paymentEventId,
-          'ignored',
-          'Charge was not paid'
-        )
-        return NextResponse.json({ received: true })
-      }
-
-      let orderId = charge.metadata.orderId
-      if (!orderId && typeof charge.payment_intent === 'string') {
-        const paymentIntent = await retrieveStripeIntent(
-          charge.payment_intent
-        )
-        orderId = paymentIntent.metadata.orderId
-      }
-
-      if (!orderId) {
-        console.error('Stripe charge has no orderId:', charge.id)
-        await finishPaymentEvent(paymentEventId, 'ignored', 'Missing orderId')
-        return NextResponse.json({ received: true })
-      }
-
-      const result = await fulfillOrder({
-        orderId,
-        provider: 'Stripe',
-        paymentId: charge.id,
-        amountPaid: charge.amount / 100,
-        currency: charge.currency,
-        email: charge.billing_details?.email ?? '',
-        status: 'COMPLETED',
-      })
-
-      await finishPaymentEvent(paymentEventId, 'processed')
-      return NextResponse.json({
-        received: true,
-        alreadyPaid: result.alreadyPaid,
-      })
-    }
-
+    // Only `payment_intent.succeeded` fulfils an order. The legacy
+    // `charge.succeeded` subscriber was removed: it compared `charge.amount`
+    // and could block legitimate capture flows, and Stripe sends the intent
+    // event for every successful payment. Any other event is acknowledged and
+    // logged as ignored.
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       console.error(

@@ -113,22 +113,27 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       throw new Error(`Variant is no longer available: ${product.name}`)
 
     // Older persisted carts may have size/color but no variant id. Resolve the
-    // matching/default variant instead of trusting the product-level price.
+    // matching variant instead of trusting the product-level price. Never fall
+    // back to the default variant when the line explicitly chose options: that
+    // silently substituted a different size/color (and price) with no warning.
     if (!variant && !variantId && (product.variants?.length ?? 0) > 0) {
       const requestedSize = item.size?.trim()
       const requestedColor = item.color?.trim()
-      const matched =
-        requestedSize || requestedColor
-          ? product.variants?.find(
-              (candidate) =>
-                (!requestedSize || candidate.size === requestedSize) &&
-                (!requestedColor || candidate.color === requestedColor)
-            )
-          : undefined
-      variant =
-        matched ??
-        product.variants?.find((candidate) => candidate.isDefault) ??
-        product.variants?.[0]
+      if (requestedSize || requestedColor) {
+        variant = product.variants?.find(
+          (candidate) =>
+            (!requestedSize || candidate.size === requestedSize) &&
+            (!requestedColor || candidate.color === requestedColor)
+        )
+        if (!variant)
+          throw new Error(
+            `Choose an available variant for ${product.name} again`
+          )
+      } else {
+        variant =
+          product.variants?.find((candidate) => candidate.isDefault) ??
+          product.variants?.[0]
+      }
     }
     if (!variant && (product.variants?.length ?? 0) > 0)
       throw new Error(`Choose an available variant for ${product.name}`)
