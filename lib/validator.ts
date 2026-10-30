@@ -77,6 +77,8 @@ export const ProductInputSchema = z.object({
     .int()
     .nonnegative('low stock threshold must be a non-negative number')
     .optional(),
+  // Product-level shipping weight (kg), used when the item has no variant.
+  weight: z.coerce.number().nonnegative('Weight must be non-negative').optional(),
   tags: z.array(z.string()).default([]),
   sizes: z.array(z.string()).default([]),
   colors: z.array(z.string()).default([]),
@@ -159,8 +161,9 @@ export const ShippingAddressSchema = z.object({
   city: z.string().min(1, 'City is required').max(100, 'City is too long'),
   postalCode: z
     .string()
-    .min(1, 'Postal code is required')
-    .max(20, 'Postal code is too long'),
+    .min(3, 'Postal code is required')
+    .max(20, 'Postal code is too long')
+    .regex(/^[A-Za-z0-9][A-Za-z0-9 -]*$/, 'Postal code is invalid'),
   province: z
     .string()
     .min(1, 'Province is required')
@@ -169,11 +172,17 @@ export const ShippingAddressSchema = z.object({
   nationalAddress: z
     .string()
     .max(20, 'National address is too long')
+    .regex(/^[A-Za-z0-9 -]*$/, 'National address is invalid')
     .optional(),
   phone: z
     .string()
-    .min(1, 'Phone number is required')
-    .max(30, 'Phone number is too long'),
+    .min(7, 'Phone number is invalid')
+    .max(30, 'Phone number is too long')
+    .regex(/^\+?[\d\s()\-]+$/, 'Phone number is invalid')
+    .refine(
+      (value) => (value.match(/\d/g)?.length ?? 0) >= 7,
+      'Phone number is invalid'
+    ),
   country: z
     .string()
     .min(1, 'Country is required')
@@ -428,6 +437,7 @@ export const ProductInputFormSchema = z.object({
     .int()
     .nonnegative('low stock threshold must be a non-negative number')
     .optional(),
+  weight: z.coerce.number().nonnegative('Weight must be non-negative').optional(),
   tags: z.array(z.string()),
   sizes: z.array(z.string()),
   colors: z.array(z.string()),
@@ -495,32 +505,42 @@ export const PaymentMethodSchema = z.object({
   commission: z.coerce.number().min(0, 'Commission must be at least 0'),
 })
 
-export const ShippingRateSchema = z.object({
+export const ShippingRateBaseSchema = z.object({
   zoneName: z.string().min(1, 'Zone name is required').max(100),
   country: z.string().min(2).max(100),
   region: z.string().min(1, 'Region is required').max(100),
   city: z.string().min(1, 'City is required').max(100),
   carrier: z.string().min(1, 'Carrier is required').max(100),
   serviceName: z.string().min(1, 'Service is required').max(100),
-  baseRate: z.coerce.number().min(0),
-  includedWeightKg: z.coerce.number().min(0),
-  extraPerKg: z.coerce.number().min(0),
-  weightRoundingKg: z.coerce.number().min(0.1),
+  baseRate: z.coerce.number().min(0).max(1_000_000),
+  includedWeightKg: z.coerce.number().min(0).max(1_000),
+  extraPerKg: z.coerce.number().min(0).max(100_000),
+  weightRoundingKg: z.coerce.number().min(0.1).max(100),
   freeShippingEnabled: z.boolean().default(true),
-  freeShippingMinPrice: z.coerce.number().min(0),
-  codFee: z.coerce.number().min(0),
-  remoteSurcharge: z.coerce.number().min(0),
-  etaMinDays: z.coerce.number().int().min(0),
-  etaMaxDays: z.coerce.number().int().min(0),
+  freeShippingMinPrice: z.coerce.number().min(0).max(1_000_000),
+  codFee: z.coerce.number().min(0).max(100_000),
+  remoteSurcharge: z.coerce.number().min(0).max(100_000),
+  etaMinDays: z.coerce.number().int().min(0).max(365),
+  etaMaxDays: z.coerce.number().int().min(0).max(365),
   pickupAvailable: z.boolean(),
   codAvailable: z.boolean(),
   isActive: z.boolean(),
   priority: z.coerce.number().int(),
 })
 
-export const ShippingRateUpdateSchema = ShippingRateSchema.extend({
+const etaOrder = {
+  message: 'Minimum delivery days cannot exceed maximum delivery days',
+  path: ['etaMaxDays'],
+}
+
+export const ShippingRateSchema = ShippingRateBaseSchema.refine(
+  (rate) => rate.etaMinDays <= rate.etaMaxDays,
+  etaOrder
+)
+
+export const ShippingRateUpdateSchema = ShippingRateBaseSchema.extend({
   _id: z.string(),
-})
+}).refine((rate) => rate.etaMinDays <= rate.etaMaxDays, etaOrder)
 
 export const DeliveryDateSchema = z.object({
   name: z.string().min(1, 'Name is required'),

@@ -2,6 +2,15 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P3-A — MC1-bugs: shipping weight, validation, UTC dates, order keys (2026-10-29)
+
+- **Shipping weight (35):** products now have a product-level `weight` (model, `ProductInputSchema`/form schema, admin form field, create/edit defaults). Order lines use `variant.weight ?? product.weight ?? 0`. Why: non-variant products were always priced at 0 kg, so `extraPerKg` surcharges never applied.
+- **Address/rate validation (36):** `ShippingAddressSchema` now requires a plausible phone (digits plus space/`+`/`-`/parentheses, at least 7 digits), an alphanumeric postal code and an alphanumeric national address. `ShippingRateSchema` caps monetary fields and validates `etaMinDays <= etaMaxDays` (also on update). Why: `"x"` passed as a phone number, and inverted ETAs or absurd amounts could be saved and then distort checkout quotes.
+- **UTC date handling (37):** `parseDateParam` parses day boundaries as UTC, the six-month sales window starts at a UTC month boundary, and `$dateToString` groups explicitly with `timezone: 'UTC'`. Why: server-local midnight boundaries were being bucketed by UTC in Mongo, shifting a few hours of orders into the wrong day/month and diverging from the VAT report (which already used UTC).
+- **Verification email (38):** already resolved by the P0-6 work — `checkAndSetEmailRateLimit` runs before account creation and before `sendVerificationEmail`. No further change.
+- **Order item keys (39):** the order details table keys rows by `clientId` (falling back to `slug` + index) instead of `slug`, so two variants of the same product no longer share a React key.
+- Added `tests/p3-validation.test.ts` (address/rate/product validation and UTC date parsing).
+
 ## P2-D — MC1-bugs: single site-URL source (2026-10-28)
 
 - Added `getSiteUrl()` in `lib/env.ts` and used it in `app/sitemap.ts`, `app/robots.ts` and the locale layout's `metadataBase`. It accepts `NEXT_PUBLIC_SITE_URL`, the legacy `NEXT_PUBLIC_SERVER_URL`/`SITE_URL` names, Vercel's production URL, then the store setting, and strips trailing slashes. `.env.example` documents the precedence. Why: the sitemap read `NEXT_PUBLIC_SITE_URL` while robots read `NEXT_PUBLIC_SERVER_URL`, so a deployment could advertise the real domain in one file and `localhost` in the other; the layout had a third, slightly different fallback chain. Added `tests/site-url.test.ts`.

@@ -351,9 +351,12 @@ export function parseDateParam(
   endOfDay: boolean
 ): Date | undefined {
   if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return undefined
+  // Standardize on UTC: Mongo aggregations bucket with UTC by default, and the
+  // VAT report already parses its filters as UTC. Local-midnight boundaries
+  // shifted a few hours of orders into the wrong day/month.
   const d = endOfDay
-    ? new Date(`${dateParam}T23:59:59.999`)
-    : new Date(`${dateParam}T00:00:00`)
+    ? new Date(`${dateParam}T23:59:59.999Z`)
+    : new Date(`${dateParam}T00:00:00.000Z`)
   return isNaN(d.getTime()) ? undefined : d
 }
 

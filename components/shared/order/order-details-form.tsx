@@ -171,8 +171,8 @@ export default function OrderDetailsForm({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.slug}>
+                {items.map((item, index) => (
+                  <TableRow key={item.clientId ?? `${item.slug}-${index}`}>
                     <TableCell>
                       <Link
                         href={`/product/${item.slug}`}

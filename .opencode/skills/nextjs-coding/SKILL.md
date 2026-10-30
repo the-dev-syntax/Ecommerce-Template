@@ -11,6 +11,8 @@ description: Guidelines for modifying this Next.js e-commerce project safely, in
 - Avoid unrelated changes.
 - Run appropriate checks after changes.
 - Document all changes and why they were made in README.md.
+- when you commit any code , use a brief and descriptive commit message that clearly explains the purpose of the changes made. Avoid generic messages like "fix" or "update" and instead provide context about what was changed.
+- 
 
 ## Windows Memory and Resource Safety
 

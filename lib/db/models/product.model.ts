@@ -54,6 +54,8 @@ const productSchema = new Schema<IProduct>(
       default: 5,
       min: 0,
     },
+    // Product-level shipping weight in kg, used when no variant weight exists.
+    weight: { type: Number, default: 0, min: 0 },
     tags: { type: [String], default: ['new arrival'] },
     colors: { type: [String], default: ['White', 'Red', 'Black'] },
     sizes: { type: [String], default: ['60'] },

@@ -448,6 +448,7 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
       price: normalized.price,
       listPrice: normalized.listPrice,
       lowStockThreshold: normalized.lowStockThreshold ?? 5,
+      weight: normalized.weight ?? 0,
       tags: normalized.tags,
       sizes: normalized.sizes,
       colors: normalized.colors,

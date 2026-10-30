@@ -179,7 +179,7 @@ const buildOrderItems = async (clientItems: OrderItem[]) => {
       variantLabel: variant
         ? [variant.size, variant.color].filter(Boolean).join(' / ')
         : undefined,
-      weight: variant?.weight ?? 0,
+      weight: variant?.weight ?? product.weight ?? 0,
     }
   })
 }
@@ -1102,9 +1102,7 @@ export async function getOrderSummary(date: DateRange) {
 
   const today = new Date()
   const sixMonthEarlierDate = new Date(
-    today.getFullYear(),
-    today.getMonth() - 5,
-    1
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 5, 1)
   )
   const monthlySales = await Order.aggregate([
     {
@@ -1116,7 +1114,13 @@ export async function getOrderSummary(date: DateRange) {
     },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+        _id: {
+          $dateToString: {
+            format: '%Y-%m',
+            date: '$createdAt',
+            timezone: 'UTC',
+          },
+        },
         totalSales: { $sum: '$totalPrice' },
       },
     },

@@ -212,6 +212,28 @@ interface ProductFormUIProps {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name='weight'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Weight (kg)')}</FormLabel>
+                <FormControl>
+                  <Input
+                    type='number'
+                    min={0}
+                    step='0.01'
+                    placeholder={t('Product weight in kilograms')}
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {t('Used to calculate shipping cost')}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <VariantForm form={form} isEdit={type === 'Update'} />
