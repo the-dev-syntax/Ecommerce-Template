@@ -1,2 +1,13 @@
 {
+  // Stop the "extension wants to relaunch the terminal" popup/indicator.
+  "terminal.integrated.environmentChangesIndicator": "off",
+  // Don't auto-relaunch terminals behind your back either.
+  "terminal.integrated.environmentChangesRelaunch": false,
+
+  // Turn off Copilot suggestions and chat features in this workspace.
+  "github.copilot.enable": {
+    "*": false
+  },
+  "editor.inlineSuggest.enabled": false,
+  "chat.disableAIFeatures": true
 }

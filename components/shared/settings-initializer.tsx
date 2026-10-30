@@ -1,15 +1,9 @@
 
 // RECOMMENDED SOLUTION
 
-import { useEffect, useLayoutEffect } from 'react'
+import { useEffect } from 'react'
 import useSettingStore from '@/hooks/use-setting-store'
 import { ClientSetting } from '@/types'
-
-// useState/setState in a layout effect is applied before the browser paints,
-// so server-rendered prices switch to the cookie currency without a visible
-// flash. useEffect runs after paint and briefly showed the default currency.
-const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 export default function SettingsInitializer({
   setting,
@@ -17,7 +11,13 @@ export default function SettingsInitializer({
   setting: ClientSetting
 }) {
   // Synchronize the server-provided `setting` prop with the client store.
-  useIsomorphicLayoutEffect(() => {
+  //
+  // This must stay a regular effect: a layout effect runs during hydration and
+  // can update the shared store before sibling client components hydrate, so
+  // they render the cookie currency while the server HTML used the default —
+  // a hydration mismatch (seen on ProductPrice). useEffect runs after the
+  // whole tree has hydrated, so the currency swap is visible but safe.
+  useEffect(() => {
     useSettingStore.setState({ setting })
   }, [setting]) // We include `setting` as a dependency.
 

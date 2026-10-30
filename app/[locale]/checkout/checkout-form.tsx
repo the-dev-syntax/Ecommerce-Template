@@ -28,6 +28,7 @@ import { ShippingAddressSchema } from '@/lib/validator'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter, Link } from '@/i18n/routing'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useRef, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import CheckoutFooter from './checkout-footer'
@@ -468,6 +469,19 @@ const CheckoutForm = ({
       </CardContent>
     </Card>
   )
+
+  // The cart is rehydrated from localStorage on the client. Rendering the form
+  // before that completes would compare the server's empty cart with the
+  // persisted one (different items, address and prices) during hydration.
+  if (!isMounted) {
+    return (
+      <main className='max-w-6xl mx-auto space-y-4 p-4'>
+        <Skeleton className='h-8 w-48' />
+        <Skeleton className='h-40 w-full' />
+        <Skeleton className='h-64 w-full' />
+      </main>
+    )
+  }
 
   return (
     <main className='max-w-6xl mx-auto highlight-link'>
