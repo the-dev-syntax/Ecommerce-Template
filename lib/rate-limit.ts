@@ -59,6 +59,58 @@ export async function limitCurrencyChangesByIP() {
     throw new Error('Too many currency changes. Please wait a moment.')
 }
 
+// Phone verification: per-account buckets (the number-level cap is enforced by
+// Tawked itself). Fail open if Redis is unavailable so checkout is not blocked
+// by the limiter — the verification check itself still always runs.
+const phoneStartUserLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '10 m'),
+  prefix: 'v1:ratelimit:phone-start',
+})
+
+export async function limitPhoneVerificationStart(userId: string) {
+  try {
+    const { success, reset } = await phoneStartUserLimit.limit(userId)
+    if (!success) {
+      const retrySeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000))
+      throw new Error(
+        `Too many verification codes requested. Please wait ${formatSeconds(retrySeconds)}`
+      )
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Too many'))
+      throw error
+    console.error('Phone start limiter unavailable:', error)
+  }
+}
+
+const phoneCheckUserLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, '10 m'),
+  prefix: 'v1:ratelimit:phone-check',
+})
+
+export async function limitPhoneVerificationCheck(userId: string) {
+  try {
+    const { success, reset } = await phoneCheckUserLimit.limit(userId)
+    if (!success) {
+      const retrySeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000))
+      throw new Error(
+        `Too many verification attempts. Please wait ${formatSeconds(retrySeconds)}`
+      )
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Too many'))
+      throw error
+    console.error('Phone check limiter unavailable:', error)
+  }
+}
+
+/** Client IP for Tawked's per-IP protection guard. */
+export async function getClientIp() {
+  return getIP()
+}
+
 // Credential sign-in limiters: slow down brute force and credential stuffing.
 // Per-IP catches distributed email guessing; per-email catches many IPs
 // targeting one account. Successful sign-ins count too, so keep the windows

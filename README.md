@@ -2,6 +2,17 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## Phone verification — MC1-bugs (2026-10-30)
+
+- **Locked Saudi number:** checkout and the address book now use a shared `PhoneVerification` field with a fixed `+966` prefix and exactly 9 national digits (`5XXXXXXXX`). `normalizeSaudiPhone()` accepts the formats Tawked accepts (`055…`, `551…`, `966…`, `00966…`, `+966…`) and returns E.164; `ShippingAddressSchema` rejects anything that is not a Saudi mobile. The development checkout default was changed from an invalid landline-style number to `512345678`.
+- **Tawked Verify integration:** `lib/tawked.ts` calls `POST /v1/verify/start` (Bearer `TAWKED_SMS_API_KEY`, `Idempotency-Key`, `reference`, `client_ip`, language) and `POST /v1/verify/check`. One retry reuses the idempotency key for network/5xx failures, so a retry cannot send or charge a second SMS. The verification `id` is stored server-side only (`phoneOtpId`, `phoneOtpPhone`, `phoneOtpExpires`, all `select: false`); the browser only receives "code sent".
+- **Persistence:** a successful check sets `phone` (E.164), `phoneVerified: true`, `phoneVerifiedAt`, and appends the number to `verifiedPhones`. `phoneVerified` is never accepted from the client; only Tawked's `check` answer sets it.
+- **Requirement enforced server-side:** `createOrderFromCart` rejects an order unless the shipping phone is in the user's verified numbers, and `saveUserAddress` rejects saving an unverified phone. The checkout and address-book forms also check before submitting and show a toast.
+- **Rate limits:** 5 starts / 10 min and 20 checks / 10 min per account, in addition to Tawked's per-number/per-IP guard. The limiter fails open (verification itself still always runs).
+- **Errors:** Tawked's stable `error` strings are mapped to actionable messages (`invalid_destination`, `rate_limited`, `ip_rate_limited`, sandbox-only number, missing configuration); every other failure shows a generic message and logs `X-Request-Id` context.
+- **Config:** `TAWKED_SMS_API_KEY` (required for the layer) and optional `TAWKED_API_BASE` documented in `.env.example`.
+- Added `tests/phone.test.ts` for normalization/formatting. The 9-digit rule is intentional: Saudi mobile numbers have 9 national digits after `+966`; Tawked rejects longer ones.
+
 ## P3-A — MC1-bugs: shipping weight, validation, UTC dates, order keys (2026-10-29)
 
 - **Shipping weight (35):** products now have a product-level `weight` (model, `ProductInputSchema`/form schema, admin form field, create/edit defaults). Order lines use `variant.weight ?? product.weight ?? 0`. Why: non-variant products were always priced at 0 kg, so `extraPerKg` surcharges never applied.

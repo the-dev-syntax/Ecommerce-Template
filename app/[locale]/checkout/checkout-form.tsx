@@ -33,6 +33,8 @@ import { SubmitHandler, useForm } from 'react-hook-form'
 import CheckoutFooter from './checkout-footer'
 import { ShippingAddress } from '@/types'
 import type { UserAddress } from '@/types'
+import { normalizeSaudiPhone } from '@/lib/phone'
+import PhoneVerification from '@/components/shared/phone/phone-verification'
 import useIsMounted from '@/hooks/use-is-mounted'
 import useCartStore from '@/hooks/use-cart-store'
 import ProductPrice from '@/components/shared/product/product-price'
@@ -52,7 +54,7 @@ const shippingAddressDefaultValues =
       province: 'Riyadh',
       district: 'Al Olaya',
       nationalAddress: 'RFKB4744',
-      phone: '4181234567',
+      phone: '512345678',
       postalCode: 'A8C 1H4',
       country: 'Saudi Arabia',
     }
@@ -78,17 +80,21 @@ function toShippingAddress(address: UserAddress): ShippingAddress {
     country: address.country,
     district: address.district,
     nationalAddress: address.nationalAddress,
-    phone: address.phone,
+    phone: normalizeSaudiPhone(address.phone) ?? address.phone,
   }
 }
 
 const CheckoutForm = ({
   savedAddresses = [],
+  verifiedPhones = [],
 }: {
   savedAddresses?: UserAddress[]
+  verifiedPhones?: string[]
 }) => {
   const router = useRouter()
   const t = useTranslations()
+  const [verifiedPhoneList, setVerifiedPhoneList] =
+    useState<string[]>(verifiedPhones)
 
   const { setting: {
     site,
@@ -198,11 +204,28 @@ const CheckoutForm = ({
     values
   ) => {
     if (isAddressSaving) return
+
+    const phone = normalizeSaudiPhone(values.phone)
+    if (!phone) {
+      toast({
+        description: t('Enter a valid Saudi mobile number'),
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!verifiedPhoneList.includes(phone)) {
+      toast({
+        description: t('Verify your phone number first'),
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsAddressSaving(true)
     try {
       // This reprices the cart through a server action and can throw when a
       // product/variant disappeared or the address is not serviceable.
-      await setShippingAddress(values)
+      await setShippingAddress({ ...values, phone })
       setIsAddressSelected(true)
     } catch (error) {
       toast({
@@ -669,12 +692,19 @@ const CheckoutForm = ({
                             render={({ field }) => (
                               <FormItem className='w-full'>
                                 <FormLabel>{t('Phone number')}</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder={t('Enter phone number')}
-                                    {...field}
-                                  />
-                                </FormControl>
+                                <PhoneVerification
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  verifiedPhones={verifiedPhoneList}
+                                  onVerified={(phone) => {
+                                    setVerifiedPhoneList((current) =>
+                                      current.includes(phone)
+                                        ? current
+                                        : [...current, phone]
+                                    )
+                                    field.onChange(phone)
+                                  }}
+                                />
                                 <FormMessage />
                               </FormItem>
                             )}

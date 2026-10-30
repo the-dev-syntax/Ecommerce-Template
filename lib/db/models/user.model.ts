@@ -22,6 +22,14 @@ export interface IUser extends Omit<Document, '_id'>, IUserInput {
   failedOtpAttempts?: number;
   otpLockedUntil?: Date | null;
   addresses?: UserAddress[];
+  phone?: string | null;
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: Date | null;
+  verifiedPhones?: { phone: string; verifiedAt: Date }[];
+  // Tawked verification currently in flight (kept out of normal reads).
+  phoneOtpId?: string | null;
+  phoneOtpPhone?: string | null;
+  phoneOtpExpires?: Date | null;
 }
 
 // 2. Interface for statics
@@ -72,6 +80,21 @@ const UserSchema = new Schema<IUser, IUserModel>({
       isDefault: { type: Boolean, default: false },
     },
   ],
+  // Phone verification (Tawked Verify). E.164 numbers only.
+  phone: { type: String, default: null },
+  phoneVerified: { type: Boolean, default: false },
+  phoneVerifiedAt: { type: Date, default: null },
+  verifiedPhones: [
+    {
+      _id: false,
+      phone: { type: String, required: true },
+      verifiedAt: { type: Date, default: Date.now },
+    },
+  ],
+  // In-flight Tawked verification id — server-only, never serialized.
+  phoneOtpId: { type: String, default: null, select: false },
+  phoneOtpPhone: { type: String, default: null, select: false },
+  phoneOtpExpires: { type: Date, default: null, select: false },
 }, { timestamps: true });
 
 // Hash on every save path. Flows that already hash (registerUser,

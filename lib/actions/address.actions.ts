@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import { auth } from '@/auth'
 import { connectToDatabase } from '@/lib/db'
 import User from '@/lib/db/models/user.model'
+import { normalizeSaudiPhone } from '@/lib/phone'
 import { formatError } from '@/lib/utils'
 import { UserAddressSchema } from '@/lib/validator'
 import type { UserAddress } from '@/types'
@@ -49,6 +50,24 @@ export async function saveUserAddress(
     await connectToDatabase()
 
     const data = UserAddressSchema.parse(input)
+    const phone = normalizeSaudiPhone(data.phone)
+    if (!phone)
+      throw new Error(
+        'Enter a valid Saudi mobile number (+966 followed by 9 digits)'
+      )
+
+    // Only numbers verified by OTP can be saved to the address book.
+    const owner = await User.findById(userId)
+      .select({ phone: 1, phoneVerified: 1, verifiedPhones: 1 })
+      .lean()
+    const verifiedPhones = new Set(
+      (owner?.verifiedPhones ?? []).map((entry) => entry.phone)
+    )
+    if (owner?.phoneVerified && owner.phone) verifiedPhones.add(owner.phone)
+    if (!verifiedPhones.has(phone))
+      throw new Error('Verify this phone number before saving it.')
+
+    data.phone = phone
     const addresses = await readAddresses(userId)
     const requestedId = data.id?.trim()
     let savedId = requestedId

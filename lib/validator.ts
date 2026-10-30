@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { formatNumberWithDecimal } from './utils'
+import { normalizeSaudiPhone } from './phone'
 
 import {
   REFUND_REASONS,
@@ -176,12 +177,11 @@ export const ShippingAddressSchema = z.object({
     .optional(),
   phone: z
     .string()
-    .min(7, 'Phone number is invalid')
-    .max(30, 'Phone number is too long')
-    .regex(/^\+?[\d\s()\-]+$/, 'Phone number is invalid')
+    .min(9, 'Enter a valid Saudi mobile number')
+    .max(20, 'Phone number is too long')
     .refine(
-      (value) => (value.match(/\d/g)?.length ?? 0) >= 7,
-      'Phone number is invalid'
+      (value) => normalizeSaudiPhone(value) !== null,
+      'Enter a valid Saudi mobile number (+966 followed by 9 digits)'
     ),
   country: z
     .string()

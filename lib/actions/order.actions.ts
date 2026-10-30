@@ -25,6 +25,7 @@ import { sendAskReviewOrderItems, sendOrderShippedEmail } from '@/emails'
 import { DateRange } from 'react-day-picker'
 import Product from '../db/models/product.model'
 import User from '../db/models/user.model'
+import { normalizeSaudiPhone } from '../phone'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
 import { isAdminOrOwner, requireAdmin } from '../access'
@@ -270,6 +271,25 @@ export const createOrderFromCart = async (
   const shippingAddress = clientSideCart.shippingAddress
     ? ShippingAddressSchema.parse(clientSideCart.shippingAddress)
     : undefined
+
+  if (!shippingAddress) throw new Error('Shipping address is required')
+
+  // Checkout requirement: the shipping phone must have been verified by OTP.
+  const shippingPhone = normalizeSaudiPhone(shippingAddress.phone)
+  if (!shippingPhone)
+    throw new Error('Enter a valid Saudi mobile number (+966 followed by 9 digits)')
+
+  const buyer = await User.findById(userId)
+    .select({ phone: 1, phoneVerified: 1, verifiedPhones: 1 })
+    .lean()
+  const verifiedPhones = new Set(
+    (buyer?.verifiedPhones ?? []).map((entry) => entry.phone)
+  )
+  if (buyer?.phoneVerified && buyer.phone) verifiedPhones.add(buyer.phone)
+  if (!verifiedPhones.has(shippingPhone))
+    throw new Error('Verify your phone number before placing the order.')
+
+  shippingAddress.phone = shippingPhone
 
   const {
     availableDeliveryDates: settingDeliveryDates,

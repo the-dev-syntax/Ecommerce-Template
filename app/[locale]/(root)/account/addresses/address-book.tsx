@@ -25,6 +25,8 @@ import {
   saveUserAddress,
   setDefaultUserAddress,
 } from '@/lib/actions/address.actions'
+import { normalizeSaudiPhone } from '@/lib/phone'
+import PhoneVerification from '@/components/shared/phone/phone-verification'
 import { UserAddressSchema } from '@/lib/validator'
 import type { UserAddress } from '@/types'
 
@@ -43,12 +45,16 @@ const emptyAddress: UserAddress = {
 
 export default function AddressBook({
   initialAddresses,
+  verifiedPhones = [],
 }: {
   initialAddresses: UserAddress[]
+  verifiedPhones?: string[]
 }) {
   const t = useTranslations()
   const { toast } = useToast()
   const [addresses, setAddresses] = useState(initialAddresses)
+  const [verifiedPhoneList, setVerifiedPhoneList] =
+    useState<string[]>(verifiedPhones)
   const [editing, setEditing] = useState<UserAddress | null>(null)
   const [showForm, setShowForm] = useState(false)
 
@@ -76,7 +82,23 @@ export default function AddressBook({
   }
 
   const onSubmit = async (values: UserAddress) => {
-    const result = await saveUserAddress({ ...values, id: editing?.id })
+    const phone = normalizeSaudiPhone(values.phone)
+    if (!phone) {
+      toast({
+        variant: 'destructive',
+        description: t('Enter a valid Saudi mobile number'),
+      })
+      return
+    }
+    if (!verifiedPhoneList.includes(phone)) {
+      toast({
+        variant: 'destructive',
+        description: t('Verify your phone number first'),
+      })
+      return
+    }
+
+    const result = await saveUserAddress({ ...values, phone, id: editing?.id })
     if (!result.success) {
       toast({ variant: 'destructive', description: result.message })
       return
@@ -126,7 +148,29 @@ export default function AddressBook({
               >
                 <div className='grid gap-4 md:grid-cols-2'>
                   <AddressField form={form} name='fullName' label={t('Full Name')} />
-                  <AddressField form={form} name='phone' label={t('Phone number')} />
+                  <FormField
+                    control={form.control}
+                    name='phone'
+                    render={({ field }) => (
+                      <FormItem className='w-full'>
+                        <FormLabel>{t('Phone number')}</FormLabel>
+                        <PhoneVerification
+                          value={field.value}
+                          onChange={field.onChange}
+                          verifiedPhones={verifiedPhoneList}
+                          onVerified={(phone) => {
+                            setVerifiedPhoneList((current) =>
+                              current.includes(phone)
+                                ? current
+                                : [...current, phone]
+                            )
+                            field.onChange(phone)
+                          }}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <AddressField form={form} name='country' label={t('Country')} />
                   <AddressField form={form} name='province' label={t('Province')} />
                   <AddressField form={form} name='city' label={t('City')} />

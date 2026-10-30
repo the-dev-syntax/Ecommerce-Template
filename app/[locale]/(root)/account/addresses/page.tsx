@@ -2,6 +2,7 @@ import { Link } from '@/i18n/routing'
 import { getTranslations } from 'next-intl/server'
 
 import { getUserAddresses } from '@/lib/actions/address.actions'
+import { getVerifiedPhones } from '@/lib/actions/phone.actions'
 import AddressBook from './address-book'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +15,7 @@ export async function generateMetadata() {
 export default async function AddressesPage() {
   const t = await getTranslations()
   const addresses = await getUserAddresses()
+  const verifiedPhones = await getVerifiedPhones()
 
   return (
     <div>
@@ -28,7 +30,10 @@ export default async function AddressesPage() {
       <p className='pb-4 text-sm text-muted-foreground'>
         {t('Saved addresses are pre-filled at checkout')}
       </p>
-      <AddressBook initialAddresses={addresses} />
+      <AddressBook
+        initialAddresses={addresses}
+        verifiedPhones={verifiedPhones}
+      />
     </div>
   )
 }
