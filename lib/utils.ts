@@ -217,11 +217,13 @@ export function formatId(id: string) {
 }
 
 
-export function formUrlQuery({
+export function buildUrlQuery({
+  basePath,
   params,
   key,
   value,
 }: {
+  basePath: string
   params: string
   key: string
   value: string | null
@@ -232,11 +234,30 @@ export function formUrlQuery({
 
   return qs.stringifyUrl(
     {
-      url: window.location.pathname,
+      url: basePath,
       query: currentUrl,
     },
     { skipNull: true }
   )
+}
+
+export function formUrlQuery({
+  params,
+  key,
+  value,
+  basePath,
+}: {
+  params: string
+  key: string
+  value: string | null
+  basePath?: string
+}) {
+  return buildUrlQuery({
+    basePath: basePath ?? window.location.pathname,
+    params,
+    key,
+    value,
+  })
 }
 
 export const getFilterUrl = ({

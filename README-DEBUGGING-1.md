@@ -181,11 +181,13 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - `app/sitemap.ts:23,34,43` builds `${siteUrl}/${locale === 'en-US' ? '' : locale}${path}` while `path` already starts with `/`.
 - Live: `sitemap.xml` contains **44** `<loc>https://www.essentialvital.com//...</loc>` entries (29 products plus `/search`, `/cart` and pages). Each one 308-redirects to the correct URL.
 - Fix: use `${siteUrl}${locale === 'en-US' ? '' : `/${locale}`}${path}` and assert no `//` after the origin.
+- **Fixed 2026-11-01:** the sitemap now uses `localizedPath()`; Preview `sitemap.xml` has zero `//` URLs.
 
 58. Pagination on `/fr` and `/ar` navigates to `/fr/fr/...` and 404s - [live]
 - `components/shared/pagination.tsx:25` calls `formUrlQuery`, which uses `window.location.pathname` (`lib/utils.ts:237`) - that path already contains `/fr`. The result is pushed through the locale-aware router, which prefixes the locale again.
 - Live: `/fr/fr/search?page=2` returns 404 while `/fr/search?page=2` returns 200. The same component is used by `/account/orders`, `/admin/orders`, `/admin/reviews` and `/admin/users`.
 - Fix: base the query URL on `usePathname()` from `@/i18n/routing` (locale-stripped), not `window.location.pathname`.
+- **Fixed 2026-11-01:** `formUrlQuery` accepts `basePath` and Pagination passes the locale-stripped `usePathname()`; a router prefix is now added once. `tests/filter-url.test.ts` guards it.
 
 59. Missing product/page slugs render the 404 UI but return HTTP 200 (soft 404) - [live]
 - `app/[locale]/(root)/product/[slug]/page.tsx:62` and `app/[locale]/(root)/page/[slug]/page.tsx:38` call `notFound()`, but the route streams first through `app/[locale]/loading.tsx:3`, so the status is committed before the 404 boundary resolves.

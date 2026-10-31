@@ -3,6 +3,7 @@ import { i18n } from '@/i18n-config'
 import { getAllProductsForSitemap } from '@/lib/actions/product.actions';
 import { getAllWebPagesForSitemap } from '@/lib/actions/web-page.actions';
 import { getSiteUrl } from '@/lib/env';
+import { localizedPath } from '@/lib/utils';
 
 
 
@@ -20,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const staticUrls = staticPaths.flatMap((path) =>
     locales.map((locale) => ({
-      url: `${siteUrl}/${(locale === 'en-US' ? '' : locale)}${path}`,
+      url: `${siteUrl}${localizedPath(locale, path)}`,
       lastModified: new Date(), // Use a fixed date or dynamically fetch the last modified date
       changeFrequency: 'monthly' as const,
       priority: path === '' ? 1.0 : 0.8, // Homepage gets higher priority
@@ -31,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const productUrls = products.flatMap((product) =>
     locales.map((locale) => ({   // if the products are localized, you can add locale to the URL
-      url: `${siteUrl}/${(locale === 'en-US' ? '' : locale)}/product/${product.slug}`,
+      url: `${siteUrl}${localizedPath(locale, `/product/${product.slug}`)}`,
       lastModified: product.updatedAt,
       changeFrequency: 'monthly' as const, 
       priority: 0.7,
@@ -40,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const webPageUrls = webPages.flatMap((page) =>
     locales.map((locale) => ({
-      url: `${siteUrl}/${(locale === 'en-US' ? '' : locale)}/page/${page.slug}`,
+      url: `${siteUrl}${localizedPath(locale, `/page/${page.slug}`)}`,
       lastModified: page.updatedAt,
       changeFrequency: 'yearly' as const, // Content pages like 'about-us' rarely change
       priority: 0.5,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useRouter } from '@/i18n/routing'
+import { usePathname, useRouter } from '@/i18n/routing'
 import React from 'react'
 import { formUrlQuery } from '@/lib/utils'
 import { Button } from '../ui/button'
@@ -20,6 +20,7 @@ type PaginationProps = {
 const Pagination = ({ page, totalPages, urlParamName }: PaginationProps) => {
   const t = useTranslations()
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const onClick = (btnType: string) => {
@@ -30,6 +31,8 @@ const Pagination = ({ page, totalPages, urlParamName }: PaginationProps) => {
       params: searchParams.toString(),
       key: urlParamName || 'page',
       value: pageValue.toString(),
+      // usePathname() is locale-stripped; the router adds the prefix once.
+      basePath: pathname,
     })
 
     router.push(newUrl, { scroll: true })

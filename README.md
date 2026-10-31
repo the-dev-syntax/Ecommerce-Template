@@ -2,6 +2,16 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-58 - Locale pagination no longer doubles the prefix (2026-11-01)
+
+- `formUrlQuery` accepts a `basePath`, and `Pagination` passes `usePathname()` from `@/i18n/routing` (locale-stripped). The locale-aware router adds `/fr` exactly once, so `/fr/fr/search` is no longer produced.
+- Added `tests/filter-url.test.ts` coverage for the URL builder and a source guard on the pagination component.
+
+## P1-57 - Sitemap URLs no longer contain double slashes (2026-11-01)
+
+- `app/sitemap.ts` builds every URL with `localizedPath()`. The 44 `//product`, `//search`, `//cart` and `//page` entries for the default locale are gone.
+- Verified on Preview: zero `https://www.essentialvital.com//` occurrences in `sitemap.xml`.
+
 ## P1-55 - Every public page has its own canonical and Open Graph data (2026-10-31)
 
 - Removed the locale layout's `alternates.canonical` (`/${locale}`), `openGraph.url: '/'` and the inherited Twitter image. The layout now only supplies defaults.
