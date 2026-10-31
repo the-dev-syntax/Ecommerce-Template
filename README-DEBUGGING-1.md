@@ -136,6 +136,7 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - Live: the product page emits `twitter:image = https://ev-web-zeta.vercel.app//og-preview.jpg`, and `https://ev-web-zeta.vercel.app/invoice/<id>` redirects to `/sign-in` because the session cookie belongs to the canonical host.
 - Impact: verification, password-reset, receipt and invoice links send customers to the alias host; sessions do not carry over, so invoice links bounce to sign-in. Some templates also produce `//path` because `siteUrl` keeps its trailing slash.
 - Fix: build every email link with `getSiteUrl()` (already strips trailing slashes) and update `settings.site.url` to the canonical domain.
+- **Fixed 2026-10-31:** all email links now use `getSiteUrl()`; `settings.site.url` is display-only, both defaults and the live document are canonical, and `tests/email-links.test.ts` guards the change.
 
 51. Moyasar webhook silently discards a captured payment for a cancelled or already-paid order - [code]
 - `app/api/webhooks/moyasar/route.ts:215-217` returns `ignored` when `order.isCancelled` or `order.isPaid` without comparing `payment.id` with `order.moyasarPaymentId`, refunding, or alerting.

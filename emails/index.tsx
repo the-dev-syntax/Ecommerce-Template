@@ -4,6 +4,7 @@ import { OrderWithUser } from '@/lib/db/models/order.model'
 import { SENDER_EMAIL, SENDER_NAME } from '@/lib/constants'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { fillEmailTemplate } from '@/lib/email-templates'
+import { getSiteUrl } from '@/lib/env'
 import AskReviewOrderItemsEmail from './ask-review-order-items'
 import VerificationEmail from './verification-email'
 import PasswordResetEmail, { PasswordResetEmailProps } from './password-reset-email'
@@ -16,13 +17,14 @@ const resend = new Resend(process.env.RESEND_API_KEY as string)
 
 async function getSender() {
   const { email, emailTemplates, site, brand } = await getSetting()
+  const siteUrl = getSiteUrl()
   return {
     from: `${email.senderName || SENDER_NAME} <${email.senderEmail || SENDER_EMAIL}>`,
     replyTo: email.replyTo || undefined,
     templates: emailTemplates,
     siteName: site.name,
-    siteUrl: site.url,
-    logoUrl: new URL(brand.emailLogo || site.logo, site.url).toString(),
+    siteUrl,
+    logoUrl: new URL(brand.emailLogo || site.logo, siteUrl).toString(),
   }
 }
 

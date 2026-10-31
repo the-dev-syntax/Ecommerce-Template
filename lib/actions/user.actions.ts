@@ -8,6 +8,7 @@ import User, { IUser } from '../db/models/user.model'
 import { clampLimit, clampPage, formatError, generateOtp, generateVerificationToken, normalizeEmail } from '../utils'
 import { redirect } from 'next/navigation'
 import { getSetting } from './setting.actions'
+import { getSiteUrl } from '@/lib/env'
 import { sendPasswordResetEmail, sendVerificationEmail } from '@/emails'
 import { incrementIPEmailTokenAttempt, resetIPAttempt, checkAndSetEmailRateLimit, limitAuthActionsByIP, limitPasswordResetRequests, limitPasswordResetConfirm } from '@/lib/rate-limit';
 import crypto from 'crypto';
@@ -264,10 +265,9 @@ export async function requestPasswordReset(values: IRequestPasswordReset) {
         },
       })
 
-      const { site } = await getSetting()
       const resetLink = new URL(
         `/reset-password?token=${encodeURIComponent(token)}`,
-        site.url
+        getSiteUrl()
       ).toString()
 
       try {

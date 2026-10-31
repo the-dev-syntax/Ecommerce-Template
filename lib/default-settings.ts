@@ -156,7 +156,7 @@ export const defaultSettings: ISettingInput[] = [
         description:
           'Discover premium, science-backed supplements designed to support your health and wellness goals. Shop natural, high-quality vitamins, minerals, and herbal formulas for energy, immunity, and overall well-being.',
         keywords: 'Next Ecommerce, Next.js, Tailwind CSS, MongoDB',
-        url: 'https://ev-web-zeta.vercel.app/',
+        url: 'https://www.essentialvital.com',
         logo: '/icons/EV_org-sky.svg',
         slogan: 'Spend less, enjoy more.',
         author: 'Next Ecommerce',

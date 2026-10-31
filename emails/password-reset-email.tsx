@@ -12,6 +12,7 @@ import {
 } from '@react-email/components'
 
 import { getSetting } from '@/lib/actions/setting.actions'
+import { getSiteUrl } from '@/lib/env'
 import type { EmailTemplateContent } from '@/lib/email-templates'
 
 export type PasswordResetEmailProps = {
@@ -88,7 +89,7 @@ export default async function PasswordResetEmail({
   content,
 }: PasswordResetEmailProps) {
   const { site, brand } = await getSetting()
-  const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString()
+  const logoSrc = new URL(brand.emailLogo || site.logo, getSiteUrl()).toString()
 
   return (
     <Html>

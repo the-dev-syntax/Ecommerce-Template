@@ -8,6 +8,7 @@ import {
   Text,
 } from '@react-email/components';
 import { getSetting } from '@/lib/actions/setting.actions';
+import { getSiteUrl } from '@/lib/env';
 import { VerificationPropsType } from '@/types';
 import type { EmailTemplateContent } from '@/lib/email-templates';
 import  { EMAIL_EXPIRATION_TIME } from '@/lib/constants';
@@ -90,7 +91,8 @@ export default async function VerificationEmail(
 ) {
   const { token, name, update, content } = props;
   const { site, brand } = await getSetting();
-  const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString();
+  const siteUrl = getSiteUrl();
+  const logoSrc = new URL(brand.emailLogo || site.logo, siteUrl).toString();
   
   const signUpMessage = `Thank you for signing up with ${site.name}! To complete your registration, please verify your email address by entering this OTP code:`;
   const updateMessage = `You're updating your email address. Please verify your new email by entering this OTP code:`;
@@ -136,7 +138,7 @@ export default async function VerificationEmail(
             <br />
             &copy; {new Date().getFullYear()} {site.name}. All rights reserved.
             <br />
-            Need help? <Link href={`${site.url}/support`} style={emailStyles.supportLink}>
+            Need help? <Link href={`${siteUrl}/support`} style={emailStyles.supportLink}>
               Contact our support team
             </Link>
           </Text>
@@ -214,8 +216,8 @@ import {
   export default async function VerificationEmail(props:  VerificationPropsType ) {
      const { email, token, name, update } = props
      const { site } = await getSetting()
-    //  const verificationLink = new URL(`/verify-email?token=${token}`, site.url).toString();
-     const logoSrc = new URL(site.logo, site.url).toString();
+    //  const verificationLink = new URL(`/verify-email?token=${token}`, siteUrl).toString();
+     const logoSrc = new URL(site.logo, siteUrl).toString();
      const signUpMessage = `Thank you for signing up with ${site.name}. To complete your registration, please verify your email {email} by using the OTP below.`
      const updateMessage = `To complete your Email Update, please verify your new email ${email} by using the OTP below.`
 
@@ -256,7 +258,7 @@ import {
             <br />
             &copy; {new Date().getFullYear()} {site.name}. All rights reserved.
             <br />
-            <Link href={`${site.url}/support`} style={{ color: '#666666' }}>
+            <Link href={`${siteUrl}/support`} style={{ color: '#666666' }}>
               Contact Support
             </Link>
           </Text>
@@ -306,7 +308,7 @@ import {
             <br />
             &copy; {new Date().getFullYear()} {site.name}. All rights reserved.
             <br />
-            <Link href={`${site.url}/support`} style={{ color: '#666666' }}>
+            <Link href={`${siteUrl}/support`} style={{ color: '#666666' }}>
               Contact Support
             </Link>
           </Text>
@@ -351,7 +353,7 @@ import {
             <br />
             &copy; {new Date().getFullYear()} {site.name}. All rights reserved.
             <br />
-            <Link href={`${site.url}/support`} style={{ color: '#666666' }}>
+            <Link href={`${siteUrl}/support`} style={{ color: '#666666' }}>
               Contact Support
             </Link>
           </Text>

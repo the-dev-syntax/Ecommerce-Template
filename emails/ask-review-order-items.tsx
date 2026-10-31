@@ -18,6 +18,7 @@ import {
 import { formatCurrency, round2 } from '@/lib/utils'
 import { OrderWithUser } from '@/lib/db/models/order.model'
 import { getSetting } from '@/lib/actions/setting.actions'
+import { getSiteUrl } from '@/lib/env'
 import type { EmailTemplateContent } from '@/lib/email-templates'
 
 
@@ -78,7 +79,8 @@ export default async function AskReviewOrderItemsEmail({
   content,
 }: OrderInformationProps) {
   const { site, brand } = await getSetting()
-  const logoSrc = new URL(brand.emailLogo || site.logo, site.url).toString()
+  const baseUrl = getSiteUrl()
+  const logoSrc = new URL(brand.emailLogo || site.logo, baseUrl).toString()
   const taxIncluded = order.taxInclusive !== false
   const netItemsPrice = taxIncluded
     ? Math.max(0, round2(order.itemsPrice - order.taxPrice))
@@ -132,21 +134,21 @@ export default async function AskReviewOrderItemsEmail({
               {order.items.map((item) => (
                 <Row key={item.clientId} className='mt-8'>
                   <Column className='w-20'>
-                     <Link href={`${site.url}/product/${item.slug}`}>
+                     <Link href={`${baseUrl}/product/${item.slug}`}>
                       <Img
                         width='80'
                         alt={item.name}
                         className='rounded'
                         src={
                           item.image.startsWith('/')
-                            ? `${site.url}${item.image}`
+                            ? `${baseUrl}${item.image}`
                             : item.image
                         }
                       />
                     </Link>
                   </Column>
                   <Column className='align-top'>
-                     <Link href={`${site.url}/product/${item.slug}`}>
+                     <Link href={`${baseUrl}/product/${item.slug}`}>
                       <Text className='mx-2 my-0'>
                         {item.name}
                         {item.variantLabel ? ` (${item.variantLabel})` : ''} x{' '}
@@ -156,7 +158,7 @@ export default async function AskReviewOrderItemsEmail({
                   </Column>
                   <Column align='right' className='align-top '>
                     <Button
-                      href={`${site.url}/product/${item.slug}#reviews`}
+                      href={`${baseUrl}/product/${item.slug}#reviews`}
                       className='text-center bg-blue-500 hover:bg-blue-700 text-white   py-2 px-4 rounded'
                     >
                       Review this product

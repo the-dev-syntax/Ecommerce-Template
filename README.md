@@ -2,6 +2,13 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-50 - Email links use the canonical origin (2026-10-31)
+
+- `getSender()` now derives `siteUrl` and `logoUrl` from `getSiteUrl()` instead of `settings.site.url`. `purchase-receipt`, `ask-review-order-items`, `verification-email`, `password-reset-email` and `requestPasswordReset` do the same, so verification, reset, receipt, invoice and product links all use `NEXT_PUBLIC_SITE_URL` with trailing slashes removed.
+- Updated the default setting in `lib/default-settings.ts` and the live settings document to `https://www.essentialvital.com`. `settings.site.url` is now display data only.
+- Added `tests/email-links.test.ts`, which fails if an email template or the reset action starts using `site.url` again.
+- Fixes links landing on `ev-web-zeta.vercel.app` (where the session cookie is absent, so invoice links bounced to sign-in) and the occasional `//path`.
+
 ## P0-49 - Seed data removed from the client bundle (2026-10-31)
 
 - Split the default settings out of `lib/data.ts` into `lib/default-settings.ts` (727 lines moved; the `webPages` seed array that sat beside it was restored to `lib/data.ts`). `hooks/use-setting-store.ts` now imports only `defaultSetting`, so the seed users - bcrypt hashes, emails, phones and addresses - are no longer part of any client chunk.
