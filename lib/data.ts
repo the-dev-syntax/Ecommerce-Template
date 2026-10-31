@@ -72,8 +72,8 @@ const saudiLocations = [
 // Never commit plaintext passwords or credentials here.
 const HASHED_PASSWORDS = {
   admin: '$2b$12$hNtUKLP1CFK8BLqe1YlHvOONaaV/piBnwNjvOqLhpO9YSnqkQ3FlC',
-  user1: '$2a$12$K5.qJL7YNu9RG5r3nEL5UOoD9qZB1qYpNNtVYr5xVJH0.q8R3OdKa',
-  user: '$2a$12$wQfPEw.AkCNV9J5vS.4XRONc8qZqD.TqFJH8UxNYvKqXjL8.Nq.3W',
+  user1: '$2b$12$5Mil3rdUR/82a5Vgzb5lBeZgHfLnZgR4fclTmZ0CiLPZKPJTp.dKS',
+  user: '$2b$12$TZH338LtEIgnAA/1mtRafuk.ek4wG3Uej9KwPXlC.yVPGO1U4woNK',
   jack: '$2b$12$f4m84swOoNyGy2UJdLLW3.qm.DhLZOENr0upics2ARyDRistwQiGy',
 }
 

@@ -1,3 +1,5 @@
+don't add to skills [when you commit any code, use a brief and descriptive commit message that clearly explains the purpose of the changes made. Avoid generic messages like "fix" or "update" and instead provide context about what was changed, and push after the commit.]
+
 GLM-1-DEBUGGING:
 All four audits are done and I've personally re-verified the headline findings in the code (open redirect, Math.random OTP, plaintext seed password, COD expiresAt: undefined, raw updateSetting write, missing model indexes, dead /account/addresses link, plain next/link vs next-intl, formatError leak, unvalidated browsing-history API, client-controlled isVerifiedPurchase). Two items the agents cited slightly differently resolved the same way (the isVerifiedPurchase leak flows through ReviewInputSchema.parse({...data}), not a named field in the action).
 
