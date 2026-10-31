@@ -37,6 +37,46 @@ export const paypal = {
 
     return handleResponse(response)
   },
+  getOrder: async function getOrder(orderId: string) {
+    const accessToken = await generateAccessToken()
+    const response = await fetch(`${base}/v2/checkout/orders/${orderId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    return handleResponse(response)
+  },
+  getCapture: async function getCapture(captureId: string) {
+    const accessToken = await generateAccessToken()
+    const response = await fetch(`${base}/v2/payments/captures/${captureId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    return handleResponse(response)
+  },
+  refundCapture: async function refundCapture(
+    captureId: string,
+    amount: number,
+    currency: string,
+    requestId: string
+  ) {
+    const accessToken = await generateAccessToken()
+    const response = await fetch(
+      `${base}/v2/payments/captures/${captureId}/refund`,
+      {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          'PayPal-Request-Id': requestId,
+        },
+        body: JSON.stringify({
+          amount: {
+            value: amount.toFixed(2),
+            currency_code: currency.toUpperCase(),
+          },
+        }),
+      }
+    )
+    return handleResponse(response)
+  },
 }
 
 async function generateAccessToken() {
@@ -59,10 +99,12 @@ async function generateAccessToken() {
 // 201 = a new resource is created
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleResponse(response: any) {
-  if (response.status === 200 || response.status === 201) {
+  if (response.status >= 200 && response.status < 300) {
     return response.json()
   }
 
   const errorMessage = await response.text()
-  throw new Error(errorMessage)
+  const error = new Error(errorMessage) as Error & { status?: number }
+  error.status = response.status
+  throw error
 }

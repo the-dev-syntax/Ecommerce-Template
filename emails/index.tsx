@@ -134,6 +134,54 @@ export const sendReturnConfirmationEmail = async ({
   })
 }
 
+export const sendPaymentRecoveryEmail = async ({
+  order,
+  amount,
+  outcome,
+}: {
+  order: OrderWithUser
+  amount: number
+  outcome: 'refund_pending' | 'refunded' | 'manual_review'
+}) => {
+  const sender = await getSender()
+  const refunded = outcome === 'refunded'
+  const pending = outcome === 'refund_pending'
+  await resend.emails.send({
+    from: sender.from,
+    replyTo: sender.replyTo,
+    to: order.user.email,
+    subject: refunded
+      ? `Refund issued for order ${order._id}`
+      : pending
+        ? `Refund in progress for order ${order._id}`
+        : `Refund review needed for order ${order._id}`,
+    react: (
+      <OrderUpdateEmail
+        siteName={sender.siteName}
+        siteUrl={sender.siteUrl}
+        logoUrl={sender.logoUrl}
+        orderId={String(order._id)}
+        heading={
+          refunded
+            ? 'Your payment was refunded'
+            : pending
+              ? 'Your refund is in progress'
+              : 'Refund requires review'
+        }
+        message={
+          refunded
+            ? 'We could not fulfill your order because an item was no longer available. A refund has been issued to the original payment method.'
+            : pending
+              ? 'We could not fulfill your order because an item was no longer available. A refund has been started to the original payment method.'
+              : 'We could not fulfill your order because an item was no longer available. Your payment is recorded, but the refund needs manual review. Our team will contact you.'
+        }
+        amount={`${amount.toFixed(2)} ${order.currency}`}
+        amountLabel={refunded ? 'Refund amount' : 'Captured amount'}
+      />
+    ),
+  })
+}
+
 export const sendVerificationEmail = async ( props: VerificationPropsType ) => {  const { name, email, token, update } = props
   try {
     const sender = await getSender()

@@ -574,7 +574,12 @@ export async function cancelOrderById(
           'The order payment state changed. Reload and try again.'
         )
 
-      if (wasPaid) {
+      // Recovery orders failed before fulfillment, so their stock was already
+      // released/never decremented. Restocking on cancellation would create
+      // phantom inventory.
+      const skipRestock = !!fresh.recoveryRefundKey
+
+      if (wasPaid && !skipRestock) {
         for (const item of fresh.items) {
           const increment = {
             countInStock: item.quantity,
@@ -800,6 +805,10 @@ export async function restockFullyRefundedOrder(orderId: string) {
       restockAudit.length = 0
       const order = await Order.findById(orderId).session(session)
       if (!order) return
+
+      // A fulfillment-recovery refund means the order never received stock.
+      // Dashboard refunds / retries must not restock it.
+      if (order.recoveryRefundKey) return
 
       for (const item of order.items) {
         const alreadyRestocked = item.restockedQuantity ?? 0

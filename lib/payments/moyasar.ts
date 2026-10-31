@@ -75,7 +75,9 @@ async function moyasarRequest<T>(
     } catch {
       // Keep the status-based message when the body is not JSON.
     }
-    throw new Error(message)
+    const error = new Error(message) as Error & { status?: number }
+    error.status = response.status
+    throw error
   }
 
   return (await response.json()) as T

@@ -12,6 +12,8 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded'
   | 'returned'
+  | 'refund_pending'
+  | 'manual_review'
 
 // omit = replace _id of document with _id of mongoose type
 export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
@@ -53,6 +55,21 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
     returnId?: string
     reference?: string
   }[]
+  // Payment captured but fulfillment failed (usually an expired stock
+  // reservation). These fields are the idempotent recovery state machine.
+  recoveryRefundKey?: string
+  recoveryRefundStatus?: 'pending' | 'processing' | 'refunded' | 'manual_review'
+  recoveryRefundProvider?: string
+  recoveryRefundPaymentId?: string
+  recoveryRefundAmount?: number
+  recoveryRefundCurrency?: string
+  recoveryRefundAttempts?: number
+  recoveryRefundLastAttemptAt?: Date
+  recoveryRefundId?: string
+  recoveryRefundError?: string
+  recoveryRefundResolvedAt?: Date
+  recoveryNotifiedStatus?: 'refund_pending' | 'refunded' | 'manual_review'
+  recoveryNotifiedAt?: Date
   // Server-computed idempotency key for order creation (see createOrderFromCart).
   cartFingerprint?: string
 }
@@ -174,6 +191,8 @@ const orderSchema = new Schema<IOrder>(
         'cancelled',
         'refunded',
         'returned',
+        'refund_pending',
+        'manual_review',
       ],
       default: 'pending_payment',
       index: true,
@@ -210,6 +229,26 @@ const orderSchema = new Schema<IOrder>(
         reference: { type: String },
       },
     ],
+    recoveryRefundKey: { type: String },
+    recoveryRefundStatus: {
+      type: String,
+      enum: ['pending', 'processing', 'refunded', 'manual_review'],
+      index: true,
+    },
+    recoveryRefundProvider: { type: String },
+    recoveryRefundPaymentId: { type: String },
+    recoveryRefundAmount: { type: Number },
+    recoveryRefundCurrency: { type: String },
+    recoveryRefundAttempts: { type: Number, default: 0 },
+    recoveryRefundLastAttemptAt: { type: Date },
+    recoveryRefundId: { type: String },
+    recoveryRefundError: { type: String },
+    recoveryRefundResolvedAt: { type: Date },
+    recoveryNotifiedStatus: {
+      type: String,
+      enum: ['refund_pending', 'refunded', 'manual_review'],
+    },
+    recoveryNotifiedAt: { type: Date },
     createdAt: { type: Date, default: Date.now },
     cartFingerprint: { type: String, index: true },
   },
@@ -222,6 +261,11 @@ const orderSchema = new Schema<IOrder>(
 orderSchema.index({ user: 1, createdAt: -1 })
 orderSchema.index({ createdAt: -1 })
 orderSchema.index({ user: 1, cartFingerprint: 1, status: 1, createdAt: -1 })
+// Recovery cron: find stale pending/processing refunds.
+orderSchema.index({
+  recoveryRefundStatus: 1,
+  recoveryRefundLastAttemptAt: 1,
+})
 
 // this is a mongoos method call by ==> import Order ==> Order.create(zod-Validated-Order-Obj)
 const Order =

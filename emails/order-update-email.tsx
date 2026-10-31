@@ -22,6 +22,7 @@ export type OrderUpdateEmailProps = {
   trackingNumber?: string
   trackingUrl?: string
   amount?: string
+  amountLabel?: string
 }
 
 export default function OrderUpdateEmail({
@@ -34,6 +35,7 @@ export default function OrderUpdateEmail({
   trackingNumber,
   trackingUrl,
   amount,
+  amountLabel = 'Refund amount',
 }: OrderUpdateEmailProps) {
   return (
     <Html>
@@ -70,7 +72,7 @@ export default function OrderUpdateEmail({
               )}
               {amount && (
                 <>
-                  <Text className='mb-0 mt-4 text-gray-500'>Refund amount</Text>
+                  <Text className='mb-0 mt-4 text-gray-500'>{amountLabel}</Text>
                   <Text className='mt-0'>{amount}</Text>
                 </>
               )}

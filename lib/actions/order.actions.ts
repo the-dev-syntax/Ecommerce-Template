@@ -54,6 +54,56 @@ import { getShippingProvider } from '../shipping'
 import { getShippingRates, hasActiveShippingRates } from '../shipping/rates'
 import { getLowStockCount } from './inventory.actions'
 import { limitCartPricingByIP } from '../rate-limit'
+import {
+  RecoveryRetryError,
+  type RecoveryOutcome,
+} from '../orders/payment-recovery'
+
+function recoveryActionMessage(
+  outcome: RecoveryOutcome,
+  fallback?: string
+): string {
+  if (outcome === 'refunded' || outcome === 'already_refunded')
+    return 'Payment was refunded because the order could not be fulfilled.'
+  if (outcome === 'manual_review')
+    return 'Payment was received, but the refund needs manual review. Our team will contact you.'
+  if (outcome === 'in_progress' || outcome === 'retry')
+    return 'Payment was received; the refund is still being processed.'
+  return fallback ?? 'Payment received.'
+}
+
+function existingRecoveryResponse(order: {
+  recoveryRefundStatus?: IOrder['recoveryRefundStatus']
+  status?: IOrder['status']
+}) {
+  const status =
+    order.recoveryRefundStatus ??
+    (order.status === 'refund_pending'
+      ? 'pending'
+      : order.status === 'manual_review'
+        ? 'manual_review'
+        : order.status === 'refunded'
+          ? 'refunded'
+          : null)
+  if (!status) return null
+  if (status === 'refunded')
+    return {
+      success: true as const,
+      recovery: 'refunded' as const,
+      message: recoveryActionMessage('refunded'),
+    }
+  if (status === 'manual_review')
+    return {
+      success: true as const,
+      recovery: 'manual_review' as const,
+      message: recoveryActionMessage('manual_review'),
+    }
+  return {
+    success: true as const,
+    recovery: 'pending' as const,
+    message: recoveryActionMessage('in_progress'),
+  }
+}
 
 
 // Internal helper. Must NOT be exported from a 'use server' module, otherwise
@@ -571,6 +621,10 @@ export async function approvePayPalOrder(
     if (!order) throw new Error('Order not found')
     if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
+
+    const existingRecovery = existingRecoveryResponse(order)
+    if (existingRecovery) return existingRecovery
+
     if (order.isPaid) {
       return {
         success: true,
@@ -594,7 +648,7 @@ export async function approvePayPalOrder(
     const amountPaid = Number(capture?.amount?.value ?? 0)
     const currency = capture?.amount?.currency_code ?? order.currency ?? 'USD'
 
-    await fulfillOrder({
+    const result = await fulfillOrder({
       orderId,
       provider: 'PayPal',
       paymentId: capture?.id ?? captureData.id,
@@ -607,11 +661,29 @@ export async function approvePayPalOrder(
     await revalidateAllLocales(`/account/orders/${orderId}`)
     await revalidateAllLocales(`/admin/orders/${orderId}`)
 
+    if (result.recovery) {
+      return {
+        success: true,
+        recovery: result.recovery.outcome,
+        message: recoveryActionMessage(
+          result.recovery.outcome,
+          result.recovery.message
+        ),
+      }
+    }
+
     return {
       success: true,
       message: 'Your order has been successfully paid by PayPal',
     }
   } catch (err) {
+    if (err instanceof RecoveryRetryError) {
+      return {
+        success: true,
+        recovery: 'pending',
+        message: 'Payment was received; the refund is still being processed.',
+      }
+    }
     return { success: false, message: formatError(err) }
   }
 }
@@ -632,6 +704,12 @@ export async function updateOrderToPaidByStripe(
 
     if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
+
+    const existingRecovery = existingRecoveryResponse(order)
+    if (existingRecovery) {
+      await revalidateAllLocales(`/account/orders/${orderId}`)
+      return existingRecovery
+    }
 
     if (order.isPaid) {
       await revalidateAllLocales(`/account/orders/${orderId}`)
@@ -667,7 +745,7 @@ export async function updateOrderToPaidByStripe(
     )
       throw new Error('Payment currency does not match order')
 
-    await fulfillOrder({
+    const result = await fulfillOrder({
       orderId,
       provider: 'Stripe',
       paymentId: paymentIntent.id,
@@ -682,8 +760,26 @@ export async function updateOrderToPaidByStripe(
     await revalidateAllLocales(`/admin/orders/${orderId}`)
     await revalidateAllLocales('/admin/orders')
 
+    if (result.recovery) {
+      return {
+        success: true,
+        recovery: result.recovery.outcome,
+        message: recoveryActionMessage(
+          result.recovery.outcome,
+          result.recovery.message
+        ),
+      }
+    }
+
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
+    if (err instanceof RecoveryRetryError) {
+      return {
+        success: true,
+        recovery: 'pending',
+        message: 'Payment was received; the refund is still being processed.',
+      }
+    }
     return { success: false, message: formatError(err) }
   }
 }
@@ -704,6 +800,12 @@ export async function updateOrderToPaidByMoyasar(
 
     if (!isAdminOrOwner(session.user.id, session.user.role, order.user?._id))
       throw new Error('Error accessing order')
+
+    const existingRecovery = existingRecoveryResponse(order)
+    if (existingRecovery) {
+      await revalidateAllLocales(`/account/orders/${orderId}`)
+      return existingRecovery
+    }
 
     if (order.isPaid) {
       await revalidateAllLocales(`/account/orders/${orderId}`)
@@ -742,7 +844,7 @@ export async function updateOrderToPaidByMoyasar(
       moyasarPaymentId: payment.id,
     })
 
-    await fulfillOrder({
+    const result = await fulfillOrder({
       orderId,
       provider: 'Moyasar',
       paymentId: payment.id,
@@ -756,8 +858,26 @@ export async function updateOrderToPaidByMoyasar(
     await revalidateAllLocales(`/admin/orders/${orderId}`)
     await revalidateAllLocales('/admin/orders')
 
+    if (result.recovery) {
+      return {
+        success: true,
+        recovery: result.recovery.outcome,
+        message: recoveryActionMessage(
+          result.recovery.outcome,
+          result.recovery.message
+        ),
+      }
+    }
+
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
+    if (err instanceof RecoveryRetryError) {
+      return {
+        success: true,
+        recovery: 'pending',
+        message: 'Payment was received; the refund is still being processed.',
+      }
+    }
     return { success: false, message: formatError(err) }
   }
 }
@@ -1401,6 +1521,9 @@ export async function updateOrderToPaid(orderId: string) {
 
     const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
+    const existingRecovery = existingRecoveryResponse(order)
+    if (existingRecovery) return existingRecovery
+
     if (order.isPaid)
       return { success: true, message: 'Order is already paid' }
     if (order.isCancelled) throw new Error('Order is cancelled')
@@ -1409,7 +1532,7 @@ export async function updateOrderToPaid(orderId: string) {
         'Only cash-on-delivery orders can be marked paid manually'
       )
 
-    await fulfillOrder({
+    const result = await fulfillOrder({
       orderId,
       provider: order.paymentMethod,
       paymentId: order.paymentResult?.id || `manual-cod-${Date.now()}`,
@@ -1425,8 +1548,26 @@ export async function updateOrderToPaid(orderId: string) {
     await revalidateAllLocales(`/admin/orders/${orderId}`)
     await revalidateAllLocales('/admin/orders')
 
+    if (result.recovery) {
+      return {
+        success: true,
+        recovery: result.recovery.outcome,
+        message: recoveryActionMessage(
+          result.recovery.outcome,
+          result.recovery.message
+        ),
+      }
+    }
+
     return { success: true, message: 'Order paid successfully' }
   } catch (err) {
+    if (err instanceof RecoveryRetryError) {
+      return {
+        success: true,
+        recovery: 'pending',
+        message: 'Payment was received; the refund is still being processed.',
+      }
+    }
     return { success: false, message: formatError(err) }
   }
 }

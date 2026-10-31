@@ -7,7 +7,26 @@ import Product from '@/lib/db/models/product.model'
 import StockReservation from '@/lib/db/models/stock-reservation.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
+import {
+  recoverCapturedPayment,
+  RecoveryRetryError,
+  type RecoveryResult,
+} from '@/lib/orders/payment-recovery'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
+
+class FulfillmentStockError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'FulfillmentStockError'
+  }
+}
+
+class FulfillmentClosedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'FulfillmentClosedError'
+  }
+}
 
 export type FulfillOrderInput = {
   orderId: string
@@ -60,11 +79,16 @@ export async function fulfillOrder({
   status = 'COMPLETED',
   actorId,
   actorEmail,
-}: FulfillOrderInput) {
+}: FulfillOrderInput): Promise<{
+  success: true
+  alreadyPaid: boolean
+  recovery?: RecoveryResult
+}> {
   await connectToDatabase()
 
   const session = await mongoose.connection.startSession()
   let alreadyPaid = false
+  let recovery: RecoveryResult | undefined
   const stockAudit = new Map<
     string,
     {
@@ -90,7 +114,8 @@ export async function fulfillOrder({
         return
       }
 
-      if (order.isCancelled) throw new Error('Order is cancelled')
+      if (order.isCancelled)
+        throw new FulfillmentClosedError('Order is cancelled')
 
       if (order.paymentMethod !== provider)
         throw new Error('Payment method does not match this order')
@@ -154,7 +179,10 @@ export async function fulfillOrder({
               { new: true, session }
             )
 
-        if (!product) throw new Error(`Not enough stock for ${item.name}`)
+        if (!product)
+          throw new FulfillmentStockError(
+            `Not enough stock for ${item.name}`
+          )
 
         const variant = item.variantId
           ? product.variants?.find((entry) => entry.id === item.variantId)
@@ -203,6 +231,32 @@ export async function fulfillOrder({
 
       await order.save({ session })
     })
+  } catch (error) {
+    if (
+      error instanceof FulfillmentStockError ||
+      error instanceof FulfillmentClosedError
+    ) {
+      // The gateway captured the money, but the transaction rolled back and
+      // the order is not fulfilled. Never discard that payment: start the
+      // idempotent refund/review recovery path instead of returning a webhook
+      // error that would retry forever.
+      recovery = await recoverCapturedPayment({
+        orderId,
+        provider,
+        paymentId,
+        amountPaid,
+        currency,
+        email,
+        reason: error.message,
+      })
+
+      if (recovery.outcome === 'retry') {
+        throw new RecoveryRetryError(recovery.message)
+      }
+
+      return { success: true, alreadyPaid: false, recovery }
+    }
+    throw error
   } finally {
     await session.endSession()
   }

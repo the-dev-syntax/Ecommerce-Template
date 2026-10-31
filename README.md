@@ -2,6 +2,19 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-11 — Payment captured but fulfillment failed (2026-10-31)
+
+- `fulfillOrder` now distinguishes a stock/closed-order failure from validation failures. After the transaction rolls back, it calls `recoverCapturedPayment` instead of throwing a webhook error forever. The payment is marked captured (`isPaid`, `paidAt`, `paymentResult`) and the order moves to `refund_pending` or `manual_review`.
+- Added the `refund_pending` and `manual_review` order statuses and recovery fields: idempotency key, provider/payment id, amount/currency, attempts, last attempt, provider refund id, error, resolved time and notification state. Added a recovery cron index.
+- **Idempotency:** one atomic order claim keyed by `recovery:<orderId>:<paymentId>`. A duplicate webhook cannot start a second refund while processing; a stale `processing` claim can be retried after 10 minutes. Attempts are capped at 5, then the order escalates to `manual_review`. Stripe uses a stable refund idempotency key and pre-checks existing refunds; PayPal uses `PayPal-Request-Id` (SHA-256-truncated to 38 chars) and capture lookup; Moyasar pre-checks `refunded` and voids authorized payments. `PaymentEvent` records a unique `recovery.refund` event per order/payment.
+- **Provider coverage:** automatic refunds are implemented for Stripe, PayPal and Moyasar. COD and the test mock provider cannot be refunded automatically and go to `manual_review`.
+- **Outcomes:** successful refunds set `refunded`, full `refundedAmount`, refund history, payment status and cancel the order. Pending/transient failures stay `refund_pending` and are retried; definitive failures or exhausted attempts become `manual_review`. `POST /api/cron/payment-recovery` (Bearer `CRON_SECRET`) retries stale pending/processing refunds; schedule it every few minutes in production.
+- **Customer notification:** a new `sendPaymentRecoveryEmail` sends “refund in progress”, “refund issued” or “refund needs review” using the existing order-update template. Notifications are claimed once per outcome so duplicate webhooks do not send duplicate mail.
+- **Webhooks:** duplicate deliveries are safe even if the refund already succeeded or is pending. `fulfillOrder` returns success for refunded/manual outcomes (webhook 200); retryable refund failures throw so the gateway retries, while the order claim prevents duplicate provider calls. Stripe/Moyasar success pages now show a refund/review screen instead of “Thanks for your purchase” when recovery ran.
+- Added `tests/payment-recovery.test.ts` for stable keys, provider normalization, retry/definitive error classification, attempt cap, concurrent/stale claim decisions and the new order statuses. Verified with `npx tsc --noEmit`, `npm run lint` and `npm test` (102 tests).
+- Manual production configuration: provider refund permissions/API keys (`STRIPE_SECRET_KEY`, PayPal credentials, Moyasar secret), Resend sender/API key for the recovery email, and a scheduler calling `/api/cron/payment-recovery` with `Authorization: Bearer $CRON_SECRET`.
+- Remaining limitation: gateway refunds that stay `pending` are retried up to the attempt cap and then require manual review. COD/mock payments never have an automatic gateway refund.
+
 ## Development seed refresh (2026-10-31)
 
 
@@ -204,7 +217,7 @@ My assessment: These are good improvements, particularly the production empty-da
 - `formatError` no longer returns raw driver/vendor/stack text. Zod, validation and duplicate-key messages are preserved; short domain messages (for example "Not enough stock…") stay actionable; CastError/Mongo/connection/stack-shaped messages are logged and replaced with a generic message. Added `tests/error-format.test.ts`.
 - "Verified Purchase" is now derived on the server from a paid order containing the product (`Order.exists(...)`); the client-supplied flag is overwritten on create and update. Why: any signed-in user could claim the badge by calling the action directly.
 - Added hot-path indexes: `orders` `(user, createdAt)`, `(createdAt)` and `(user, cartFingerprint, status, createdAt)`; `reviews` `(product, createdAt)` and `(product, user)`; `shipping-rates` `(country, region, city, carrier, serviceName)`. `upsertShippingRate` rejects a duplicate carrier/service/area pair before insert/update. Why: order/review lists were collection scans, and duplicate rate rows produced ambiguous checkout options and delivery indexes.
-- Residual (documented, not automated): if a gateway captures a payment after the reservation has already expired *and* the stock was sold meanwhile, fulfillment still needs a provider-specific auto-refund/manual review. The longer TTL and intent-time refresh make this window much smaller, but a complete auto-refund loop is a separate provider-by-provider change.
+- Resolved by P1-11: if a gateway captures a payment after the reservation has expired and the stock was sold, `fulfillOrder` now starts an idempotent automatic refund (Stripe/PayPal/Moyasar), keeps the order in `refund_pending` while the provider is pending, or escalates to `manual_review`. The longer TTL and intent-time refresh still make this window small, but the payment is no longer left unhandled.
 
 ## P0-34 — MC1-bugs: account and auth security hardening (2026-10-28)
 

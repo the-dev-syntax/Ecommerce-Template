@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import useCartStore from '@/hooks/use-cart-store'
-import { CheckCircle, Loader2, XCircle } from 'lucide-react'
+import { CheckCircle, Loader2, RefreshCw, XCircle } from 'lucide-react'
 import { updateOrderToPaidByStripe } from '@/lib/actions/order.actions'
 
 function StripePaymentSuccessContent({
@@ -20,6 +20,10 @@ function StripePaymentSuccessContent({
   const [orderId, setOrderId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [recovery, setRecovery] = useState<{
+    outcome: string
+    message: string
+  } | null>(null)
   const { clearCart } = useCartStore()
 
   const isSucceeded = redirectStatus === 'succeeded'
@@ -43,6 +47,9 @@ function StripePaymentSuccessContent({
       .then((res) => {
         if (res.success) {
           clearCart()
+          if ('recovery' in res && res.recovery) {
+            setRecovery({ outcome: res.recovery, message: res.message })
+          }
         } else {
           setPaymentError(res.message)
         }
@@ -57,6 +64,46 @@ function StripePaymentSuccessContent({
         <div className="flex flex-col gap-6 items-center py-12">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p>Processing your payment...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (recovery) {
+    const refunded =
+      recovery.outcome === 'refunded' ||
+      recovery.outcome === 'already_refunded'
+    const manual = recovery.outcome === 'manual_review'
+    return (
+      <div className="max-w-4xl w-full mx-auto space-y-8">
+        <div className="flex flex-col gap-6 items-center py-12">
+          {refunded ? (
+            <CheckCircle className="h-16 w-16 text-green-500" />
+          ) : manual ? (
+            <XCircle className="h-16 w-16 text-destructive" />
+          ) : (
+            <RefreshCw className="h-16 w-16 text-primary" />
+          )}
+          <h1 className="font-bold text-2xl lg:text-3xl">
+            {refunded
+              ? 'Payment refunded'
+              : manual
+                ? 'Refund under review'
+                : 'Refund in progress'}
+          </h1>
+          <p className="text-muted-foreground text-center">
+            {recovery.message}
+          </p>
+          <div className="flex gap-4">
+            {orderId && (
+              <Button asChild>
+                <Link href={`/account/orders/${orderId}`}>View Order</Link>
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href="/">Return to Home</Link>
+            </Button>
+          </div>
         </div>
       </div>
     )

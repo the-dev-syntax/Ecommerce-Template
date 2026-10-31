@@ -30,6 +30,33 @@ export async function retrieveStripeCharge(id: string) {
   return getStripeClient().charges.retrieve(id)
 }
 
+export async function listStripeRefunds(paymentIntentId: string) {
+  return getStripeClient().refunds.list({
+    payment_intent: paymentIntentId,
+    limit: 20,
+  })
+}
+
+export async function retrieveStripeRefund(id: string) {
+  return getStripeClient().refunds.retrieve(id)
+}
+
+export async function refundStripePayment(input: {
+  paymentIntentId: string
+  amount: number
+  idempotencyKey: string
+}) {
+  return getStripeClient().refunds.create(
+    {
+      payment_intent: input.paymentIntentId,
+      amount: Math.round(input.amount * 100),
+      reason: 'requested_by_customer',
+      metadata: { recovery: 'fulfillment_failed' },
+    },
+    { idempotencyKey: input.idempotencyKey }
+  )
+}
+
 export function constructStripeWebhook(
   payload: string,
   signature: string,
