@@ -115,6 +115,22 @@ export function isMoyasarPaid(status: string): boolean {
   return status === 'paid' || status === 'captured'
 }
 
+/** Payment id already associated with the order, if any. */
+export function moyasarRecordedPaymentId(order: {
+  moyasarPaymentId?: string | null
+  paymentResult?: { id?: string | null } | null
+}): string {
+  return order.moyasarPaymentId || order.paymentResult?.id || ''
+}
+
+/** Remaining captured amount in major units, never negative. */
+export function moyasarRefundableAmount(payment: {
+  amount: number
+  refunded?: number | null
+}): number {
+  return Math.max(0, (payment.amount - (payment.refunded ?? 0)) / 100)
+}
+
 /**
  * Moyasar finalises a payment after one refund call (partial or full), so a
  * second refund is rejected with "Payment is already refunded".

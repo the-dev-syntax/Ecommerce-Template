@@ -9,6 +9,13 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Added `tests/email-links.test.ts`, which fails if an email template or the reset action starts using `site.url` again.
 - Fixes links landing on `ev-web-zeta.vercel.app` (where the session cookie is absent, so invoice links bounced to sign-in) and the occasional `//path`.
 
+## P1-51 - Moyasar captures on closed or duplicate orders are refunded (2026-10-31)
+
+- The webhook now compares the captured payment with the order's recorded payment. A capture after cancellation goes through `recoverCapturedPayment` (idempotent; `refund_pending` / `refunded` / `manual_review`, with customer notification). A second capture on an already-paid order is refunded directly and logged in `refundHistory`, without changing the order's paid state or `refundedAmount`; a failed refund sets `isDisputed` / `disputeStatus` and returns 500 so Moyasar retries.
+- Repeated deliveries of the same payment are still ignored, and a non-Moyasar order is rejected before any refund.
+- Added `moyasarRecordedPaymentId` / `moyasarRefundableAmount` helpers and `tests/moyasar-capture.test.ts`.
+- Not verified against the live gateway: the cancelled-order and duplicate-capture branches need Moyasar sandbox events in staging.
+
 ## P0-49 - Seed data removed from the client bundle (2026-10-31)
 
 - Split the default settings out of `lib/data.ts` into `lib/default-settings.ts` (727 lines moved; the `webPages` seed array that sat beside it was restored to `lib/data.ts`). `hooks/use-setting-store.ts` now imports only `defaultSetting`, so the seed users - bcrypt hashes, emails, phones and addresses - are no longer part of any client chunk.

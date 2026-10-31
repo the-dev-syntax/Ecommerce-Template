@@ -7,6 +7,7 @@ import Order from '@/lib/db/models/order.model'
 import { getMoyasarWebhookSecret } from '@/lib/env'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { fulfillOrder } from '@/lib/orders/fulfill-order'
+import { recoverCapturedPayment } from '@/lib/orders/payment-recovery'
 import { restockFullyRefundedOrder } from '@/lib/orders/refund-order'
 import { queueZatcaForInvoice } from '@/lib/zatca/service'
 import {
@@ -17,6 +18,9 @@ import {
 import {
   fetchMoyasarPayment,
   isMoyasarPaid,
+  moyasarRecordedPaymentId,
+  moyasarRefundableAmount,
+  refundMoyasarPayment,
   toMoyasarAmount,
   verifyMoyasarWebhookToken,
 } from '@/lib/payments/moyasar'
@@ -212,13 +216,97 @@ export async function POST(req: NextRequest) {
       return respond('processed')
     }
 
-    if (!isMoyasarPaid(payment.status) || order.isPaid || order.isCancelled) {
-      return respond('ignored', 'Payment not payable or order closed')
-    }
-
     if (order.paymentMethod !== 'Moyasar') {
       console.error('Moyasar webhook received for a non-Moyasar order')
       return respond('ignored', 'Order is not a Moyasar order')
+    }
+
+    if (!isMoyasarPaid(payment.status)) {
+      return respond('ignored', 'Payment is not captured')
+    }
+
+    // A capture that lands after the admin cancelled the order is still real
+    // money. Start the idempotent refund path instead of dropping it.
+    if (order.isCancelled) {
+      const recovery = await recoverCapturedPayment({
+        orderId,
+        provider: 'Moyasar',
+        paymentId: payment.id,
+        amountPaid: payment.amount / 100,
+        currency: payment.currency,
+        email: '',
+        reason: 'Payment captured after the order was cancelled',
+      })
+      if (recovery.outcome === 'retry') {
+        throw new Error('Cancelled-order refund needs a retry')
+      }
+      return respond(
+        'processed',
+        `Cancelled-order payment handled: ${recovery.outcome}`
+      )
+    }
+
+    // A second capture for an already-paid order is a duplicate charge. Refund
+    // that payment only; the order's paid state and refundedAmount track the
+    // original payment and must not change.
+    if (order.isPaid) {
+      if (moyasarRecordedPaymentId(order) === payment.id) {
+        return respond('ignored', 'Duplicate capture for the recorded payment')
+      }
+
+      const alreadyRecorded = order.refundHistory?.some(
+        (entry) => entry.reference === payment.id
+      )
+      if (alreadyRecorded) {
+        return respond('ignored', 'Duplicate capture already refunded')
+      }
+
+      const amount = moyasarRefundableAmount(payment)
+      try {
+        if (amount > 0) {
+          await refundMoyasarPayment(payment.id)
+        }
+        await Order.updateOne(
+          { _id: order._id, 'refundHistory.reference': { $ne: payment.id } },
+          {
+            $push: {
+              refundHistory: {
+                amount,
+                provider: 'Moyasar',
+                refundedAt: new Date(),
+                reason: 'Duplicate capture refunded',
+                reference: payment.id,
+              },
+              statusHistory: {
+                status: order.status ?? 'paid',
+                at: new Date(),
+                note: `Duplicate Moyasar capture ${payment.id} refunded`,
+              },
+            },
+          }
+        )
+      } catch (error) {
+        await Order.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              isDisputed: true,
+              disputeStatus: 'duplicate_capture_refund_failed',
+              disputedAt: new Date(),
+            },
+            $push: {
+              statusHistory: {
+                status: order.status ?? 'paid',
+                at: new Date(),
+                note: `Duplicate Moyasar capture ${payment.id} refund failed`,
+              },
+            },
+          }
+        )
+        throw error
+      }
+
+      return respond('processed', 'Duplicate capture refunded')
     }
 
     if (payment.amount !== toMoyasarAmount(order.totalPrice)) {
