@@ -2,25 +2,31 @@ import { notFound } from 'next/navigation'
 import { getWebPageBySlug } from '@/lib/actions/web-page.actions'
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { getSetting } from '@/lib/actions/setting.actions';
+import { buildPageMetadata } from '@/lib/seo';
 
 // Force dynamic rendering - this page depends on database queries
 export const dynamic = 'force-dynamic'
 
 
 export async function generateMetadata(props: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string; locale: string }>
 }) {
   const params = await props.params
 
-  const { slug } = params
-
+  const { slug, locale } = params
   const webPage = await getWebPageBySlug(slug)
   if (!webPage) {
-    return { title: 'Web page not found' }
+    return {
+      title: 'Web page not found',
+      robots: { index: false, follow: false },
+    }
   }
-  return {
+  return buildPageMetadata({
+    locale,
+    path: `/page/${slug}`,
     title: webPage.title,
-  }
+    description: webPage.content.slice(0, 160),
+  })
 }
 
 export default async function ProductDetailsPage(props: {

@@ -167,11 +167,13 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - Live: `/fr/product/essential-vital-gift-card` returns `<link rel="canonical" href="https://www.essentialvital.com/fr">`, `og:url` = site root, `og:title` = the site slogan, and the same `og:image` for every product.
 - Impact: Google is told every product, search and info page canonicalises to the locale homepage, so product URLs can be dropped or consolidated; shared product links show the generic slogan.
 - Fix: keep only the title template/description in the root layout; emit self-referencing canonical, `openGraph.url`, `openGraph.images` and `twitter` in each route's `generateMetadata` using `getSiteUrl()` and the current path.
+- **Fixed 2026-10-31:** added `buildPageMetadata` (`lib/seo.ts`) and wired it into home, search, product and web-page routes; the layout no longer sets a canonical or `openGraph.url`. Verified on Preview for `/`, `/search`, `/product/...` and `/fr/product/...`.
 
 56. `og-preview.jpg` does not exist, so every social preview image is a 404 - [live]
 - `app/[locale]/layout.tsx:46` defaults `ogImage` to `/og-preview.jpg`, and `public/` does not contain that file (live `GET /og-preview.jpg` returns 404).
 - Impact: WhatsApp, X, Facebook and LinkedIn previews show a broken image on every page.
 - Fix: add a real 1200x630 image at `public/og-preview.jpg`, or use `app/opengraph-image.tsx` and stop overriding `images` with a missing path.
+- **Fixed 2026-10-31:** the default now resolves to the generated `app/opengraph-image.png` (200) and the legacy setting is mapped to it; `/og-preview.jpg` is no longer referenced by new builds.
 
 ### P2 - Medium
 

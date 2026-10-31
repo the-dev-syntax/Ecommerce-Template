@@ -14,11 +14,13 @@ import Rating from '@/components/shared/product/rating'
 import { getTranslations } from 'next-intl/server'
 import CollapsibleOnMobile from '@/components/shared/collapsible-on-mobile'
 import { SORT_ORDERS, PRICE_RANGES, DEFAULT_PRODUCT_SORT, isProductSort } from '@/lib/constants';
+import { buildPageMetadata } from '@/lib/seo';
 
 
 
 
 export async function generateMetadata(props: {
+  params: Promise<{ locale: string }>
   searchParams: Promise<{
     q: string
     category: string
@@ -29,6 +31,7 @@ export async function generateMetadata(props: {
     page: string
   }>
 }) {
+  const { locale } = await props.params
   const searchParams = await props.searchParams
   const t = await getTranslations()
   const {
@@ -39,25 +42,26 @@ export async function generateMetadata(props: {
     rating = 'all',
   } = searchParams
 
-  if (
+  const title =
     (q !== 'all' && q !== '') ||
     category !== 'all' ||
     tag !== 'all' ||
     rating !== 'all' ||
     price !== 'all'
-  ) {
-    return {  
-      title: `${t('Search')} ${q !== 'all' ? q : ''} 
+      ? `${t('Search')} ${q !== 'all' ? q : ''}
           ${category !== 'all' ? ` : ${t('Category')} ${category}` : ''}
           ${tag !== 'all' ? ` : ${t('Tag')} ${tag}` : ''}
           ${price !== 'all' ? ` : ${t('Price')} ${price}` : ''}
-          ${rating !== 'all' ? ` : ${t('Rating')} ${rating}` : ''}`,
-    }
-  } else {
-    return {
-      title: t('Search Products'),
-    }
-  }
+          ${rating !== 'all' ? ` : ${t('Rating')} ${rating}` : ''}`
+          .replace(/\s+/g, ' ')
+          .trim()
+      : t('Search Products')
+
+  return buildPageMetadata({
+    locale,
+    path: '/search',
+    title,
+  })
 }
 
 export default async function SearchPage(props: {

@@ -2,6 +2,14 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-55 - Every public page has its own canonical and Open Graph data (2026-10-31)
+
+- Removed the locale layout's `alternates.canonical` (`/${locale}`), `openGraph.url: '/'` and the inherited Twitter image. The layout now only supplies defaults.
+- Added `lib/seo-url.ts` (canonical/hreflang and image URL helpers) and `lib/seo.ts` (`buildPageMetadata`) which emits a self-referencing canonical, per-page `openGraph.url`/`title`/`images`, Twitter card and hreflang for en-US/fr/ar. The default locale stays unprefixed to match `localePrefix: 'as-needed'`.
+- Wired it into the home, search, product and web-page routes. Product images feed their OG/Twitter cards; missing product/page metadata is `noindex`.
+- The default OG image now resolves to the generated `/opengraph-image.png` (200) instead of the missing `/og-preview.jpg`; `lib/default-settings.ts` and the stored `settings.seo.ogImage` were updated.
+- Verified on a Preview deployment: canonical/`og:url` self-reference for `/`, `/search`, `/product/...` and `/fr/product/...`; hreflang correct; product OG image absolute; `/opengraph-image.png` returns 200.
+
 ## P1-53 - PayPal captures are recorded before fulfillment (2026-10-31)
 
 - `createPayPalOrder` persists `paypalOrderId` and reuses it. It no longer creates a second PayPal order or overwrites the payment reference when the customer retries after a failure.

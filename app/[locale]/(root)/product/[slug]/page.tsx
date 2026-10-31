@@ -20,23 +20,30 @@ import ReviewList from './review-list'
 import { auth } from '@/auth'
 import RatingSummary from '@/components/shared/product/rating-summary'
 import { getTranslations } from 'next-intl/server'
+import { buildPageMetadata } from '@/lib/seo'
 
 // Force dynamic rendering - this page depends on database queries
 export const dynamic = 'force-dynamic'
 
 
 export async function generateMetadata(props: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string; locale: string }>
 }) {
   const params = await props.params
   const product = await getProductBySlug(params.slug)
   if (!product) {
-    return { title: 'Product not found' }
+    return {
+      title: 'Product not found',
+      robots: { index: false, follow: false },
+    }
   }
-  return {
+  return buildPageMetadata({
+    locale: params.locale,
+    path: `/product/${params.slug}`,
     title: product.name,
     description: product.description,
-  }
+    images: product.images,
+  })
 }
 
 export default async function ProductDetails(props: {

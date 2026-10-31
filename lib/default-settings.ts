@@ -21,7 +21,7 @@ export const defaultSettings: ISettingInput[] = [
         titleTemplate: '%s | Essential Vital',
         defaultDescription:
           'Discover premium, science-backed supplements designed to support your health and wellness goals.',
-        ogImage: '/og-preview.jpg',
+        ogImage: '/opengraph-image.png',
         twitterHandle: '',
       },
       features: {

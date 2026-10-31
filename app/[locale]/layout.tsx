@@ -12,6 +12,7 @@ import { Metadata } from 'next/types'
 import CookieConsentBanner from '@/components/shared/cookie-consent-banner'
 import { fontStack, hexForeground, hexToHsl } from '@/lib/colors'
 import { getSiteUrl } from '@/lib/env'
+import { absoluteSiteUrl, resolveOgImage } from '@/lib/seo-url'
 
 // Force dynamic rendering - required because layout uses database calls and cookies
 export const dynamic = 'force-dynamic'
@@ -43,7 +44,8 @@ export async function generateMetadata(props: {
 
   const defaultTitle = seo.titleTemplate || `%s | ${name}`
   const seoDescription = seo.defaultDescription || description
-  const ogImage = seo.ogImage || '/og-preview.jpg'
+  const siteUrl = getSiteUrl(url)
+  const ogImage = resolveOgImage(seo.ogImage)
   const icon = setting.brand.favicon || '/favicon.ico'
 
   return {
@@ -52,8 +54,7 @@ export async function generateMetadata(props: {
       default: `${name}. ${slogan}`,
     },
     description: seoDescription,
-    // metadataBase: new URL(url),
-    metadataBase: new URL(getSiteUrl(url)),
+    metadataBase: new URL(siteUrl),
     icons: { icon },
     robots: {
       index: true,
@@ -63,27 +64,19 @@ export async function generateMetadata(props: {
         follow: true,
       },
     },
-    // Helps search engines understand the different language versions of your pages
-    alternates: {
-      canonical: `/${locale}`,
-      languages: {
-        'en-US': '/en-US',
-        fr: '/fr',
-        ar: '/ar',
-      },
-    },
     // --- Open Graph (for Facebook, Pinterest, etc.) ---
+    // Each public route sets its own canonical and page-level Open Graph data;
+    // this layout only supplies defaults for routes that do not.
     openGraph: {
       title: {
         template: defaultTitle,
         default: `${name} | ${slogan}`,
       },
       description: seoDescription,
-      url: '/',
       siteName: name,
       images: [
         {
-          url: ogImage,
+          url: absoluteSiteUrl(siteUrl, ogImage),
           width: 1200,
           height: 630,
           alt: `Default Open Graph image for ${name}`,
@@ -101,7 +94,7 @@ export async function generateMetadata(props: {
         default: `${name} | ${slogan}`,
       },
       description: seoDescription,
-      images: [/^https?:\/\//.test(ogImage) ? ogImage : `${url}${ogImage}`],
+      images: [absoluteSiteUrl(siteUrl, ogImage)],
     },
     // Optional: other useful tags
     // themeColor: '#ffffff',

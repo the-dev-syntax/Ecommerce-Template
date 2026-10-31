@@ -12,14 +12,20 @@ import { getSetting } from '@/lib/actions/setting.actions'
 import { getTranslations } from 'next-intl/server'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import { Metadata } from 'next'
+import { buildPageMetadata } from '@/lib/seo'
 
 
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await props.params
   const t = await getTranslations();
-  return {
+  return buildPageMetadata({
+    locale,
+    path: '/',
     title: t('Home Page'),
-  };
+  })
 }
 
 export default async function Page() {
