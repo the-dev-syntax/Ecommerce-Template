@@ -1,5 +1,32 @@
 const base = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com'
 
+export type PayPalCapture = {
+  id: string
+  status?: string
+  amount?: { value?: string; currency_code?: string }
+}
+
+export type PayPalOrderResponse = {
+  id: string
+  status?: string
+  payer?: { email_address?: string }
+  purchase_units?: Array<{
+    payments?: { captures?: PayPalCapture[] }
+  }>
+}
+
+export function firstPayPalCapture(order: unknown): PayPalCapture | null {
+  const value = order as PayPalOrderResponse | null | undefined
+  const capture = value?.purchase_units?.[0]?.payments?.captures?.[0]
+  return capture?.id ? capture : null
+}
+
+export function isPayPalAlreadyCaptured(error: unknown): boolean {
+  const value = error as { status?: number; message?: string }
+  if (value?.status !== 422) return false
+  return (value.message ?? '').includes('ORDER_ALREADY_CAPTURED')
+}
+
 export const paypal = {
   createOrder: async function createOrder(price: number, currency = 'USD') {
     const accessToken = await generateAccessToken()

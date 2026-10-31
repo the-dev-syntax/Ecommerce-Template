@@ -19,7 +19,13 @@ import {
 } from '../validator'
 import Order, { IOrder } from '../db/models/order.model'
 
-import { paypal } from '../paypal'
+import {
+  firstPayPalCapture,
+  isPayPalAlreadyCaptured,
+  paypal,
+  type PayPalCapture,
+  type PayPalOrderResponse,
+} from '../paypal'
 import { getPaymentAdapter } from '../payments/adapters'
 import { sendAskReviewOrderItems, sendOrderShippedEmail } from '@/emails'
 import { DateRange } from 'react-day-picker'
@@ -580,6 +586,23 @@ export async function createPayPalOrder(orderId: string) {
     // Refresh the stock hold while the customer completes PayPal's redirect.
     await extendStockReservation(order._id)
 
+    // Never create a second PayPal order for the same checkout. Reusing the
+    // stored id prevents a retry (after a capture or fulfillment failure) from
+    // charging the customer twice.
+    const legacyOrderId =
+      order.paymentResult &&
+      (!order.paymentResult.status || order.paymentResult.status === '')
+        ? order.paymentResult.id
+        : ''
+    const existingOrderId = order.paypalOrderId || legacyOrderId
+    if (existingOrderId) {
+      return {
+        success: true,
+        message: 'PayPal order already created',
+        data: existingOrderId,
+      }
+    }
+
     const adapter = getPaymentAdapter('paypal')
     if (!adapter?.createOrder) throw new Error('PayPal adapter is unavailable')
     const paypalOrder = await adapter.createOrder(
@@ -588,6 +611,7 @@ export async function createPayPalOrder(orderId: string) {
     )
 
     await Order.findByIdAndUpdate(order._id, {
+      paypalOrderId: paypalOrder.id,
       paymentResult: {
         id: paypalOrder.id,
         email_address: '',
@@ -633,29 +657,88 @@ export async function approvePayPalOrder(
     }
     if (!isPaymentProvider(order.paymentMethod, 'paypal'))
       throw new Error('Order is not payable by PayPal')
-    if (order.paymentResult?.id !== data.orderID)
+
+    const recordedOrderId = order.paypalOrderId || order.paymentResult?.id
+    if (recordedOrderId !== data.orderID)
       throw new Error('PayPal order does not match this order')
 
     const adapter = getPaymentAdapter('paypal')
     if (!adapter?.captureOrder) throw new Error('PayPal adapter is unavailable')
-    const captureData = (await adapter.captureOrder(
-      data.orderID
-    )) as Awaited<ReturnType<typeof paypal.capturePayment>>
-    if (!captureData || captureData.status !== 'COMPLETED')
-      throw new Error('PayPal payment was not completed')
 
-    const capture = captureData.purchase_units?.[0]?.payments?.captures?.[0]
-    const amountPaid = Number(capture?.amount?.value ?? 0)
-    const currency = capture?.amount?.currency_code ?? order.currency ?? 'USD'
+    let capture: PayPalCapture | null = null
+    let payerEmail = order.paymentResult?.email_address ?? ''
+
+    if (order.paypalCaptureId) {
+      // A previous attempt already captured the money but fulfillment failed.
+      // Reuse the recorded capture instead of capturing a second order.
+      const existingCapture = (await paypal.getCapture(
+        order.paypalCaptureId
+      )) as PayPalCapture
+      if (
+        existingCapture.status === 'REFUNDED' ||
+        existingCapture.status === 'PARTIALLY_REFUNDED'
+      )
+        throw new Error('This PayPal payment has already been refunded')
+      if (existingCapture.status !== 'COMPLETED')
+        throw new Error(
+          `PayPal capture is ${existingCapture.status ?? 'unknown'}`
+        )
+      capture = existingCapture
+    } else {
+      try {
+        const captured = (await adapter.captureOrder(
+          data.orderID
+        )) as PayPalOrderResponse
+        if (captured.status !== 'COMPLETED')
+          throw new Error('PayPal payment was not completed')
+        capture = firstPayPalCapture(captured)
+        if (!capture) throw new Error('PayPal capture reference is missing')
+        payerEmail = captured.payer?.email_address ?? payerEmail
+      } catch (error) {
+        // A retried approval can hit an order PayPal already captured. Reconcile
+        // from the gateway instead of creating a second charge.
+        if (!isPayPalAlreadyCaptured(error)) throw error
+        const existingOrder = (await paypal.getOrder(
+          data.orderID
+        )) as PayPalOrderResponse
+        capture = firstPayPalCapture(existingOrder)
+        if (!capture) throw new Error('PayPal capture reference is missing')
+        payerEmail = existingOrder.payer?.email_address ?? payerEmail
+      }
+    }
+
+    if (!capture) throw new Error('PayPal capture reference is missing')
+
+    const amountPaid = Number(capture.amount?.value ?? 0)
+    const currency = capture.amount?.currency_code ?? order.currency ?? 'USD'
+    if (!(amountPaid > 0)) throw new Error('PayPal capture amount is missing')
+
+    // Persist the capture before fulfillment. If fulfillment fails, the retry
+    // reuses this capture and cannot charge a second time.
+    await Order.updateOne(
+      { _id: order._id },
+      {
+        $set: {
+          paypalOrderId: order.paypalOrderId || data.orderID,
+          paypalCaptureId: capture.id,
+          paymentResult: {
+            id: capture.id,
+            status: capture.status ?? 'COMPLETED',
+            email_address: payerEmail,
+            pricePaid: amountPaid.toFixed(2),
+          },
+        },
+      }
+    )
 
     const result = await fulfillOrder({
       orderId,
       provider: 'PayPal',
-      paymentId: capture?.id ?? captureData.id,
+      paymentId: capture.id,
       amountPaid,
       currency,
-      email: captureData.payer?.email_address ?? '',
-      status: captureData.status,
+      email: payerEmail,
+      status: 'COMPLETED',
     })
 
     await revalidateAllLocales(`/account/orders/${orderId}`)

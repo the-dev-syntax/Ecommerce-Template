@@ -22,6 +22,8 @@ export interface IOrder extends Omit<Document, '_id'>, IOrderInput {
   updatedAt: Date
   receiptSentAt?: Date
   moyasarPaymentId?: string
+  paypalOrderId?: string
+  paypalCaptureId?: string
   isCancelled?: boolean
   cancelledAt?: Date
   cancelReason?: string
@@ -171,6 +173,8 @@ const orderSchema = new Schema<IOrder>(
     // Stripe Step 1 intent ID — stored on creation, verified on success
     stripePaymentIntentId: { type: String },
     moyasarPaymentId: { type: String },
+    paypalOrderId: { type: String },
+    paypalCaptureId: { type: String },
     isCancelled: { type: Boolean, default: false },
     cancelledAt: { type: Date },
     cancelReason: { type: String },

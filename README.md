@@ -2,6 +2,13 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-53 - PayPal captures are recorded before fulfillment (2026-10-31)
+
+- `createPayPalOrder` persists `paypalOrderId` and reuses it. It no longer creates a second PayPal order or overwrites the payment reference when the customer retries after a failure.
+- `approvePayPalOrder` persists `paypalCaptureId`, the captured amount, currency and `paymentResult` **before** calling `fulfillOrder`. A retry reuses the recorded capture. `ORDER_ALREADY_CAPTURED` (422) is reconciled through `paypal.getOrder` instead of a second capture attempt.
+- Added `paypalOrderId` / `paypalCaptureId` to the order model, plus `firstPayPalCapture` and `isPayPalAlreadyCaptured` helpers and `tests/paypal-capture.test.ts`.
+- Not verified against the PayPal sandbox: capture a payment, force a fulfillment failure, retry, and confirm PayPal shows exactly one capture.
+
 ## P1-52 - Cancellation no longer restocks dashboard-refunded units (2026-10-31)
 
 - `cancelOrderById` now computes each line's remaining units with `remainingRestockQuantity` and claims the line atomically through `restockedQuantity` before incrementing stock. A dashboard refund that already restocked the order leaves `restockedQuantity = quantity`, so a later cancellation restocks zero units instead of the full quantity again.
