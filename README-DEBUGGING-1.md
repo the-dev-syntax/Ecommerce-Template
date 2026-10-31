@@ -111,3 +111,192 @@ Suggested fix order
 3. P2 19-24 (500s + the i18n Link sweep) → 25-32 → 33, 34.
 4. P3 in one hygiene pass (validators, dates, dead code, suspected race guards).
 
+--------------------------
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# SECOND AUDIT
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+## Full-site audit - 2026-10-31 (HEAD `80bc3f4`, production `www.essentialvital.com`)
+
+Scope: every route, server action, model and background job, plus a live smoke test of the deployed build. Method: `npx tsc --noEmit`, `npm run lint`, `npm test` (105 passing), `npm run i18n:check` (805 keys in en-US/ar/fr), live `curl` checks against production, and four parallel code reviews (auth/security, orders/payments, cart/checkout, catalog/UI/i18n). Only issues reproduced in code or on the live site are listed. The 48 items above are not repeated; fixed ones are omitted.
+
+Legend: **[live]** reproduced on production; **[code]** proven by reading the current code; **[staging]** needs gateway/DB access to reproduce.
+
+### P0 - Critical
+
+49. Seed dataset and bcrypt hashes are shipped to every browser - [live]
+- `hooks/use-setting-store.ts:2` imports the whole default export of `lib/data.ts` (`export default data`), which contains `users` with pre-hashed passwords plus emails, phones and addresses. The store is imported by client components, so the dataset is bundled.
+- Live: `/_next/static/chunks/1911-a790167c4fa61bfa.js` contains **4 bcrypt hashes** and **16 `@example.com` addresses**, including `admin@example.com`, `jane@example.com` and `jack@example.com`.
+- Impact: password hashes and customer PII are public in the JS bundle. The live catalogue matches the dev seed, so if the seeded admin account exists in production, the documented seed password is an admin-takeover path. It also inflates every page's JS.
+- Fix: export a minimal client-safe `defaultSettings` from a separate module; never import `lib/data.ts` from client code. Rotate the seeded account passwords and confirm no demo admin exists in production.
+
+### P1 - High
+
+50. Transactional email links use the stale `ev-web-zeta.vercel.app` origin - [live]
+- `emails/index.tsx:24` (`siteUrl: site.url`), `lib/actions/user.actions.ts:267-271` (password-reset link built from `site.url`) and `emails/purchase-receipt.tsx:75` all use the DB setting, whose seeded/live value is `https://ev-web-zeta.vercel.app/` (`lib/data.ts:1617`). The canonical origin is `https://www.essentialvital.com`.
+- Live: the product page emits `twitter:image = https://ev-web-zeta.vercel.app//og-preview.jpg`, and `https://ev-web-zeta.vercel.app/invoice/<id>` redirects to `/sign-in` because the session cookie belongs to the canonical host.
+- Impact: verification, password-reset, receipt and invoice links send customers to the alias host; sessions do not carry over, so invoice links bounce to sign-in. Some templates also produce `//path` because `siteUrl` keeps its trailing slash.
+- Fix: build every email link with `getSiteUrl()` (already strips trailing slashes) and update `settings.site.url` to the canonical domain.
+
+51. Moyasar webhook silently discards a captured payment for a cancelled or already-paid order - [code]
+- `app/api/webhooks/moyasar/route.ts:215-217` returns `ignored` when `order.isCancelled` or `order.isPaid` without comparing `payment.id` with `order.moyasarPaymentId`, refunding, or alerting.
+- Failure: a customer completes 3DS while an admin cancels the unpaid order; the capture lands, the webhook returns 200/ignored, stock is already released and nothing refunds the card. Two checkout tabs create two Moyasar payments: the second capture is dropped while the customer is charged twice. A later dashboard refund then hits `Refund received before the order was paid` (`route.ts:115-117`) and 500s forever.
+- Fix: on a paid capture that does not match the recorded payment, or on a closed order, call `recoverCapturedPayment`/refund or move to `manual_review`; never acknowledge and drop the money.
+
+52. Cancelling a dashboard-refunded order restocks the same units twice - [code]
+- `lib/orders/refund-order.ts:582-628` increments stock by `item.quantity` and only afterwards stamps `restockedQuantity`; it ignores the value already written by `restockFullyRefundedOrder` (`:813-836`). The Moyasar refund webhook restocks but does not set `isCancelled` (`route.ts:141-179`), so the admin cancel button stays available.
+- Impact: phantom inventory, oversell later, and `numSales` decremented twice.
+- Fix: in the cancel loop restock only `item.quantity - (item.restockedQuantity ?? 0)` and claim each line atomically, as the refund helper does.
+
+53. PayPal capture is not durably recorded; a retry can charge twice - [code]
+- `lib/actions/order.actions.ts:590-597` overwrites `paymentResult.id` with every new PayPal order, and `:641-659` captures before anything is persisted. There is no PayPal webhook (absent from `app/api/webhooks/payments/[provider]/route.ts`) and `approvePayPalOrder` does not reconcile `ORDER_ALREADY_CAPTURED`.
+- Failure: PayPal captures the money, `fulfillOrder` then fails (DB blip/timeout) and the action returns an error while the order stays unpaid. The customer retries, a second PayPal order is created and overwrites the first id, and the second capture fulfils the order. The first charge is invisible to the app.
+- Fix: persist the PayPal order id before capture and refuse to create a new one while it exists; on failure, fetch the capture with `paypal.getOrder` and fulfil/recover; add a capture webhook or reconciliation cron.
+
+54. ZATCA transient failures are marked `failed` and never retried automatically - [code]
+- `lib/zatca/service.ts:235-240` sets `status = 'failed'` and returns `retryable: true`, but `processZatcaQueue` only scans `queued`/`pending` (`:275-278`). The invoice page only queues when no submission exists (`app/[locale]/invoice/[id]/page.tsx:44-50`), so a `failed` row is never re-queued.
+- Impact: a ZATCA outage or temporary credential error leaves a tax invoice/credit note unreported past the legal window unless an admin opens that exact order and clicks retry.
+- Fix: keep retryable failures scannable (stay queued/pending with an error, or scan `failed` with backoff and an attempt cap) and re-queue from the invoice page.
+
+55. Every page declares the locale homepage as its canonical and inherits its Open Graph data - [live]
+- `app/[locale]/layout.tsx:67-74` sets `alternates.canonical = /${locale}`, `:76-94` sets `openGraph.url = '/'` plus a default image, and `:104` sets the Twitter image. Product/search/page `generateMetadata` return only `title`/`description` (`app/[locale]/(root)/product/[slug]/page.tsx:28-40`), so the layout values win.
+- Live: `/fr/product/essential-vital-gift-card` returns `<link rel="canonical" href="https://www.essentialvital.com/fr">`, `og:url` = site root, `og:title` = the site slogan, and the same `og:image` for every product.
+- Impact: Google is told every product, search and info page canonicalises to the locale homepage, so product URLs can be dropped or consolidated; shared product links show the generic slogan.
+- Fix: keep only the title template/description in the root layout; emit self-referencing canonical, `openGraph.url`, `openGraph.images` and `twitter` in each route's `generateMetadata` using `getSiteUrl()` and the current path.
+
+56. `og-preview.jpg` does not exist, so every social preview image is a 404 - [live]
+- `app/[locale]/layout.tsx:46` defaults `ogImage` to `/og-preview.jpg`, and `public/` does not contain that file (live `GET /og-preview.jpg` returns 404).
+- Impact: WhatsApp, X, Facebook and LinkedIn previews show a broken image on every page.
+- Fix: add a real 1200x630 image at `public/og-preview.jpg`, or use `app/opengraph-image.tsx` and stop overriding `images` with a missing path.
+
+### P2 - Medium
+
+57. Sitemap emits double-slash URLs for the default locale - [live]
+- `app/sitemap.ts:23,34,43` builds `${siteUrl}/${locale === 'en-US' ? '' : locale}${path}` while `path` already starts with `/`.
+- Live: `sitemap.xml` contains **44** `<loc>https://www.essentialvital.com//...</loc>` entries (29 products plus `/search`, `/cart` and pages). Each one 308-redirects to the correct URL.
+- Fix: use `${siteUrl}${locale === 'en-US' ? '' : `/${locale}`}${path}` and assert no `//` after the origin.
+
+58. Pagination on `/fr` and `/ar` navigates to `/fr/fr/...` and 404s - [live]
+- `components/shared/pagination.tsx:25` calls `formUrlQuery`, which uses `window.location.pathname` (`lib/utils.ts:237`) - that path already contains `/fr`. The result is pushed through the locale-aware router, which prefixes the locale again.
+- Live: `/fr/fr/search?page=2` returns 404 while `/fr/search?page=2` returns 200. The same component is used by `/account/orders`, `/admin/orders`, `/admin/reviews` and `/admin/users`.
+- Fix: base the query URL on `usePathname()` from `@/i18n/routing` (locale-stripped), not `window.location.pathname`.
+
+59. Missing product/page slugs render the 404 UI but return HTTP 200 (soft 404) - [live]
+- `app/[locale]/(root)/product/[slug]/page.tsx:62` and `app/[locale]/(root)/page/[slug]/page.tsx:38` call `notFound()`, but the route streams first through `app/[locale]/loading.tsx:3`, so the status is committed before the 404 boundary resolves.
+- Live: `/product/does-not-exist-xyz` and `/page/does-not-exist-xyz` both return 200 with `NEXT_HTTP_ERROR_FALLBACK;404` in the body. The status is 200 even though a `noindex` meta is injected.
+- Impact: stale/typo'd links are indexed as valid pages, analytics and uptime monitors see no error, and crawl budget is wasted.
+- Fix: resolve the slug in `generateMetadata` (awaited before the shell flushes) and call `notFound()` there too, or scope/remove the locale loading boundary for these routes; verify with `curl -o /dev/null -w '%{http_code}'` (must be 404).
+
+60. Search filters keep the current `page`, so filtering from page 2+ shows an empty grid - [live]
+- `app/[locale]/(root)/search/page.tsx:99` passes `params` (including `page`) into `getFilterUrl` (`lib/utils.ts:267-274`), which preserves it.
+- Live: `/search?category=T-Shirts&page=2` displays "10 - 9 of 6" and zero product links; clicking any category/tag/price filter from page 2 produces the same shape.
+- Fix: delete/reset `page` inside `getFilterUrl` whenever any other filter or sort changes; clamp out-of-range pages server-side.
+
+61. A verified user can never finish an email change (the OTP screen redirects away) - [code]
+- `updateUserEmail` stores `pendingEmail` but leaves `emailVerified` true (`lib/actions/user.actions.ts:600-621`); the form then pushes `/verify-email` (`app/[locale]/(root)/account/manage/email/email-form.tsx:64`). That page immediately redirects any verified session home (`app/[locale]/verify-email/page.tsx:23-25`), and `/account` is already gated to verified users in middleware.
+- Impact: every user allowed to start an email change is bounced away before the OTP form renders. The address is never swapped, `pendingEmail` stays forever, and resend keeps mailing the stale address.
+- Fix: only redirect when there is no valid pending email; render the OTP form for verified users with a pending change, or add a dedicated `/account/manage/email/verify` route outside the verification gate.
+
+62. The COD fee is missing from the displayed checkout total on a first-time cart - [code]
+- The cart store starts with `paymentMethod: undefined` (`hooks/use-cart-store.ts:18`), so `calcDeliveryDateAndPrice` adds no COD fee (`lib/actions/order.actions.ts:451-452`). Checkout resolves the fallback method for display but writes it back only when a method was already stored (`app/[locale]/checkout/checkout-form.tsx:288-294`), and the radio does not fire when it is already default. The summary renders the store's `codFee`/`totalPrice`.
+- Impact: if COD is the first/default enabled method, the customer reviews `items + shipping`, while `handlePlaceOrder` submits COD and the server adds `+ codFee`; the payment page then shows a higher total.
+- Fix: price the cart for the method that will actually be submitted (write the resolved fallback on mount, or resolve the default inside `calcDeliveryDateAndPrice`), and use `settings.defaultPaymentMethod` instead of `enabledPaymentMethods[0]`.
+
+63. The order dedupe window is shorter than the stock hold, so one cart can produce two payable orders - [code]
+- `lib/actions/order.actions.ts:516` only reuses a pending order created in the last **30 minutes**, while `RESERVATION_TTL_MS` is **60 minutes** (`lib/orders/stock-reservations.ts:16`) and creating a Stripe/PayPal order extends it.
+- Failure: place O1 at t=0, open the payment page (hold extends to ~60 min), return to checkout at t=35 and submit again: O2 is created with a second reservation. Both are `pending_payment` and independently payable, and the customer can pay both.
+- Fix: make the dedupe lifetime at least the reservation TTL and enforce it with a unique partial index on `{ user, cartFingerprint }` for open orders; reuse/extend the existing order instead of inserting.
+
+64. Moyasar refund is issued before the durable claim, so a retry is rejected forever - [code]
+- `lib/orders/refund-order.ts:150-190` calls the gateway before the transaction at `:193-250`; the idempotency record (`OrderReturn`) is only created inside that transaction, and `isMoyasarRefundable` accepts only `paid`/`captured` after the refund.
+- Failure: the gateway refund succeeds, then the transaction aborts (timeout/contention). The order still shows `refundedAmount = 0`, no return, no stock, no credit note. Retrying fails with "Payment cannot be refunded (status: refunded)", so the operator cannot reconcile without paying twice manually.
+- Fix: create the idempotent claim/`OrderReturn` before the gateway call, then finalize; on retry, if the gateway already reports the refund, complete the local transaction from that state.
+
+65. Refunded orders can still be shipped and delivered - [code]
+- `shipOrder` (`lib/actions/order.actions.ts:1604-1606`) and `deliverOrder` (`:1668-1673`) check `isCancelled`, `isPaid` and `isDelivered` but not `status === 'refunded'` or `refundedAmount`. The Moyasar refund webhook sets `status: 'refunded'` without `isCancelled`.
+- Impact: the admin page still offers "Ship order" after a full dashboard refund; clicking it overwrites `refunded` with `shipped` and emails a shipping notice to a refunded customer.
+- Fix: treat `refunded`/full `refundedAmount` as terminal and hide the ship/deliver controls.
+
+66. Admin revenue and sales charts include unpaid, cancelled and refunded orders - [code]
+- `lib/actions/order.actions.ts:1229-1246` (`totalSales`), `:1252-1281` (`monthlySales`) and `:1311-1346` (`salesChartData`) match only on `createdAt` and sum `totalPrice`; there is no `isPaid` filter and no subtraction of `refundedAmount`.
+- Impact: abandoned orders inflate revenue, and a full refund changes neither the dashboard card nor the charts, so they disagree with the VAT report (which nets credit notes).
+- Fix: filter `isPaid: true`, exclude cancelled, and net out `refundedAmount` or aggregate invoices minus credit notes.
+
+67. Editing a web page title silently rewrites its slug and breaks live URLs - [code]
+- `app/[locale]/admin/web-pages/web-page-form.tsx:99-109` auto-generates the slug whenever `currentSlug === slugify(currentSlug)`, which is true for every valid slug, including an existing manual one.
+- Failure: rename "About Us" to "About Essential Vital" and the slug silently becomes `about-essential-vital`; saving makes the linked `/page/about-us` a 404.
+- Fix: generate the slug only on create and only while the field is untouched (track a `slugDirty` flag), or keep a redirect from the old slug.
+
+68. Product tags cannot be set in the admin UI, so new products never appear in home sections - [code]
+- `app/[locale]/admin/products/CreateProduct.tsx:32-37` defaults `tags: []` and `product-form.tsx` has no field bound to `tags` (grep returns no `tags` input), even though the homepage queries `tags` and the deal badge reads `todays-deal`.
+- Impact: every product created in the admin UI is invisible to New Arrivals, Best Sellers, Featured, Today's Deals and tag filters, with no UI hint why.
+- Fix: add a tags multi-select (allowed set `new-arrival`, `best-seller`, `featured`, `todays-deal`) and default new products to `['new-arrival']`.
+
+69. An unknown payment-method name is treated as enabled but has no payment panel - [code]
+- `lib/payments/index.ts:82-89` returns `true` for a method whose provider is unknown, so both the checkout list and `createOrderFromCart` accept it. `app/[locale]/checkout/[id]/payment-panel.tsx:149-151` renders nothing for unknown providers, and `updateOrderToPaid` only supports COD.
+- Failure: an admin types "Mada" or "Cash On Deliver" in Settings; customers can select it, the order is created and stock reserved, but the payment page has no controls and no admin "mark paid" path.
+- Fix: treat unmapped methods as disabled, validate `availablePaymentMethods` against provider ids, or add an explicit offline/manual panel plus admin mark-paid.
+
+70. Registration and email change still reveal whether an address is registered - [code]
+- `registerUser` returns different messages/shapes for existing vs new addresses (`lib/actions/user.actions.ts:101-104` vs `:127-128`). `updateUserEmail` returns success without `data` for a taken address (`:589-596`) but success with `{ email }` for a free one (`:625-630`), and the taken branch returns before the rate limiter (`:598`), adding a second oracle.
+- Impact: server actions are callable endpoints, so an attacker can enumerate accounts for phishing/credential stuffing even though the UI hides the message.
+- Fix: return an identical object (same message, no `data`) on both paths and run the limiter before the early return.
+
+71. The email-verification gate exists only in middleware, so unverified accounts can call data actions directly - [code]
+- `middleware.ts:26-28,89-103` is the only check of `emailVerified`; `createOrder`/`createOrderFromCart` (`lib/actions/order.actions.ts:291-302,314-320`) and `getMyOrders` (`:1177-1180`) check only the session id.
+- Impact: an account that registered with an address it does not own can still POST the action from a public page and create orders/receive order data, because middleware only sees the page URL.
+- Fix: add a `requireVerifiedUser(session)` check inside every data-touching action; keep middleware for UX only.
+
+72. Toggling a shipping rate does not clear the 60-second quote cache - [code]
+- `lib/actions/shipping.actions.ts:76-83` updates `isActive` but does not call `clearShippingRatesCache()` (unlike create/delete at `:53`/`:67`). `getActiveShippingRates` caches for `60_000` ms (`lib/shipping/rates.ts:8`), and order creation validates from that same list.
+- Impact: a deactivated service is still quoted and orderable for up to a minute per instance; a newly activated one stays hidden.
+- Fix: call `clearShippingRatesCache()` in `toggleShippingRate` and re-check `isActive` when creating the order.
+
+73. The Stripe button shows the display-currency converted amount, not the charged currency - [code]
+- `app/[locale]/checkout/[id]/stripe-form.tsx:74` renders `<ProductPrice price={priceInCents / 100} plain />`; `ProductPrice` converts to the visitor's display currency by default, while the Stripe intent is created in `order.currency`.
+- Impact: a visitor displaying USD sees "$26.67" while Stripe charges 100.00 SAR, and the displayed figure drifts if the conversion rate is edited.
+- Fix: pass `convert={false} currencyCode={order.currency}` as the other checkout surfaces do.
+
+74. Checkout pre-fills the previous cart owner's name, street and phone before the cart is cleared - [code]
+- `app/[locale]/checkout/checkout-form.tsx:199` seeds the form from the persisted `shippingAddress`; the owner is claimed only in a post-mount effect (`:281`), and `setCartOwner` clears only when a different owner is already stored (`hooks/use-cart-store.ts:189-200`). The form-sync effect bails once the address is cleared (`:249`), so the already-rendered values remain.
+- Impact: on a shared browser, account B sees account A's address and phone on `/checkout` (and the header/cart keep A's items until then), contradicting the ownership requirement.
+- Fix: resolve the cart owner before rendering/initialising the form (gate on an owner-resolved flag and `form.reset()` on owner change) and stop persisting the shipping address, or clear it on sign-out.
+
+### P3 - Low / hygiene
+
+75. The idempotency fingerprint omits the chosen shipping option - [code]
+- `lib/actions/order.actions.ts:493-518` hashes items, address, payment method, shipping price and total, but not `shippingRateId`, `isPickup` or the ETA. When a delivery and a pickup quote both cost 0 (e.g. free-shipping threshold plus store pickup), a re-submit returns the first order with the wrong fulfillment method.
+- Fix: include the selected rate/pickup/ETA identity in the fingerprint and compare the existing order's shipping snapshot before returning it.
+
+76. Some email templates concatenate an unstripped `siteUrl`, producing `//` paths - [code]
+- `emails/index.tsx:24` passes `site.url` with its trailing slash; `order-update-email.tsx:59` and the verification/review templates build `${siteUrl}/...`. `purchase-receipt.tsx:75` strips the slash, so the fix is inconsistent.
+- Fix: normalize once in `getSender()` (`site.url.replace(/\/+$/, '')`) or pass `getSiteUrl()`.
+
+77. Currency flash is still present for non-SAR visitors - [code] (known residual)
+- `hooks/use-setting-store.ts:14-17` initialises with the seed SAR defaults and `components/shared/settings-initializer.tsx` applies the cookie currency in a `useEffect`, so server-rendered prices paint the seed currency and flip after hydration.
+- Fix: pass the server-selected currency through a provider/context (or a server-rendered data attribute) instead of mutating a module store after mount.
+
+### Live smoke test (2026-10-31)
+
+- `npm run i18n:check`: OK, 805 identical keys in en-US/ar/fr.
+- Public routes return 200 (`/`, `/ar`, `/fr`, `/search`, `/cart`, `/sign-in`, `/sign-up`, `/forgot-password`, `/verify-email`, sitemap, robots).
+- `/en-US` returns 307 (expected locale redirect); `/checkout`, `/account`, `/admin`, `/invoice/:id` return 302 to sign-in when unauthenticated.
+- `/api/debug-ip` returns 404 in production; `/api/cron/payment-recovery` and `/api/cron/stock-reservations` return 401 without the Bearer token.
+- Anomalies: absent product/page slugs return 200 (item 59), `/fr/fr/search?page=2` returns 404 (item 58), and `/search?category=T-Shirts&page=2` shows "10 - 9 of 6" with no products (item 60).
+- The production build itself succeeded on Vercel (`ecommerce-template-4kyt1kgom`, 1m 42s).
+
+### Verified clean (negative results)
+
+- No IDOR found in order/payment/invoice paths reviewed: owner/admin checks are applied, admin actions use `requireAdmin`, and `dbOrderWith3UserKeys` stays private.
+- Stripe signature verification, Moyasar constant-time token + gateway re-fetch + amount/currency checks, and `PaymentEvent` uniqueness are intact.
+- Review moderation is server-enforced: non-buyers are rejected and `isVerifiedPurchase`/`isApproved` cannot be set by the client. Review aggregates match the approved reviews (315 reviews, 0 rating/count mismatches).
+- `safeCallbackUrl` is used at every callback site; Google account linking is disabled; OTPs use `crypto.randomInt` with per-account lockout; reset tokens are hashed, single-use and expiring.
+- Markdown/admin content is sanitized; no XSS path found.
+- i18n key sets are identical across the three locales.
+
+### Suggested fix order
+
+1. Item 49 immediately (remove the seed bundle, rotate any seeded passwords), then 50 (email origin) and 56 (missing OG image).
+2. Payment integrity: 51, 52, 53, 64, 65, 63.
+3. SEO and navigation: 55, 57, 58, 59, 60; then 61, 62, 66-74.
+4. ZATCA (54) before production onboarding; hygiene items 75-77 in one pass.
+
