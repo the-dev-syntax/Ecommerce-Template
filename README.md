@@ -2,7 +2,20 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
-## P1-11 — Payment captured but fulfillment failed (2026-10-31)
+## P0-7 - Trusted client IP for rate limiting (2026-10-31)
+
+- Verified the real Vercel header behaviour with a temporary diagnostic route (`app/api/debug-ip`) on a Preview deployment, calling it normally and with spoofed `X-Forwarded-For`, `X-Real-IP`, `X-Vercel-Forwarded-For` and `CF-Connecting-IP` values.
+- Result: Vercel **overwrites** `x-forwarded-for`, `x-vercel-forwarded-for` and `x-real-ip` with the real client IP, so a client cannot spoof them. `cf-connecting-ip` is passed through unchanged, so it must not be trusted on Vercel.
+- Set `TRUSTED_IP_HEADER=x-forwarded-for` as a Config variable in Production and Preview. It is documented in `.env.example` and added to `.env.local` for local tests. `getIP()` fails closed in production when no trusted header exists.
+- Hardened `lib/client-ip.ts`: a forwarded chain is always resolved to its **right-most** entry (the value the nearest proxy added), even when the header is explicitly trusted. Previously a configured header used the left-most entry, which is safe only when the proxy overwrites the header.
+- Added tests for a trusted forwarded chain, a spoofed Cloudflare header alongside Vercel headers, and a blank configured header falling back to proxy headers.
+- `app/api/debug-ip` returns 404 in production and is intended for preview diagnostics only; delete it after the final production header check.
+- Rate limiting was exercised against the configured Upstash Redis with an isolated per-run prefix: three requests were allowed and the fourth was blocked, with `remaining` counting down. This confirms the Redis credentials and limiter mechanics without touching live counters.
+- Still manual: endpoint-level lockout testing (sign-in, password reset, OTP) needs Redis on the Preview environment. Preview currently has no Upstash variables, and reusing the production Redis would share counters with live traffic, so use a separate staging Redis and then hit those endpoints repeatedly.
+- Verification: `npx tsc --noEmit`, `npm run lint` and the security tests pass; live header behaviour was confirmed on deployment `ecommerce-template-eo1whs7hr-deca7s-projects.vercel.app`.
+- Remaining manual actions, including deleting `app/api/debug-ip` after the final production check, are tracked in `test-before-production.md`.
+
+## P1-11 - Payment captured but fulfillment failed (2026-10-31)
 
 - `fulfillOrder` now distinguishes a stock/closed-order failure from validation failures. After the transaction rolls back, it calls `recoverCapturedPayment` instead of throwing a webhook error forever. The payment is marked captured (`isPaid`, `paidAt`, `paymentResult`) and the order moves to `refund_pending` or `manual_review`.
 - Added the `refund_pending` and `manual_review` order statuses and recovery fields: idempotency key, provider/payment id, amount/currency, attempts, last attempt, provider refund id, error, resolved time and notification state. Added a recovery cron index.

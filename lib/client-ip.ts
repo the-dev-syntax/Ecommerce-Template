@@ -21,8 +21,15 @@ export function pickClientIp(
   for (const headerName of candidates) {
     const value = getHeader(headerName)
     if (!value) continue
-    const first = value.split(',')[0]?.trim()
-    if (first) return first
+    // A proxy can append to a forwarded chain. The right-most entry is the one
+    // the nearest proxy added, so a client-supplied left-most value can never
+    // win. Vercel overwrites these headers with a single address (verified
+    // 2026-10-31), so this is also correct there.
+    const parts = value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length) return parts[parts.length - 1]
   }
 
   const forwardedFor = getHeader('x-forwarded-for')

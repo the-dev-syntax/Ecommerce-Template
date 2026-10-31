@@ -1,0 +1,3 @@
+# Never upload local environment files to a Vercel deployment.
+.env
+.env.*

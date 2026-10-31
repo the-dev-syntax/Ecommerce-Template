@@ -28,6 +28,32 @@ test('client ip: the right-most X-Forwarded-For value is used', () => {
   assert.equal(ip, '198.51.100.7')
 })
 
+test('client ip: a trusted forwarded chain still uses the right-most value', () => {
+  const ip = pickClientIp(
+    getHeader({ 'x-forwarded-for': '1.2.3.4, 198.51.100.7' }),
+    'x-forwarded-for'
+  )
+  assert.equal(ip, '198.51.100.7')
+})
+
+test('client ip: Vercel headers win over a spoofed forwarding header', () => {
+  const ip = pickClientIp(
+    getHeader({
+      'cf-connecting-ip': '8.8.8.8',
+      'x-vercel-forwarded-for': '37.106.184.127',
+    })
+  )
+  assert.equal(ip, '37.106.184.127')
+})
+
+test('client ip: a blank trusted header falls back to proxy headers', () => {
+  const ip = pickClientIp(
+    getHeader({ 'x-real-ip': '198.51.100.9' }),
+    '   '
+  )
+  assert.equal(ip, '198.51.100.9')
+})
+
 test('client ip: returns null when no proxy header exists', () => {
   assert.equal(pickClientIp(getHeader({ 'user-agent': 'browser' })), null)
 })
