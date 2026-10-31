@@ -23,6 +23,8 @@ export interface IZatcaSubmission extends Omit<Document, '_id'> {
   signedXml?: string
   status: ZatcaSubmissionStatus
   attempts: number
+  nextAttemptAt?: Date
+  lastError?: string
   zatcaWarnings?: unknown[]
   zatcaErrors?: unknown[]
   reportedAt?: Date
@@ -58,6 +60,8 @@ const zatcaSubmissionSchema = new Schema<IZatcaSubmission>(
       index: true,
     },
     attempts: { type: Number, required: true, default: 0 },
+    nextAttemptAt: { type: Date },
+    lastError: { type: String },
     zatcaWarnings: { type: [Schema.Types.Mixed], default: [] },
     zatcaErrors: { type: [Schema.Types.Mixed], default: [] },
     reportedAt: { type: Date },
@@ -66,6 +70,7 @@ const zatcaSubmissionSchema = new Schema<IZatcaSubmission>(
 )
 
 zatcaSubmissionSchema.index({ status: 1, createdAt: 1 })
+zatcaSubmissionSchema.index({ environment: 1, status: 1, nextAttemptAt: 1 })
 
 export const ZatcaSubmission =
   (models.ZatcaSubmission as Model<IZatcaSubmission>) ||

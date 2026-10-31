@@ -160,6 +160,7 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - `lib/zatca/service.ts:235-240` sets `status = 'failed'` and returns `retryable: true`, but `processZatcaQueue` only scans `queued`/`pending` (`:275-278`). The invoice page only queues when no submission exists (`app/[locale]/invoice/[id]/page.tsx:44-50`), so a `failed` row is never re-queued.
 - Impact: a ZATCA outage or temporary credential error leaves a tax invoice/credit note unreported past the legal window unless an admin opens that exact order and clicks retry.
 - Fix: keep retryable failures scannable (stay queued/pending with an error, or scan `failed` with backoff and an attempt cap) and re-queue from the invoice page.
+- **Fixed 2026-10-31:** retryable failures stay `pending` with backoff/`nextAttemptAt` and become terminal only after six attempts; the queue also picks up legacy `failed` rows below the cap. Added `/api/cron/zatca` and `tests/zatca-retry.test.ts`.
 
 55. Every page declares the locale homepage as its canonical and inherits its Open Graph data - [live]
 - `app/[locale]/layout.tsx:67-74` sets `alternates.canonical = /${locale}`, `:76-94` sets `openGraph.url = '/'` plus a default image, and `:104` sets the Twitter image. Product/search/page `generateMetadata` return only `title`/`description` (`app/[locale]/(root)/product/[slug]/page.tsx:28-40`), so the layout values win.

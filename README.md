@@ -9,6 +9,13 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 - Added `paypalOrderId` / `paypalCaptureId` to the order model, plus `firstPayPalCapture` and `isPayPalAlreadyCaptured` helpers and `tests/paypal-capture.test.ts`.
 - Not verified against the PayPal sandbox: capture a payment, force a fulfillment failure, retry, and confirm PayPal shows exactly one capture.
 
+## P1-54 - ZATCA transient failures are retried automatically (2026-10-31)
+
+- Retryable reporting errors no longer park a submission in terminal `failed`. `scheduleRetry` keeps it `pending` with `attempts`, `nextAttemptAt` (1m, 5m, 15m, 1h, 6h) and `lastError`; the sixth failure becomes terminal `failed` for admin review.
+- `processZatcaQueue` scans `queued`/`pending` plus legacy `failed` rows below the attempt cap, and honors `nextAttemptAt`. `retryZatcaSubmission` resets the retry cycle for a manual retry.
+- Added `app/api/cron/zatca` (Bearer `CRON_SECRET`) and `tests/zatca-retry.test.ts`.
+- Manual production configuration: schedule `GET /api/cron/zatca` every 15 minutes (Vercel Cron sends `Authorization: Bearer $CRON_SECRET`). Transient outages now recover without an admin opening the invoice.
+
 ## P1-52 - Cancellation no longer restocks dashboard-refunded units (2026-10-31)
 
 - `cancelOrderById` now computes each line's remaining units with `remainingRestockQuantity` and claims the line atomically through `restockedQuantity` before incrementing stock. A dashboard refund that already restocked the order leaves `restockedQuantity = quantity`, so a later cancellation restocks zero units instead of the full quantity again.

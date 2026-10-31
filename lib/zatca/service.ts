@@ -15,6 +15,7 @@ import {
   loadZatcaEgs,
 } from './config'
 import { buildZatcaInvoice } from './invoice-builder'
+import { ZATCA_MAX_ATTEMPTS, nextZatcaRetryAt } from './retry'
 
 const LOCK_MS = 2 * 60 * 1000
 
@@ -130,18 +131,50 @@ export async function queueZatcaForInvoice(invoiceId: string) {
   }
 }
 
-async function markFailed(
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function markTerminalFailure(
   submission: IZatcaSubmission,
   error: unknown
 ) {
+  const message = errorMessage(error)
   submission.status = 'failed'
-  submission.zatcaErrors = [
-    {
-      type: 'ERROR',
-      message: error instanceof Error ? error.message : String(error),
-    },
-  ]
+  submission.attempts = ZATCA_MAX_ATTEMPTS
+  submission.nextAttemptAt = undefined
+  submission.lastError = message.slice(0, 1000)
+  submission.zatcaErrors = [{ type: 'ERROR', message }]
   await submission.save()
+}
+
+async function scheduleRetry(
+  submission: IZatcaSubmission,
+  error: unknown,
+  zatcaErrors?: unknown[]
+) {
+  const message = errorMessage(error)
+  const attempts = (submission.attempts ?? 0) + 1
+  const nextAttemptAt = nextZatcaRetryAt(attempts)
+
+  submission.attempts = attempts
+  submission.lastError = message.slice(0, 1000)
+  submission.zatcaErrors =
+    zatcaErrors && zatcaErrors.length > 0
+      ? zatcaErrors
+      : [{ type: 'ERROR', message }]
+
+  if (!nextAttemptAt) {
+    submission.status = 'failed'
+    submission.nextAttemptAt = undefined
+    await submission.save()
+    return { accepted: false as const, retryable: false }
+  }
+
+  submission.status = 'pending'
+  submission.nextAttemptAt = nextAttemptAt
+  await submission.save()
+  return { accepted: false as const, retryable: true }
 }
 
 async function signAndReport(
@@ -198,7 +231,6 @@ async function signAndReport(
     submission.invoiceHash = invoiceHash
     submission.qrPayload = qrPayload
     submission.status = 'pending'
-    submission.attempts += 1
     await submission.save()
   }
 
@@ -228,16 +260,16 @@ async function signAndReport(
       submission.zatcaErrors = apiError.zatcaErrors ?? [
         { type: 'ERROR', message: apiError.message },
       ]
+      submission.nextAttemptAt = undefined
+      submission.lastError = apiError.message
       await submission.save()
       return { accepted: false, retryable: false }
     }
 
-    submission.status = 'failed'
-    submission.zatcaErrors = apiError.zatcaErrors ?? [
-      { type: 'ERROR', message: apiError.message },
-    ]
-    await submission.save()
-    return { accepted: false, retryable: true }
+    // A timeout/5xx/credentials blip is retryable. Keep the submission
+    // scannable with backoff instead of parking it in a terminal `failed`
+    // state that the queue never looks at.
+    return scheduleRetry(submission, apiError, apiError.zatcaErrors)
   }
 
   const validation = response.data.validationResults
@@ -252,9 +284,11 @@ async function signAndReport(
   submission.zatcaErrors = errors
   submission.reportedAt = new Date()
   submission.status = accepted ? 'accepted' : 'rejected'
+  submission.nextAttemptAt = undefined
+  submission.lastError = ''
   await submission.save()
 
-  return { accepted, retryable: !accepted }
+  return { accepted, retryable: false }
 }
 
 export async function processZatcaQueue(limit = 5) {
@@ -272,16 +306,33 @@ export async function processZatcaQueue(limit = 5) {
 
   try {
     for (let index = 0; index < limit; index++) {
+      const now = new Date()
       const submission = await ZatcaSubmission.findOne({
         environment,
-        status: { $in: ['queued', 'pending'] },
+        $and: [
+          {
+            $or: [
+              { status: { $in: ['queued', 'pending'] } },
+              // Legacy rows and rows that failed before the retry state existed
+              // are picked up once. Terminal failures store attempts = max.
+              { status: 'failed', attempts: { $lt: ZATCA_MAX_ATTEMPTS } },
+            ],
+          },
+          {
+            $or: [
+              { nextAttemptAt: { $exists: false } },
+              { nextAttemptAt: null },
+              { nextAttemptAt: { $lte: now } },
+            ],
+          },
+        ],
       }).sort({ createdAt: 1 })
 
       if (!submission) break
 
       const invoice = await Invoice.findById(submission.invoiceId).lean()
       if (!invoice) {
-        await markFailed(submission, new Error('Invoice not found'))
+        await markTerminalFailure(submission, new Error('Invoice not found'))
         break
       }
 
@@ -309,7 +360,7 @@ export async function processZatcaQueue(limit = 5) {
         // admin can retry the same document without creating a new chain entry.
         break
       } catch (error) {
-        await markFailed(submission, error)
+        await scheduleRetry(submission, error)
         break
       }
     }
@@ -330,6 +381,9 @@ export async function retryZatcaSubmission(invoiceId: string) {
       $set: {
         status: 'queued',
         zatcaErrors: [],
+        attempts: 0,
+        nextAttemptAt: null,
+        lastError: '',
       },
     }
   )

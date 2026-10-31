@@ -51,6 +51,7 @@ Ordered checklist of remaining manual actions. Tick each item before merging to 
 ## 6. Cron and background jobs
 
 - [ ] A scheduler calls `/api/cron/payment-recovery` every few minutes with `Authorization: Bearer $CRON_SECRET`.
+- [ ] A scheduler calls `/api/cron/zatca` every 15 minutes with `Authorization: Bearer $CRON_SECRET`.
 - [ ] A scheduler calls `/api/cron/stock-reservations` on its interval.
 - [ ] A call without the Bearer token returns `401`/`503`.
 - [ ] Trigger each cron once and confirm success in the Vercel logs.
