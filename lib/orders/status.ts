@@ -34,6 +34,17 @@ export function deriveOrderStatus(order: IOrder): OrderStatus {
   return 'pending_payment'
 }
 
+/** True when the whole order has been refunded. */
+export function isFullyRefunded(order: {
+  status?: string | null
+  refundedAmount?: number | null
+  totalPrice?: number | null
+}): boolean {
+  if (order.status === 'refunded') return true
+  const total = order.totalPrice ?? 0
+  return total > 0 && (order.refundedAmount ?? 0) >= total - 0.01
+}
+
 export function statusHistoryEntry(
   status: OrderStatus,
   note?: string

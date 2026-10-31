@@ -35,6 +35,7 @@ import { normalizeSaudiPhone } from '../phone'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
 import { isAdminOrOwner, requireAdmin } from '../access'
+import { isFullyRefunded } from '../orders/status'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
 import { cancelOrderById, processOrderReturn } from '../orders/refund-order'
@@ -43,6 +44,7 @@ import {
   releaseExpiredReservations,
   releaseStockReservation,
   reserveStockForOrder,
+  RESERVATION_TTL_MS,
 } from '../orders/stock-reservations'
 import type { IOrderReturnInput } from '@/types'
 import { priceOrderItems } from '../tax'
@@ -519,7 +521,9 @@ export const createOrderFromCart = async (
     cartFingerprint,
     status: 'pending_payment',
     isCancelled: { $ne: true },
-    createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
+    // Match the stock reservation lifetime: an older order may no longer hold
+    // stock, so it must not be reused as the "same" checkout.
+    createdAt: { $gte: new Date(Date.now() - RESERVATION_TTL_MS) },
   }).sort({ createdAt: -1 })
   if (duplicate) return duplicate
 
@@ -1685,6 +1689,8 @@ export async function shipOrder(
     const order = await dbOrderWith3UserKeys(orderId)
     if (!order) throw new Error('Order not found')
     if (order.isCancelled) throw new Error('Order is cancelled')
+    if (isFullyRefunded(order))
+      throw new Error('Refunded orders cannot be shipped')
     if (!order.isPaid) throw new Error('Order is not paid')
     if (order.isDelivered) throw new Error('Order is already delivered')
     if (order.isPickup)
@@ -1749,6 +1755,8 @@ export async function deliverOrder(orderId: string) {
 
     if (!order) throw new Error('Order not found')
     if (order.isCancelled) throw new Error('Cancelled orders cannot be delivered')
+    if (isFullyRefunded(order))
+      throw new Error('Refunded orders cannot be delivered')
     if (!order.isPaid) throw new Error('Order is not paid')
     if (order.isDelivered)
       return { success: true, message: 'Order is already delivered' }

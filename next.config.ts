@@ -33,6 +33,16 @@ const nextConfig: NextConfig = withNextIntl()({
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        // Legacy social previews and cached links still request this path.
+        source: '/og-preview.jpg',
+        destination: '/opengraph-image.png',
+        permanent: true,
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

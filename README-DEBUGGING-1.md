@@ -174,6 +174,7 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - Impact: WhatsApp, X, Facebook and LinkedIn previews show a broken image on every page.
 - Fix: add a real 1200x630 image at `public/og-preview.jpg`, or use `app/opengraph-image.tsx` and stop overriding `images` with a missing path.
 - **Fixed 2026-10-31:** the default now resolves to the generated `app/opengraph-image.png` (200) and the legacy setting is mapped to it; `/og-preview.jpg` is no longer referenced by new builds.
+- **Fixed 2026-11-01:** `/og-preview.jpg` now 308-redirects to `/opengraph-image.png` for cached or external links.
 
 ### P2 - Medium
 
@@ -206,26 +207,31 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - `updateUserEmail` stores `pendingEmail` but leaves `emailVerified` true (`lib/actions/user.actions.ts:600-621`); the form then pushes `/verify-email` (`app/[locale]/(root)/account/manage/email/email-form.tsx:64`). That page immediately redirects any verified session home (`app/[locale]/verify-email/page.tsx:23-25`), and `/account` is already gated to verified users in middleware.
 - Impact: every user allowed to start an email change is bounced away before the OTP form renders. The address is never swapped, `pendingEmail` stays forever, and resend keeps mailing the stale address.
 - Fix: only redirect when there is no valid pending email; render the OTP form for verified users with a pending change, or add a dedicated `/account/manage/email/verify` route outside the verification gate.
+- **Fixed 2026-11-01:** `/verify-email` checks `pendingEmail`/`pendingEmailExpires` and keeps the OTP form open for a valid pending change. `tests/email-change.test.ts` covers the rule.
 
 62. The COD fee is missing from the displayed checkout total on a first-time cart - [code]
 - The cart store starts with `paymentMethod: undefined` (`hooks/use-cart-store.ts:18`), so `calcDeliveryDateAndPrice` adds no COD fee (`lib/actions/order.actions.ts:451-452`). Checkout resolves the fallback method for display but writes it back only when a method was already stored (`app/[locale]/checkout/checkout-form.tsx:288-294`), and the radio does not fire when it is already default. The summary renders the store's `codFee`/`totalPrice`.
 - Impact: if COD is the first/default enabled method, the customer reviews `items + shipping`, while `handlePlaceOrder` submits COD and the server adds `+ codFee`; the payment page then shows a higher total.
 - Fix: price the cart for the method that will actually be submitted (write the resolved fallback on mount, or resolve the default inside `calcDeliveryDateAndPrice`), and use `settings.defaultPaymentMethod` instead of `enabledPaymentMethods[0]`.
+- **Fixed 2026-11-01:** checkout writes the resolved default method to the cart on mount (including first-time carts), and `resolveDefaultPaymentMethod` prefers the configured default. `tests/payment-default.test.ts` covers the selection.
 
 63. The order dedupe window is shorter than the stock hold, so one cart can produce two payable orders - [code]
 - `lib/actions/order.actions.ts:516` only reuses a pending order created in the last **30 minutes**, while `RESERVATION_TTL_MS` is **60 minutes** (`lib/orders/stock-reservations.ts:16`) and creating a Stripe/PayPal order extends it.
 - Failure: place O1 at t=0, open the payment page (hold extends to ~60 min), return to checkout at t=35 and submit again: O2 is created with a second reservation. Both are `pending_payment` and independently payable, and the customer can pay both.
 - Fix: make the dedupe lifetime at least the reservation TTL and enforce it with a unique partial index on `{ user, cartFingerprint }` for open orders; reuse/extend the existing order instead of inserting.
+- **Fixed 2026-11-01:** the dedupe query uses `RESERVATION_TTL_MS` (60 minutes), matching the stock hold. A unique partial index remains a future hardening step.
 
 64. Moyasar refund is issued before the durable claim, so a retry is rejected forever - [code]
 - `lib/orders/refund-order.ts:150-190` calls the gateway before the transaction at `:193-250`; the idempotency record (`OrderReturn`) is only created inside that transaction, and `isMoyasarRefundable` accepts only `paid`/`captured` after the refund.
 - Failure: the gateway refund succeeds, then the transaction aborts (timeout/contention). The order still shows `refundedAmount = 0`, no return, no stock, no credit note. Retrying fails with "Payment cannot be refunded (status: refunded)", so the operator cannot reconcile without paying twice manually.
 - Fix: create the idempotent claim/`OrderReturn` before the gateway call, then finalize; on retry, if the gateway already reports the refund, complete the local transaction from that state.
+- **Fixed 2026-11-01:** a retry checks the gateway refunded amount first and finalizes from it when the requested refund already exists; concurrent gateway attempts are reconciled by re-fetching the payment. `tests/refund-state.test.ts` covers the rule.
 
 65. Refunded orders can still be shipped and delivered - [code]
 - `shipOrder` (`lib/actions/order.actions.ts:1604-1606`) and `deliverOrder` (`:1668-1673`) check `isCancelled`, `isPaid` and `isDelivered` but not `status === 'refunded'` or `refundedAmount`. The Moyasar refund webhook sets `status: 'refunded'` without `isCancelled`.
 - Impact: the admin page still offers "Ship order" after a full dashboard refund; clicking it overwrites `refunded` with `shipped` and emails a shipping notice to a refunded customer.
 - Fix: treat `refunded`/full `refundedAmount` as terminal and hide the ship/deliver controls.
+- **Fixed 2026-11-01:** `isFullyRefunded()` guards both actions and the admin UI hides ship/deliver for fully refunded orders. `tests/refund-status.test.ts` covers the rule.
 
 66. Admin revenue and sales charts include unpaid, cancelled and refunded orders - [code]
 - `lib/actions/order.actions.ts:1229-1246` (`totalSales`), `:1252-1281` (`monthlySales`) and `:1311-1346` (`salesChartData`) match only on `createdAt` and sum `totalPrice`; there is no `isPaid` filter and no subtraction of `refundedAmount`.

@@ -2,6 +2,33 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-65 - Refunded orders cannot be shipped or delivered (2026-11-01)
+
+- Added `isFullyRefunded()` and guards in `shipOrder` / `deliverOrder`; the admin order page hides the ship/deliver controls for fully refunded orders.
+- Tests: `tests/refund-status.test.ts`.
+
+## P1-64 - Moyasar return retries reconcile a completed gateway refund (2026-11-01)
+
+- `processOrderReturn` checks the gateway's refunded amount before calling the gateway. If a previous attempt already refunded the requested amount but the local transaction failed, it finalizes from the gateway state without refunding again. A concurrent/retried gateway call is reconciled by re-fetching the payment.
+- Tests: `tests/refund-state.test.ts`.
+
+## P1-63 - Order dedupe matches the stock hold (2026-11-01)
+
+- A pending order is reused for `RESERVATION_TTL_MS` (60 minutes), not 30 minutes, so one cart cannot create two independently payable orders while the stock hold is still valid.
+
+## P1-62 - Checkout prices the payment method that will be submitted (2026-11-01)
+
+- Checkout writes the resolved default payment method to the cart on mount, including first-time carts, so the COD fee is included in the displayed total. `resolveDefaultPaymentMethod` honors the configured default when it is enabled.
+- Tests: `tests/payment-default.test.ts`.
+
+## P1-61 - Pending email changes can reach the OTP screen (2026-11-01)
+
+- `/verify-email` now redirects verified users home only when there is no valid `pendingEmail`; a pending change keeps the OTP form reachable. Added `hasPendingEmailChange` and `tests/email-change.test.ts`.
+
+## P1-56 - Legacy OG image path redirects (2026-11-01)
+
+- `/og-preview.jpg` now permanently redirects to `/opengraph-image.png` in `next.config.ts`, so old social links resolve instead of returning 404.
+
 ## P1-60 - Search filters reset pagination (2026-11-01)
 
 - `getFilterUrl` now deletes `page` whenever category, tag, price, rating or sort changes. The search page also clamps an out-of-range page to the last available page.

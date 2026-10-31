@@ -28,7 +28,9 @@ import {
   isMoyasarRefundable,
   refundMoyasarPayment,
   voidMoyasarPayment,
+  type MoyasarPayment,
 } from '@/lib/payments/moyasar'
+import { gatewayRefundCoversRequest } from '@/lib/returns/refund-state'
 import { round2 } from '@/lib/utils'
 
 function getMoyasarPaymentId(order: IOrder): string {
@@ -152,31 +154,65 @@ export async function processOrderReturn(
     assertMoyasarOrder(order)
     const paymentId = getMoyasarPaymentId(order)
     const payment = await fetchMoyasarPayment(paymentId)
-    if (!isMoyasarRefundable(payment.status)) {
-      throw new Error(`Payment cannot be refunded (status: ${payment.status})`)
-    }
+    const gatewayRefunded = round2((payment.refunded ?? 0) / 100)
+    const alreadyRefunded = gatewayRefundCoversRequest({
+      gatewayRefunded,
+      recordedRefunded: previousRefunded,
+      requested: refundAmount,
+    })
 
-    const remainingHalalas = payment.amount - (payment.refunded ?? 0)
-    const requestedHalalas = Math.round(refundAmount * 100)
-    if (requestedHalalas < 1) {
-      throw new Error('Refund amount must be at least 0.01')
-    }
-    if (requestedHalalas > remainingHalalas) {
-      throw new Error('Refund amount exceeds the remaining payment')
-    }
+    if (alreadyRefunded) {
+      // A previous attempt refunded at the gateway but the local transaction
+      // did not commit. Finalize from the gateway state without charging again.
+      refundReference = payment.id
+      refundedAmount = gatewayRefunded
+      paymentStatus =
+        gatewayRefunded >= payment.amount / 100 ? 'refunded' : payment.status
+    } else {
+      if (!isMoyasarRefundable(payment.status)) {
+        throw new Error(`Payment cannot be refunded (status: ${payment.status})`)
+      }
 
-    const updatedPayment =
-      requestedHalalas === remainingHalalas
-        ? await refundMoyasarPayment(paymentId)
-        : await refundMoyasarPayment(paymentId, requestedHalalas)
+      const remainingHalalas = payment.amount - (payment.refunded ?? 0)
+      const requestedHalalas = Math.round(refundAmount * 100)
+      if (requestedHalalas < 1) {
+        throw new Error('Refund amount must be at least 0.01')
+      }
+      if (requestedHalalas > remainingHalalas) {
+        throw new Error('Refund amount exceeds the remaining payment')
+      }
 
-    refundReference = updatedPayment.id
-    refundedAmount = round2(
-      (updatedPayment.refunded ??
-        (payment.refunded ?? 0) + requestedHalalas) / 100
-    )
-    paymentStatus =
-      refundedAmount >= payment.amount / 100 ? 'refunded' : payment.status
+      let updatedPayment: MoyasarPayment
+      try {
+        updatedPayment =
+          requestedHalalas === remainingHalalas
+            ? await refundMoyasarPayment(paymentId)
+            : await refundMoyasarPayment(paymentId, requestedHalalas)
+      } catch (error) {
+        // A parallel or retried call may have applied the refund already.
+        const refreshed = await fetchMoyasarPayment(paymentId)
+        const refreshedRefunded = round2((refreshed.refunded ?? 0) / 100)
+        if (
+          gatewayRefundCoversRequest({
+            gatewayRefunded: refreshedRefunded,
+            recordedRefunded: previousRefunded,
+            requested: refundAmount,
+          })
+        ) {
+          updatedPayment = refreshed
+        } else {
+          throw error
+        }
+      }
+
+      refundReference = updatedPayment.id
+      refundedAmount = round2(
+        (updatedPayment.refunded ??
+          (payment.refunded ?? 0) + requestedHalalas) / 100
+      )
+      paymentStatus =
+        refundedAmount >= payment.amount / 100 ? 'refunded' : payment.status
+    }
   } else {
     if (previousRefunded + refundAmount > round2(order.totalPrice) + 0.01)
       throw new Error('Refund exceeds the order total')

@@ -75,6 +75,23 @@ export function isPaymentProvider(name: string, id: PaymentProviderId) {
   return getPaymentProviderByName(name)?.id === id
 }
 
+/**
+ * The method checkout should select when the cart has no stored choice.
+ * Prefer the admin-configured default when it is enabled, otherwise the first
+ * enabled provider.
+ */
+export function resolveDefaultPaymentMethod<T extends { name: string }>(
+  enabled: T[],
+  configured?: string
+): string {
+  return (
+    enabled.find((method) => method.name === configured)?.name ??
+    enabled[0]?.name ??
+    configured ??
+    ''
+  )
+}
+
 export function getEnabledPaymentMethods<T extends { name: string }>(
   methods: T[],
   options: { cashOnDelivery?: boolean } = {}

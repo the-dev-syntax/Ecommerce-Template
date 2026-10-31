@@ -1,7 +1,12 @@
 import { Suspense } from 'react';
+import mongoose from 'mongoose';
+
 import VerifyClientToken from './VerifyClientToken';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { connectToDatabase } from '@/lib/db';
+import User from '@/lib/db/models/user.model';
+import { hasPendingEmailChange } from '@/lib/email-change';
 import { localizedPath } from '@/lib/utils';
 
 // Force dynamic rendering - this page uses auth session
@@ -21,7 +26,20 @@ export default async function VerifyEmailPage(props: {
   }
 
   if (session.user.emailVerified) {
-    redirect(localizedPath(locale, '/'));
+    // A verified account still needs this page while an email change is
+    // pending; otherwise the OTP form is unreachable and the change never
+    // completes.
+    let pending = false
+    if (mongoose.isValidObjectId(session.user.id)) {
+      await connectToDatabase()
+      const user = await User.findById(session.user.id)
+        .select('pendingEmail pendingEmailExpires')
+        .lean()
+      pending = hasPendingEmailChange(user)
+    }
+    if (!pending) {
+      redirect(localizedPath(locale, '/'));
+    }
   }
 
 

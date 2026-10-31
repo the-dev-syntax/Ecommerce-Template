@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { IOrder } from '@/lib/db/models/order.model'
-import { deriveOrderStatus } from '@/lib/orders/status'
+import { deriveOrderStatus, isFullyRefunded } from '@/lib/orders/status'
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 import ProductPrice from '../product/product-price'
@@ -303,7 +303,11 @@ export default function OrderDetailsForm({
                 action={() => updateOrderToPaid(order._id)}
               />
             )}
-            {isAdmin && isPaid && !isDelivered && !isCancelled && (
+            {isAdmin &&
+              isPaid &&
+              !isDelivered &&
+              !isCancelled &&
+              !isFullyRefunded(order) && (
               <>
                 {!order.isPickup && <ShipOrderForm orderId={order._id} />}
                 <ActionButton

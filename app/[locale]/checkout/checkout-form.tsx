@@ -40,7 +40,10 @@ import useIsMounted from '@/hooks/use-is-mounted'
 import useCartStore from '@/hooks/use-cart-store'
 import ProductPrice from '@/components/shared/product/product-price'
 import { createOrder } from '@/lib/actions/order.actions'
-import { getEnabledPaymentMethods } from '@/lib/payments'
+import {
+  getEnabledPaymentMethods,
+  resolveDefaultPaymentMethod,
+} from '@/lib/payments'
 import { toast } from '@/hooks/use-toast'
 import useSettingStore from '@/hooks/use-setting-store'
 import { useTranslations } from 'next-intl'
@@ -119,8 +122,10 @@ const CheckoutForm = ({
     availablePaymentMethods,
     { cashOnDelivery: features.cashOnDelivery }
   )
-  const defaultEnabledPaymentMethod =
-    enabledPaymentMethods[0]?.name ?? defaultPaymentMethod
+  const defaultEnabledPaymentMethod = resolveDefaultPaymentMethod(
+    enabledPaymentMethods,
+    defaultPaymentMethod
+  )
 
   const {
     cart: {
@@ -286,8 +291,10 @@ const CheckoutForm = ({
   // provider unconfigured). Write the resolved fallback back to the store so
   // the priced cart (COD fee etc.) matches the method actually submitted.
   useEffect(() => {
-    if (!isMounted || !storedPaymentMethod) return
+    if (!isMounted || !paymentMethod) return
     if (storedPaymentMethod === paymentMethod) return
+    // Also runs on a first-time cart (no stored method), so the priced cart
+    // includes the COD fee for the method that will actually be submitted.
     setPaymentMethod(paymentMethod).catch((error) => {
       console.error('Unable to update the payment method:', error)
     })
