@@ -24,7 +24,7 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 *********
 - Added `npm run check:seed-data`: it builds all 200 orders and the buyer-derived reviews in memory, validates each user/product/order/review against the Mongoose models, checks order totals/variant references/delivered fields, and reports duplicate emails, phones, slugs, variant ids/SKUs, page slugs, carousel URLs or order fingerprints. Current result: 16 users, 29 products, 167 variants, 200 delivered orders, 315 reviews, no conflicts.
 
-- The development reset now also clears invoices, invoice counters, order returns, payment events, stock reservations, inventory adjustments, shipping rates and ZATCA submission/chain state, so old records cannot reference the newly generated user/product/order IDs. The production empty-database guard counts those collections too (except the invoice counter, which is only cleared on the development path).
+- The development reset now also clears invoices, invoice counters, order returns, payment events, stock reservations, inventory adjustments, shipping rates and ZATCA submission/chain state, so old records cannot reference the newly generated user/product/order IDs. Invoice cleanup uses the native collection (`Invoice.collection.deleteMany`) because the invoice model intentionally blocks update/delete middleware; production never reaches this branch. The production empty-database guard counts those collections too (except the invoice counter, which is only cleared on the development path).
 
 - `npm run seed` remains the destructive development reset. `npm run seed:production` uses `lib/production-data.ts` and refuses a non-empty database, so development seed data cannot be mixed into a live production dataset.
 

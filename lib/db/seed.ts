@@ -127,7 +127,9 @@ const main = async () => {
       await Promise.all([
         ZatcaSubmission.deleteMany(),
         ZatcaChainState.deleteMany(),
-        Invoice.deleteMany(),
+        // Invoice middleware intentionally blocks update/delete. The dev reset
+        // must bypass it explicitly; production never reaches this branch.
+        Invoice.collection.deleteMany({}),
         InvoiceCounter.deleteMany(),
         OrderReturn.deleteMany(),
         PaymentEvent.deleteMany(),
