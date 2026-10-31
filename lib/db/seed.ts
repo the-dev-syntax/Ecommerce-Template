@@ -10,7 +10,7 @@ import User from './models/user.model'
 import Review from './models/review.model'
 import Order from './models/order.model'
 import { IOrderInput, OrderItem, ShippingAddress } from '@/types'
-import { calculateFutureDate, calculatePastDate, generateId, round2 } from '../utils'
+import { calculatePastDate, generateId, round2 } from '../utils'
 import WebPage from './models/web-page.model'
 import Setting from './models/setting.model'
 import { priceOrderItems } from '../tax'
@@ -99,37 +99,22 @@ const main = async () => {
     // Demo reviews and 200 generated orders belong to the development seed
     // only. A production run seeds the real catalogue and admin accounts and
     // leaves orders/reviews to real customers.
-    let createdReviews: unknown[] = []
-    let createdOrders: unknown[] = []
+    let createdReviews: Array<{
+      _id: unknown
+      product: unknown
+      rating: number
+    }> = []
+    let createdOrders: Array<{
+      _id: unknown
+      user: unknown
+      deliveredAt?: Date | null
+      items: Array<{
+        product: unknown
+        category: string
+        quantity: number
+      }>
+    }> = []
     if (!useProduction) {
-      await Review.deleteMany()
-      const rws = []
-      for (let i = 0; i < createdProducts.length; i++) {
-        let x = 0
-        const { ratingDistribution } = createdProducts[i]
-        for (let j = 0; j < ratingDistribution.length; j++) {
-          for (let k = 0; k < ratingDistribution[j].count; k++) {
-            x++
-            rws.push({
-              //[reviews][number]= one review object
-              ...reviews.filter((rev) => rev.rating === j + 1)[
-                x % reviews.filter((rev) => rev.rating === j + 1).length
-              ],
-              isVerifiedPurchase: true,
-              // Seeded demo reviews are pre-approved so the storefront starts
-              // with the ratings shipped in the seed data.
-              isApproved: true,
-              approvedAt: new Date(),
-              product: createdProducts[i]._id,
-              user: createdUser[x % createdUser.length]._id,
-              updatedAt: Date.now(),
-              createdAt: Date.now(),
-            })
-          }
-        }
-      }
-      createdReviews = await Review.insertMany(rws)
-
       await Order.deleteMany()
 
       const orders = []
@@ -143,6 +128,139 @@ const main = async () => {
         )
       }
       createdOrders = await Order.insertMany(orders)
+
+      // Reviews must come from customers who actually bought the product, as
+      // the runtime review action now requires a paid order.
+      const buyersByProduct = new Map<
+        string,
+        Array<{ userId: string; deliveredAt: Date }>
+      >()
+      for (const order of createdOrders) {
+        const deliveredAt = order.deliveredAt ?? new Date()
+        for (const item of order.items) {
+          const key = String(item.product)
+          const buyers = buyersByProduct.get(key) ?? []
+          const userId = String(order.user)
+          if (!buyers.some((buyer) => buyer.userId === userId)) {
+            buyers.push({ userId, deliveredAt })
+            buyersByProduct.set(key, buyers)
+          }
+        }
+      }
+
+      await Review.deleteMany()
+      const rws = []
+      for (const product of createdProducts) {
+        const buyers = buyersByProduct.get(String(product._id)) ?? []
+        let buyerIndex = 0
+        for (const { rating, count } of product.ratingDistribution ?? []) {
+          const templates = reviews.filter(
+            (review) => review.rating === rating
+          )
+          if (templates.length === 0) continue
+
+          for (let n = 0; n < count && buyerIndex < buyers.length; n++) {
+            const template = templates[n % templates.length]
+            const buyer = buyers[buyerIndex++]
+            const reviewedAt = new Date(
+              Math.min(
+                Date.now(),
+                buyer.deliveredAt.getTime() + (n % 10 + 1) * 86400000
+              )
+            )
+            rws.push({
+              ...template,
+              product: product._id,
+              user: buyer.userId,
+              isVerifiedPurchase: true,
+              // Seeded demo reviews are pre-approved; new runtime reviews must
+              // pass the admin queue.
+              isApproved: true,
+              approvedAt: reviewedAt,
+              createdAt: reviewedAt,
+              updatedAt: reviewedAt,
+            })
+          }
+        }
+      }
+      createdReviews = await Review.insertMany(rws)
+
+      const salesByProduct = new Map<string, number>()
+      for (const order of createdOrders) {
+        for (const item of order.items) {
+          const key = String(item.product)
+          salesByProduct.set(
+            key,
+            (salesByProduct.get(key) ?? 0) + item.quantity
+          )
+        }
+      }
+
+      // Keep the product rating aggregates in sync with the generated reviews
+      // and order quantities instead of the old placeholder distribution.
+      for (const product of createdProducts) {
+        const productReviews = createdReviews.filter(
+          (review) => String(review.product) === String(product._id)
+        )
+        const totalReviews = productReviews.length
+        const avgRating =
+          totalReviews === 0
+            ? 0
+            : Number(
+                (
+                  productReviews.reduce(
+                    (sum, review) => sum + review.rating,
+                    0
+                  ) / totalReviews
+                ).toFixed(1)
+              )
+        const ratingDistribution = [1, 2, 3, 4, 5].map((rating) => ({
+          rating,
+          count: productReviews.filter((review) => review.rating === rating)
+            .length,
+        }))
+
+        await Product.updateOne(
+          { _id: product._id },
+          {
+            $set: {
+              avgRating,
+              numReviews: totalReviews,
+              ratingDistribution,
+              reviews: productReviews.map((review) => review._id),
+              numSales: salesByProduct.get(String(product._id)) ?? 0,
+            },
+          }
+        )
+      }
+
+      // Give every account a browsing history derived from the orders it
+      // actually placed, so the account pages have realistic data.
+      const now = Date.now()
+      for (const user of createdUser) {
+        const purchased = new Map<string, string>()
+        for (const order of createdOrders) {
+          if (String(order.user) !== String(user._id)) continue
+          for (const item of order.items) {
+            purchased.set(String(item.product), item.category)
+          }
+        }
+
+        const browsingHistory = Array.from(purchased.entries())
+          .slice(0, 20)
+          .map(([product, category], index) => ({
+            product,
+            category,
+            viewedAt: new Date(now - index * 86400000),
+          }))
+
+        if (browsingHistory.length > 0) {
+          await User.updateOne(
+            { _id: user._id },
+            { $set: { browsingHistory } }
+          )
+        }
+      }
     }
 
     // Never log the inserted documents: user documents contain password
@@ -238,10 +356,20 @@ const generateOrder = async (
   const codFee = user.paymentMethod === 'Cash On Delivery' ? 10 : 0
   const totalPrice = round2(priced.totalPrice + codFee)
   const createdAt = calculatePastDate(i + 2)
-  const paidAt = calculatePastDate(i + 1)
   const deliveredAt = calculatePastDate(i)
+  // COD is collected on delivery; online payments are captured before it.
+  const paidAt =
+    user.paymentMethod === 'Cash On Delivery'
+      ? deliveredAt
+      : calculatePastDate(i + 1)
   const deliveryOption =
     priced.availableDeliveryDates[priced.deliveryDateIndex]
+  const paymentId =
+    user.paymentMethod === 'Stripe'
+      ? `pi_seed_${i}`
+      : user.paymentMethod === 'PayPal'
+        ? `PAYPAL-SEED-${i}`
+        : `COD-SEED-${i}`
 
   const order = {
     user: users[i % users.length],
@@ -262,18 +390,31 @@ const generateOrder = async (
     shippingService: deliveryOption?.name,
     shippingEtaMin: deliveryOption?.daysToDeliver,
     shippingEtaMax: deliveryOption?.daysToDeliver,
+    isPickup: false,
+    pickupLocation: '',
     isPaid: true,
     isDelivered: true,
     paidAt,
     deliveredAt,
     createdAt,
-    expectedDeliveryDate: calculateFutureDate(i % 2),
+    expectedDeliveryDate: deliveredAt,
+    receiptSentAt: deliveredAt,
     paymentResult: {
-      id: `seed-payment-${i}`,
+      id: paymentId,
       status: 'COMPLETED',
       email_address: user.email,
       pricePaid: totalPrice.toFixed(2),
     },
+    ...(user.paymentMethod === 'Stripe'
+      ? { stripePaymentIntentId: paymentId }
+      : {}),
+    ...(user.paymentMethod === 'Moyasar'
+      ? { moyasarPaymentId: paymentId }
+      : {}),
+    isCancelled: false,
+    refundedAmount: 0,
+    shippingRefunded: false,
+    isDisputed: false,
     status: 'delivered',
     statusHistory: [
       { status: 'pending_payment', at: createdAt, note: 'Order created' },
@@ -288,6 +429,7 @@ const generateOrder = async (
       deliveredAt,
       status: 'delivered',
     },
+    cartFingerprint: `seed-order-${i}`,
   }
   return order as IOrderInput
 }

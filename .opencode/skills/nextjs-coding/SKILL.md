@@ -12,6 +12,8 @@ description: Guidelines for modifying this Next.js e-commerce project safely, in
 - Run appropriate checks after changes.
 - Document all changes and why they were made in README.md.
 - don't commit any code wait for approval, but provide a recommended commit message after the task end and after the task final tests.
+- never seed to the database. 
+- never run npm run seed. 
 
 ## Windows Memory and Resource Safety
 

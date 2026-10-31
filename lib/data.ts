@@ -67,6 +67,13 @@ const saudiLocations = [
   },
 ]
 
+const seedAddress = (fullName: string): ShippingAddress => ({
+  ...saudiLocations[0],
+  fullName,
+  country: 'SA',
+  phone: '+966500000001',
+})
+
 // Pre-hashed passwords to avoid bcrypt.hashSync() at module load time.
 // Generate replacements with `ADMIN_PASSWORD=... npm run hash:password`.
 // Never commit plaintext passwords or credentials here.
@@ -77,6 +84,9 @@ const HASHED_PASSWORDS = {
   jack: '$2b$12$f4m84swOoNyGy2UJdLLW3.qm.DhLZOENr0upics2ARyDRistwQiGy',
 }
 
+// The legacy address text below is replaced by the Saudi mapping after this
+// array; the exported `users` (and therefore the seeded database) contains
+// only Saudi addresses and +966 phones.
 const userSeed: IUserInput[] = [
   {
     name: 'deca',
@@ -84,15 +94,7 @@ const userSeed: IUserInput[] = [
 
     password: HASHED_PASSWORDS.admin,
     role: 'admin',
-    address: {
-      fullName: 'John Doe',
-      street: '111 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10001',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('John Doe'),
     paymentMethod: 'Stripe',
     emailVerified: new Date("2025-07-30T00:00:00.000Z"),
     verificationToken: null,
@@ -105,15 +107,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user1,
 
     role: 'user',
-    address: {
-      fullName: 'Jane Harris',
-      street: '222 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '1002',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Jane Harris'),
     paymentMethod: 'Cash On Delivery',
     emailVerified: null,
   },
@@ -124,15 +118,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.jack,
 
     role: 'user',
-    address: {
-      fullName: 'Jack Ryan',
-      street: '333 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '1003',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Jack Ryan'),
     paymentMethod: 'PayPal',
     emailVerified: null,
   },
@@ -143,15 +129,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Sarah Smith',
-      street: '444 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '1005',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Sarah Smith'),
     paymentMethod: 'Cash On Delivery',
     emailVerified: null,
   },
@@ -162,15 +140,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'John Alexander',
-      street: '555 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '1006',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('John Alexander'),
     paymentMethod: 'PayPal',
     emailVerified: null,
   },
@@ -181,15 +151,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Emily Johnson',
-      street: '666 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10001',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Emily Johnson'),
     paymentMethod: 'Stripe',
     emailVerified: null,
   },
@@ -200,15 +162,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Alice Cooper',
-      street: '777 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10007',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Alice Cooper'),
     paymentMethod: 'Cash On Delivery',
     emailVerified: null,
   },
@@ -219,15 +173,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Tom Hanks',
-      street: '888 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10008',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Tom Hanks'),
     paymentMethod: 'Stripe',
     emailVerified: null,
   },
@@ -238,15 +184,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Linda Holmes',
-      street: '999 Main St',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10009',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Linda Holmes'),
     paymentMethod: 'PayPal',
     emailVerified: null,
   },
@@ -257,15 +195,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'George Smith',
-      street: '101 First Ave',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10010',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('George Smith'),
     paymentMethod: 'Stripe',
     emailVerified: null,
   },
@@ -276,15 +206,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Jessica Brown',
-      street: '102 First Ave',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10011',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Jessica Brown'),
     paymentMethod: 'Cash On Delivery',
     emailVerified: null,
   },
@@ -295,15 +217,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Chris Evans',
-      street: '103 First Ave',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10012',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Chris Evans'),
     paymentMethod: 'PayPal',
     emailVerified: null,
   },
@@ -314,15 +228,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Samantha Wilson',
-      street: '104 First Ave',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10013',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Samantha Wilson'),
     paymentMethod: 'Stripe',
     emailVerified: null,
   },
@@ -333,15 +239,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'David Lee',
-      street: '105 First Ave',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10014',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('David Lee'),
     paymentMethod: 'Cash On Delivery',
     emailVerified: null,
   },
@@ -352,15 +250,7 @@ const userSeed: IUserInput[] = [
     password: HASHED_PASSWORDS.user,
 
     role: 'user',
-    address: {
-      fullName: 'Anna Smith',
-      street: '106 First Ave',
-      city: 'New York',
-      province: 'NY',
-      postalCode: '10015',
-      country: 'USA',
-      phone: '123-456-7890',
-    },
+    address: seedAddress('Anna Smith'),
     paymentMethod: 'PayPal',
     emailVerified: null,
   },
@@ -369,15 +259,7 @@ const userSeed: IUserInput[] = [
     email: 'ops@example.com',
     password: HASHED_PASSWORDS.admin,
     role: 'admin',
-    address: {
-      fullName: 'Operations Admin',
-      street: 'Olaya Street',
-      city: 'Riyadh',
-      province: 'Riyadh',
-      postalCode: '12211',
-      country: 'SA',
-      phone: '+966500000015',
-    },
+    address: seedAddress('Operations Admin'),
     paymentMethod: 'Cash On Delivery',
     emailVerified: new Date('2025-01-01T00:00:00.000Z'),
     verificationToken: null,
@@ -406,6 +288,9 @@ const users: SeedUser[] = userSeed.map((user, index) => {
   return {
     ...user,
     address,
+    // Seeded accounts are pre-verified so every development login can reach
+    // checkout/account pages without access to the email inbox.
+    emailVerified: user.emailVerified ?? SEED_VERIFIED_AT,
     phone,
     phoneVerified: true,
     phoneVerifiedAt: SEED_VERIFIED_AT,
@@ -415,6 +300,14 @@ const users: SeedUser[] = userSeed.map((user, index) => {
         ...address,
         id: `seed-address-${index + 1}`,
         isDefault: true,
+      },
+      {
+        ...saudiLocations[(index + 1) % saudiLocations.length],
+        fullName: user.address.fullName,
+        country: 'SA',
+        phone,
+        id: `seed-address-${index + 1}-secondary`,
+        isDefault: false,
       },
     ],
   }

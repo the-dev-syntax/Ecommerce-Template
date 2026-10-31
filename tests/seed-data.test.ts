@@ -24,5 +24,29 @@ test('development seed data matches the current schemas', () => {
 
   assert.ok(data.users.length > 0)
   assert.ok(data.products.length > 0)
-  assert.ok(data.products.some((product) => (product.variants?.length ?? 0) > 0))
+  // `Data` types users as IUserInput[]; the development seed intentionally
+  // adds the later phone/address-book fields, so narrow the test-only view.
+  const seedUsers = data.users as Array<
+    (typeof data.users)[number] & {
+      phone: string
+      addresses: { isDefault?: boolean }[]
+    }
+  >
+  assert.ok(
+    seedUsers.every(
+      (user) =>
+        user.address.country === 'SA' &&
+        user.phone.startsWith('+966') &&
+        user.addresses.length >= 2
+    )
+  )
+  assert.ok(
+    data.products.every(
+      (product) =>
+        product.taxCategory &&
+        product.returnPolicy &&
+        typeof product.weight === 'number' &&
+        (normalizeProductVariants(product).variants?.length ?? 0) > 0
+    )
+  )
 })
