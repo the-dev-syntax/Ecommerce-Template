@@ -148,6 +148,7 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - `lib/orders/refund-order.ts:582-628` increments stock by `item.quantity` and only afterwards stamps `restockedQuantity`; it ignores the value already written by `restockFullyRefundedOrder` (`:813-836`). The Moyasar refund webhook restocks but does not set `isCancelled` (`route.ts:141-179`), so the admin cancel button stays available.
 - Impact: phantom inventory, oversell later, and `numSales` decremented twice.
 - Fix: in the cancel loop restock only `item.quantity - (item.restockedQuantity ?? 0)` and claim each line atomically, as the refund helper does.
+- **Fixed 2026-10-31:** both cancellation and dashboard-refund restocking use `remainingRestockQuantity` and the same atomic `restockedQuantity` claim; cancelling after a dashboard refund now adds zero stock. `tests/restock.test.ts` covers the quantity rule.
 
 53. PayPal capture is not durably recorded; a retry can charge twice - [code]
 - `lib/actions/order.actions.ts:590-597` overwrites `paymentResult.id` with every new PayPal order, and `:641-659` captures before anything is persisted. There is no PayPal webhook (absent from `app/api/webhooks/payments/[provider]/route.ts`) and `approvePayPalOrder` does not reconcile `ORDER_ALREADY_CAPTURED`.

@@ -2,6 +2,13 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-52 - Cancellation no longer restocks dashboard-refunded units (2026-10-31)
+
+- `cancelOrderById` now computes each line's remaining units with `remainingRestockQuantity` and claims the line atomically through `restockedQuantity` before incrementing stock. A dashboard refund that already restocked the order leaves `restockedQuantity = quantity`, so a later cancellation restocks zero units instead of the full quantity again.
+- `restockFullyRefundedOrder` uses the same helper, so both pipelines share one idempotency rule.
+- Added `tests/restock.test.ts` for untouched, fully restocked, partially restocked and over-restocked lines.
+- Not runtime-tested against a live order: the double-restock scenario needs a paid order refunded from the Moyasar dashboard and then cancelled in admin.
+
 ## P1-50 - Email links use the canonical origin (2026-10-31)
 
 - `getSender()` now derives `siteUrl` and `logoUrl` from `getSiteUrl()` instead of `settings.site.url`. `purchase-receipt`, `ask-review-order-items`, `verification-email`, `password-reset-email` and `requestPasswordReset` do the same, so verification, reset, receipt, invoice and product links all use `NEXT_PUBLIC_SITE_URL` with trailing slashes removed.

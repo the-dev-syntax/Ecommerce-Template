@@ -8,6 +8,7 @@ import OrderReturn, {
 import Product from '@/lib/db/models/product.model'
 import { createInvoiceForOrder } from '@/lib/invoices/invoice'
 import { recordInventoryAdjustment } from '@/lib/inventory/adjustments'
+import { remainingRestockQuantity } from '@/lib/orders/restock'
 import {
   markStockReservationReleased,
   releaseStockReservation,
@@ -581,11 +582,35 @@ export async function cancelOrderById(
 
       if (wasPaid && !skipRestock) {
         for (const item of fresh.items) {
+          const restockQuantity = remainingRestockQuantity(item)
+          if (restockQuantity <= 0) continue
+
+          // Claim the line atomically. A dashboard refund may already have
+          // restocked it, and a concurrent webhook must not restock the same
+          // units again.
+          const claimed = await Order.findOneAndUpdate(
+            {
+              _id: fresh._id,
+              items: {
+                $elemMatch: {
+                  clientId: item.clientId,
+                  $or: [
+                    { restockedQuantity: { $exists: false } },
+                    { restockedQuantity: { $lt: item.quantity } },
+                  ],
+                },
+              },
+            },
+            { $set: { 'items.$.restockedQuantity': item.quantity } },
+            { new: true, session }
+          )
+          if (!claimed) continue
+
           const increment = {
-            countInStock: item.quantity,
-            numSales: -item.quantity,
+            countInStock: restockQuantity,
+            numSales: -restockQuantity,
             ...(item.variantId
-              ? { 'variants.$.countInStock': item.quantity }
+              ? { 'variants.$.countInStock': restockQuantity }
               : {}),
           }
           const product = await Product.findOneAndUpdate(
@@ -610,20 +635,12 @@ export async function cancelOrderById(
               variantLabel: variant
                 ? [variant.size, variant.color].filter(Boolean).join(' / ')
                 : '',
-              previousStock: newStock - item.quantity,
+              previousStock: newStock - restockQuantity,
               newStock,
-              quantityChange: item.quantity,
+              quantityChange: restockQuantity,
               source: 'order_cancelled',
               orderId: String(fresh._id),
             })
-
-            // Track restocked units on the order as well, so a later
-            // dashboard refund cannot restock the same items again.
-            await Order.updateOne(
-              { _id: fresh._id, 'items.clientId': item.clientId },
-              { $set: { 'items.$.restockedQuantity': item.quantity } },
-              { session }
-            )
           }
         }
         const previouslyRefunded = fresh.refundedAmount ?? 0
@@ -811,8 +828,7 @@ export async function restockFullyRefundedOrder(orderId: string) {
       if (order.recoveryRefundKey) return
 
       for (const item of order.items) {
-        const alreadyRestocked = item.restockedQuantity ?? 0
-        const remaining = item.quantity - alreadyRestocked
+        const remaining = remainingRestockQuantity(item)
         if (remaining <= 0) continue
 
         // Claim the line atomically so a concurrent webhook/return cannot
