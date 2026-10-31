@@ -13,6 +13,13 @@ import { IOrderInput, OrderItem, ShippingAddress } from '@/types'
 import { calculatePastDate, generateId, round2 } from '../utils'
 import WebPage from './models/web-page.model'
 import Setting from './models/setting.model'
+import Invoice, { InvoiceCounter } from './models/invoice.model'
+import OrderReturn from './models/order-return.model'
+import PaymentEvent from './models/payment-event.model'
+import StockReservation from './models/stock-reservation.model'
+import InventoryAdjustment from './models/inventory-adjustment.model'
+import ShippingRate from './models/shipping-rate.model'
+import { ZatcaChainState, ZatcaSubmission } from './models/zatca.model'
 import { priceOrderItems } from '../tax'
 import { normalizeProductVariants } from '../product-variants'
 
@@ -54,15 +61,37 @@ const main = async () => {
     // may already be referenced by real orders/reviews; use admin screens or a
     // migration instead of re-seeding a live database.
     if (useProduction) {
-      const [settingsCount, userCount, productCount, pageCount, reviewCount, orderCount] =
-        await Promise.all([
-          Setting.countDocuments(),
-          User.countDocuments(),
-          Product.countDocuments(),
-          WebPage.countDocuments(),
-          Review.countDocuments(),
-          Order.countDocuments(),
-        ])
+      const [
+        settingsCount,
+        userCount,
+        productCount,
+        pageCount,
+        reviewCount,
+        orderCount,
+        invoiceCount,
+        returnCount,
+        paymentEventCount,
+        reservationCount,
+        adjustmentCount,
+        shippingRateCount,
+        zatcaSubmissionCount,
+        zatcaChainCount,
+      ] = await Promise.all([
+        Setting.countDocuments(),
+        User.countDocuments(),
+        Product.countDocuments(),
+        WebPage.countDocuments(),
+        Review.countDocuments(),
+        Order.countDocuments(),
+        Invoice.countDocuments(),
+        OrderReturn.countDocuments(),
+        PaymentEvent.countDocuments(),
+        StockReservation.countDocuments(),
+        InventoryAdjustment.countDocuments(),
+        ShippingRate.countDocuments(),
+        ZatcaSubmission.countDocuments(),
+        ZatcaChainState.countDocuments(),
+      ])
       const existing = (
         [
           ['settings', settingsCount],
@@ -71,6 +100,14 @@ const main = async () => {
           ['web pages', pageCount],
           ['reviews', reviewCount],
           ['orders', orderCount],
+          ['invoices', invoiceCount],
+          ['returns', returnCount],
+          ['payment events', paymentEventCount],
+          ['stock reservations', reservationCount],
+          ['inventory adjustments', adjustmentCount],
+          ['shipping rates', shippingRateCount],
+          ['ZATCA submissions', zatcaSubmissionCount],
+          ['ZATCA chain state', zatcaChainCount],
         ] as [string, number][]
       ).filter(([, count]) => count > 0)
       if (existing.length > 0) {
@@ -80,6 +117,24 @@ const main = async () => {
             .join(', ')}). Use a fresh database or a migration instead.`
         )
       }
+    }
+
+    // Development reset: remove dependent records so old invoices, events,
+    // returns, reservations or inventory audits cannot reference the new IDs.
+    // Production seeding is guarded to an empty database above, so this is a
+    // no-op there and InvoiceCounter is never reset in production.
+    if (!useProduction) {
+      await Promise.all([
+        ZatcaSubmission.deleteMany(),
+        ZatcaChainState.deleteMany(),
+        Invoice.deleteMany(),
+        InvoiceCounter.deleteMany(),
+        OrderReturn.deleteMany(),
+        PaymentEvent.deleteMany(),
+        StockReservation.deleteMany(),
+        InventoryAdjustment.deleteMany(),
+        ShippingRate.deleteMany(),
+      ])
     }
 
     await Setting.deleteMany()

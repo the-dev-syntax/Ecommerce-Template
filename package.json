@@ -20,6 +20,7 @@
     "test": "tsx --test \"tests/**/*.test.ts\"",
     "check:production": "npx tsx ./scripts/check-production-env.ts",
     "check:production-data": "npx tsx ./scripts/check-production-data.ts",
+    "check:seed-data": "npx tsx ./scripts/check-seed-data.ts",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",

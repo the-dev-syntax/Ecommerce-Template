@@ -4,23 +4,111 @@ Changes are recorded here in the order they are implemented. Each point lists wh
 
 ## Development seed refresh (2026-10-31)
 
+
 - **Users:** the source seed addresses are now Saudi (Riyadh/Jeddah/Dammam) and every exported account has an E.164 `+9665…` phone, `phoneVerified`, `phoneVerifiedAt`, a `verifiedPhones` entry, a pre-verified email and **two** saved addresses (one default, one secondary) for the address-book UI. Added a second admin (`ops@example.com`) so multi-admin and last-admin behaviour can be exercised. The existing names, emails, roles and payment methods are preserved. Regenerated the `user1` and `user` bcrypt hashes so their development passwords satisfy the registration policy (8+ characters with upper/lowercase, a number and a special character); the plaintext values stay out of the repository.
+
 - **Products:** `productDefaults` now supplies `taxCategory`, `exemptionReasonCode`, `returnPolicy`, `weight` and `lowStockThreshold` to every legacy product. Products that only listed sizes/colors get a generated cartesian variant list (unique ids/SKUs, per-variant stock, weight, image and one default) instead of collapsing to a single option; total stock is preserved. Added five supplement/gift-card examples covering multi-variant pricing, per-variant weights, `final_sale`/`refund_only` policies and an out-of-scope (`O`) tax category with an exemption code.
+
 - **Orders:** generated orders now snapshot variant id/SKU/label/size/colour/weight, tax category, exemption code and return policy on every line. They also store the priced VAT fields, COD fee, shipping service/zone/carrier/ETA, `paymentResult` (with provider-specific ids), `status`/`statusHistory`, a delivered `shipment`, `receiptSentAt`, `expectedDeliveryDate` and the cancelled/refund/dispute defaults. Every order is delivered with `isDelivered: true` and `deliveredAt`; COD orders set `paidAt` to the delivery date, online orders pay one day after creation. `createdAt`/`paidAt`/`deliveredAt` are ordered and the previous product/category/count bugs in generated lines were fixed.
+
 - **Reviews and account history:** demo reviews are now generated only from users who actually bought the product in a delivered order (`isVerifiedPurchase: true`, pre-approved). Product `avgRating`/`numReviews`/`ratingDistribution`/`numSales` are recomputed from the generated reviews and orders instead of the old placeholder distribution, and each account gets a browsing history derived from its own purchases.
+
 - Added more rating-4/5 review templates so the generated review distributions stay varied.
+
 - `normalizeProductVariants` now falls back to the product-level weight when a variant has no weight (including the auto-created default variant), so the weight surcharge actually applies to legacy products.
+
 - Added `tests/seed-data.test.ts`, which validates every development setting, user, product (after variant normalization) and web page against the current Zod schemas, and asserts that every user is Saudi with two addresses and every product has tax/return/weight/variant data before the destructive seed run.
-- `npm run seed` still performs the destructive development reset; run it when you are ready to rebuild the local data.
+
+*********
+*********
+*********
+- Added `npm run check:seed-data`: it builds all 200 orders and the buyer-derived reviews in memory, validates each user/product/order/review against the Mongoose models, checks order totals/variant references/delivered fields, and reports duplicate emails, phones, slugs, variant ids/SKUs, page slugs, carousel URLs or order fingerprints. Current result: 16 users, 29 products, 167 variants, 200 delivered orders, 315 reviews, no conflicts.
+
+- The development reset now also clears invoices, invoice counters, order returns, payment events, stock reservations, inventory adjustments, shipping rates and ZATCA submission/chain state, so old records cannot reference the newly generated user/product/order IDs. The production empty-database guard counts those collections too (except the invoice counter, which is only cleared on the development path).
+
+- `npm run seed` remains the destructive development reset. `npm run seed:production` uses `lib/production-data.ts` and refuses a non-empty database, so development seed data cannot be mixed into a live production dataset.
+
+> This update improves your website's database seeding, data validation, 
+> and protection against accidentally deleting or mixing real customer data.
+
+Let's break it down.
+1. Seed data validation
+Added npm run check:seed-data
+
+Before inserting sample data into your database, the system now creates and checks everything in memory first.
+
+It checks:
+- Users, products, orders and reviews.
+- Order totals and product variants.
+- Whether delivered orders have the required delivery information.
+- Duplicate emails, phone numbers, product slugs, SKUs, etc.
+Current result:
+Data	Count
+Users	16
+Products	29
+Product variants	167
+Delivered orders	200
+Reviews	315
+Data conflicts	0
+
+Why is this useful?
+
+It catches problems before inserting data into MongoDB. For example, duplicate SKUs or an order referencing a product variant that doesn't exist.
+2. Development reset now clears more collections
+Previously, when resetting your development database, some old records were left behind.
+
+For example:
+- Old invoices.
+- Old payment events.
+- Old inventory adjustments.
+- Old shipping rates.
+- Old ZATCA submission records.
+Now, the development reset clears these records too.
+
+Why?
+
+Imagine you delete your old products and create new products with new IDs, but an old invoice still references a deleted product.
+
+You would have inconsistent database records.
+
+The new reset prevents this by clearing all related records before generating fresh sample data.
+3. Separate development and production seeding
+This is the most important change.
+
+You now have two different commands:
+Command	Purpose
+npm run seed	Completely resets the development database and inserts sample data.
+npm run seed:production	Inserts initial production data without deleting existing data.
+
+The production command checks that the database is empty before inserting anything.
+
+If it finds existing records, it refuses to continue.
+
+This prevents accidentally mixing sample users, products and orders with real customer data.
+
+Overall: What changed?
+Think of it this way:
+- Before: You could have duplicate data, inconsistent references, and accidentally mix development data with production data.
+- Now: You validate sample data before insertion, completely clean development data, and protect production data from accidental seeding.
+My assessment: These are good improvements, particularly the production empty-database protection. Keep npm run seed restricted to development environments; never run it against your live production database.
+*********
+*********
+*********
 
 ## P3-D — security hardening (2026-10-30)
 
 - **Removed credentials from the client bundle:** the development defaults in `credentials-signin-form.tsx` no longer contain an admin email/password, and the sign-up form no longer pre-fills a password. The plaintext seed-password comments were removed from `lib/data.ts`, the dev seed emails were moved to `example.com`, and the password was redacted from `README-DEBUGGING-1.md`. Why: even behind `NODE_ENV === 'development'`, those strings are source-controlled and can leak through a copied file, a misconfigured build or a repo archive. Added `npm run hash:password` (reads `ADMIN_PASSWORD` from the environment) so developers can generate a fresh bcrypt hash without putting the plaintext in the repo.
+
 - **Seed/log hygiene:** `lib/db/seed.ts` now logs counts only instead of the inserted user documents (which include bcrypt hashes and verification fields). The production seed additionally refuses to run unless Settings/Users/Products/WebPages/Reviews/Orders are all empty, so a re-run on a live database cannot delete products/users referenced by real orders. Errors are logged by name/message rather than dumping the full driver object.
+
 - **Case-insensitive email uniqueness:** `UserSchema` now declares a unique `email_ci_unique` index with `collation: { locale: 'en', strength: 2 }`, matching every lookup/registration path. Added `npm run migrate:email-index` (`scripts/migrate-email-index.ts`) to report existing case-variant duplicates and create the index. Why: the original field-level index was case-sensitive, so `Admin@x.com` and `admin@x.com` could coexist while authentication treated them as the same address.
+
 - **Rate-limit IP hardening:** extracted `pickClientIp()` (tested) which trusts `TRUSTED_IP_HEADER`, then platform headers, then the right-most `X-Forwarded-For` value. In production, no trusted IP now fails closed instead of using a shared user-agent bucket (which was both ineffective and usable to lock out other visitors). `resetIPAttempt` uses the limiter's reset API instead of Redis `KEYS`. `.env.example` documents `TRUSTED_IP_HEADER`.
+
 - **Smaller API hardening:** the mock payment webhook returns 404 in production, the cron route compares `CRON_SECRET` with `crypto.timingSafeEqual`, `formatError` no longer logs the full error object, and the CSP now also sets `object-src 'none'` and `base-uri 'self'`.
+
 - Added `tests/security-hardening.test.ts` for the client-IP extractor and the email index. Verified with `npx tsc --noEmit`, `npm run lint`, `npm test` (93 tests) and `npm run i18n:check`.
+
 - Residual: the removed seed password still exists in older git history. Rotate that development password if it was reused anywhere real; rewriting history is a separate decision. `README-DEBUGGING-1.md` is an internal audit note and should not be published with the site.
 
 ## Production seed template (2026-10-30)
