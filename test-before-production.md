@@ -2,6 +2,15 @@
 
 Ordered checklist of remaining manual actions. Tick each item before merging to `main` and opening the store to the public.
 
+## 0. Seed data exposure (P0-49)
+
+- [ ] Check the production database for the seeded accounts (`admin@example.com`, `jack@example.com`, `jane@example.com`, `user@example.com`, `user1@example.com`, and the rest).
+- [ ] Rotate those passwords to strong unique values, or delete the demo accounts entirely.
+- [ ] Revoke all sessions for the rotated accounts (sign out everywhere / bump `tokenVersion`).
+- [ ] Confirm the real admin still signs in with the new password.
+- [ ] Run `npm run build` and `npm run check:client-bundle`; it must report `Client bundle clean`.
+- [ ] Remove or repoint stale deployments that still serve the old `1911-*.js` chunk (`vercel remove`), or accept that the hashes remain fetchable from old deployment URLs after the passwords are rotated.
+
 ## 1. Debug endpoint cleanup
 
 - [ ] After the **final production header check**, delete `app/api/debug-ip/route.ts`.

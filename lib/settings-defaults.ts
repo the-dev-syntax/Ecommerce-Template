@@ -1,5 +1,6 @@
-import data from '@/lib/data'
 import type { ISettingInput } from '@/types'
+
+import { defaultSetting } from '@/lib/default-settings'
 
 /**
  * Merge a stored settings document with the Saudi defaults. Older documents
@@ -8,7 +9,7 @@ import type { ISettingInput } from '@/types'
 export function withSettingDefaults(
   setting?: Partial<ISettingInput> | null
 ): ISettingInput {
-  const defaults = data.settings[0]
+  const defaults = defaultSetting
   const text = (value: string | undefined, fallback: string) =>
     value && value.trim() ? value : fallback
 

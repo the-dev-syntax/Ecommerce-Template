@@ -2,6 +2,14 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P0-49 - Seed data removed from the client bundle (2026-10-31)
+
+- Split the default settings out of `lib/data.ts` into `lib/default-settings.ts` (727 lines moved; the `webPages` seed array that sat beside it was restored to `lib/data.ts`). `hooks/use-setting-store.ts` now imports only `defaultSetting`, so the seed users - bcrypt hashes, emails, phones and addresses - are no longer part of any client chunk.
+- `lib/settings-defaults.ts` uses the same module. The only remaining importer of `lib/data.ts` is `lib/db/seed.ts`.
+- Added `tests/client-bundle.test.ts`, which fails if any `'use client'` module under `app/`, `components/`, `hooks/` or `lib/` imports `@/lib/data`. Added `npm run check:client-bundle`, which scans `.next/static` for bcrypt hashes, `@example.com` and the seed password marker after a build.
+- Verified: `npx tsc --noEmit`, `npm run lint`, `npm test` (107 tests), `npm run check:seed-data` and `npm run build`. The built client has 119 JS chunks and contains none of the markers.
+- Still manual: rotate or delete the seeded accounts whose hashes were public, revoke their sessions, and note that old deployment URLs still serve the previous chunk. These actions are tracked in `test-before-production.md`.
+
 ## P0-7 - Trusted client IP for rate limiting (2026-10-31)
 
 - Verified the real Vercel header behaviour with a temporary diagnostic route (`app/api/debug-ip`) on a Preview deployment, calling it normally and with spoofed `X-Forwarded-For`, `X-Real-IP`, `X-Vercel-Forwarded-For` and `CF-Connecting-IP` values.
