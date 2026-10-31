@@ -31,12 +31,7 @@ export async function generateMetadata(props: {
 }) {
   const params = await props.params
   const product = await getProductBySlug(params.slug)
-  if (!product) {
-    return {
-      title: 'Product not found',
-      robots: { index: false, follow: false },
-    }
-  }
+  if (!product) notFound()
   return buildPageMetadata({
     locale: params.locale,
     path: `/product/${params.slug}`,

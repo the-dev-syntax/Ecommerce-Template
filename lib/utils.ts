@@ -286,6 +286,9 @@ export const getFilterUrl = ({
   page?: string
 }) => {
   const newParams = { ...params }
+  // Changing a filter or sort starts a new result set; keeping the old page
+  // number shows an empty grid (e.g. page 2 of a 1-page category).
+  if (category || tag || sort || price || rating) delete newParams.page
   if (category) newParams.category = category
   if (tag) newParams.tag = slugify(tag)
   if (sort) newParams.sort = sort

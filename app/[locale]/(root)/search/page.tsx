@@ -102,19 +102,24 @@ const [t, tCategory, tTags] = await Promise.all([
 
   const params = { q, category, tag, price, rating, sort, page }
 
-  const [categories, tags, data] = await Promise.all([
+  const requestedPage = Math.max(1, Number(page) || 1)
+  const productQuery = { query: q, category, tag, price, rating, sort }
+
+  const [categories, tags, initialData] = await Promise.all([
     getAllCategories(),
     getAllTags(),
-    getAllProducts({
-      query: q,
-      category,
-      tag,
-      price,
-      rating,
-      sort,
-      page: Number(page),
-    }),
+    getAllProducts({ ...productQuery, page: requestedPage }),
   ])
+
+  // A hand-edited or stale URL can point past the last page. Clamp to the last
+  // page instead of rendering an empty grid ("10 - 9 of 6").
+  let data = initialData
+  if (initialData.totalPages > 0 && requestedPage > initialData.totalPages) {
+    data = await getAllProducts({
+      ...productQuery,
+      page: initialData.totalPages,
+    })
+  }
 
   const noProducts = data.products.length === 0
 

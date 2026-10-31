@@ -15,12 +15,7 @@ export async function generateMetadata(props: {
 
   const { slug, locale } = params
   const webPage = await getWebPageBySlug(slug)
-  if (!webPage) {
-    return {
-      title: 'Web page not found',
-      robots: { index: false, follow: false },
-    }
-  }
+  if (!webPage) notFound()
   return buildPageMetadata({
     locale,
     path: `/page/${slug}`,

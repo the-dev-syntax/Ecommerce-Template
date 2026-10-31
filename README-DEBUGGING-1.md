@@ -187,18 +187,20 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 - `components/shared/pagination.tsx:25` calls `formUrlQuery`, which uses `window.location.pathname` (`lib/utils.ts:237`) - that path already contains `/fr`. The result is pushed through the locale-aware router, which prefixes the locale again.
 - Live: `/fr/fr/search?page=2` returns 404 while `/fr/search?page=2` returns 200. The same component is used by `/account/orders`, `/admin/orders`, `/admin/reviews` and `/admin/users`.
 - Fix: base the query URL on `usePathname()` from `@/i18n/routing` (locale-stripped), not `window.location.pathname`.
-- **Fixed 2026-11-01:** `formUrlQuery` accepts `basePath` and Pagination passes the locale-stripped `usePathname()`; a router prefix is now added once. `tests/filter-url.test.ts` guards it.
+- **Fixed 2026-11-01:** `formUrlQuery` accepts `basePath` and Pagination passes the locale-stripped `usePathname()`; a router prefix is now added once. `tests/pagination-url.test.ts` guards it.
 
 59. Missing product/page slugs render the 404 UI but return HTTP 200 (soft 404) - [live]
 - `app/[locale]/(root)/product/[slug]/page.tsx:62` and `app/[locale]/(root)/page/[slug]/page.tsx:38` call `notFound()`, but the route streams first through `app/[locale]/loading.tsx:3`, so the status is committed before the 404 boundary resolves.
 - Live: `/product/does-not-exist-xyz` and `/page/does-not-exist-xyz` both return 200 with `NEXT_HTTP_ERROR_FALLBACK;404` in the body. The status is 200 even though a `noindex` meta is injected.
 - Impact: stale/typo'd links are indexed as valid pages, analytics and uptime monitors see no error, and crawl budget is wasted.
 - Fix: resolve the slug in `generateMetadata` (awaited before the shell flushes) and call `notFound()` there too, or scope/remove the locale loading boundary for these routes; verify with `curl -o /dev/null -w '%{http_code}'` (must be 404).
+- **Fixed 2026-11-01:** removed the global locale loading boundary (streaming committed 200 first), scoped `PageLoading` to home/search/cart/account/admin/checkout, and added `notFound()` to product/web-page metadata. Preview now returns 404 for missing slugs and 200 for valid pages.
 
 60. Search filters keep the current `page`, so filtering from page 2+ shows an empty grid - [live]
 - `app/[locale]/(root)/search/page.tsx:99` passes `params` (including `page`) into `getFilterUrl` (`lib/utils.ts:267-274`), which preserves it.
 - Live: `/search?category=T-Shirts&page=2` displays "10 - 9 of 6" and zero product links; clicking any category/tag/price filter from page 2 produces the same shape.
 - Fix: delete/reset `page` inside `getFilterUrl` whenever any other filter or sort changes; clamp out-of-range pages server-side.
+- **Fixed 2026-11-01:** filters and sort reset `page`, and the search page clamps an out-of-range page to the last page. `/search?category=T-Shirts&page=2` now renders `1 - 6 of 6` with products; `tests/filter-url.test.ts` covers the URL rule.
 
 61. A verified user can never finish an email change (the OTP screen redirects away) - [code]
 - `updateUserEmail` stores `pendingEmail` but leaves `emailVerified` true (`lib/actions/user.actions.ts:600-621`); the form then pushes `/verify-email` (`app/[locale]/(root)/account/manage/email/email-form.tsx:64`). That page immediately redirects any verified session home (`app/[locale]/verify-email/page.tsx:23-25`), and `/account` is already gated to verified users in middleware.

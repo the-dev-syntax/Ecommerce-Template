@@ -2,6 +2,18 @@
 
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
+## P1-60 - Search filters reset pagination (2026-11-01)
+
+- `getFilterUrl` now deletes `page` whenever category, tag, price, rating or sort changes. The search page also clamps an out-of-range page to the last available page.
+- Verified: `/search?category=T-Shirts&page=2` renders `1 - 6 of 6` with products instead of `10 - 9 of 6`.
+- Added `tests/filter-url.test.ts`.
+
+## P1-59 - Missing product/page slugs return 404 (2026-11-01)
+
+- The global `app/[locale]/loading.tsx` boundary streamed the response shell before `notFound()` could commit the status. Removed it and scoped `PageLoading` to the home, search, cart, account, admin and checkout segments.
+- `notFound()` now also runs in the product and web-page `generateMetadata`.
+- Verified on Preview: missing product/page slugs return **404**; home, search and `/page/about-us` still return 200.
+
 ## P1-58 - Locale pagination no longer doubles the prefix (2026-11-01)
 
 - `formUrlQuery` accepts a `basePath`, and `Pagination` passes `usePathname()` from `@/i18n/routing` (locale-stripped). The locale-aware router adds `/fr` exactly once, so `/fr/fr/search` is no longer produced.
