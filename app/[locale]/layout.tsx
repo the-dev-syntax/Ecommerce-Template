@@ -13,6 +13,8 @@ import CookieConsentBanner from '@/components/shared/cookie-consent-banner'
 import { fontStack, hexForeground, hexToHsl } from '@/lib/colors'
 import { getSiteUrl } from '@/lib/env'
 import { absoluteSiteUrl, resolveOgImage } from '@/lib/seo-url'
+import { resolveCurrency } from '@/lib/currency'
+import { auth } from '@/auth'
 
 // Force dynamic rendering - required because layout uses database calls and cookies
 export const dynamic = 'force-dynamic'
@@ -112,11 +114,16 @@ export default async function AppLayout({
 }) {
   const setting = await getSetting()
   const currencyCookie = (await cookies()).get('currency')?.value
-  const currency =
-    currencyCookie &&
-    setting.availableCurrencies.some((c) => c.code === currencyCookie)
-      ? currencyCookie
-      : setting.defaultCurrency
+  const currency = resolveCurrency(
+    setting.availableCurrencies,
+    currencyCookie,
+    setting.defaultCurrency
+  )
+
+  // The owner id drives the cart-owner sync so a cart persisted on a shared
+  // browser cannot outlive its signed-in owner.
+  const session = await auth()
+  const ownerId = session?.user?.id
 
   const { locale } = await params
   // Ensure that the incoming `locale` is valid
@@ -148,7 +155,10 @@ export default async function AppLayout({
         style={{ fontFamily: fontStack(setting.brand.fontFamily) }}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ClientProviders setting={{ ...setting, currency }}>
+          <ClientProviders
+            setting={{ ...setting, currency }}
+            ownerId={ownerId}
+          >
             {children}
             <CookieConsentBanner />
           </ClientProviders>

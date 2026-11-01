@@ -8,15 +8,18 @@ import SettingsInitializer from './settings-initializer'
 import { ClientSetting } from '@/types'
 import TopProgressBar from './top-progress-bar'
 import SyncBrowsingHistory from './sync-browsing-history'
+import CartOwnerSync from './cart-owner-sync'
 
 
 
 export default function ClientProviders({
   children, 
   setting, 
+  ownerId,
 }: {
   children: React.ReactNode
   setting: ClientSetting
+  ownerId?: string
 }) {
   const visible = useCartSidebar()
 
@@ -26,6 +29,7 @@ export default function ClientProviders({
         <TopProgressBar />
       </Suspense>
       <SyncBrowsingHistory />
+      <CartOwnerSync ownerId={ownerId} />
 
       <SettingsInitializer setting={setting}  />
       

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Cart, OrderItem, ShippingAddress } from '@/types'
+import { resolveCartOwnerAction } from '@/lib/cart-owner'
 import {
   calcDeliveryDateAndPrice,
   getAvailableCartItemIds,
@@ -187,16 +188,18 @@ const useCartStore = create(
           }
         }),
       setCartOwner: (ownerId?: string) => {
-        const { cart, ownerId: currentOwner } = get()
-        if (currentOwner === ownerId) return
-        // Clear only when a different signed-in account takes over the
-        // browser. Guest -> signed-in keeps the cart (the cart survives the
-        // sign-in round-trip by design).
-        if (currentOwner && ownerId && currentOwner !== ownerId) {
-          set({ cart: { ...initialState }, ownerId })
+        const { ownerId: currentOwner } = get()
+        const action = resolveCartOwnerAction(currentOwner, ownerId)
+        if (action === 'keep') return
+        if (action === 'claim') {
+          // Guest -> signed-in keeps the cart: it must survive the sign-in
+          // round-trip by design.
+          set({ ownerId })
           return
         }
-        set({ ownerId })
+        // A different account, or a signed-in owner disappearing (expired
+        // session / sign-out), must not leak the previous cart.
+        set({ cart: { ...initialState }, ownerId })
       },
       setShippingAddress: (shippingAddress: ShippingAddress) =>
         enqueue(async () => {

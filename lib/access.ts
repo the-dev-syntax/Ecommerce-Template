@@ -1,7 +1,7 @@
 import 'server-only'
 import type { UserRole } from '@/types'
 
-import { isAdminOrOwner, isAdminRole, isVerifiedUser } from './access-shared'
+import { isAdminRole, isVerifiedUser } from './access-shared'
 
 export { isAdminOrOwner, isVerifiedUser, isEmailVerified } from './access-shared'
 

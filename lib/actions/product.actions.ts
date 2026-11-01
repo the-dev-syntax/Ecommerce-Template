@@ -12,7 +12,8 @@ import { IProductInput } from '@/types'
 import { z } from 'zod'
 import { auth } from '@/auth'
 import { getSetting } from './setting.actions'
-import { revalidateAllLocales } from '../utils-serverOnly'  
+import { revalidateAllLocales } from '../utils-serverOnly'
+import { limitCatalogReadsByIP } from '../rate-limit'
 
 // Categories/tags are read on every header/search render but only change when
 // an admin edits a product. Cache them briefly per server instance.
@@ -150,6 +151,8 @@ export async function getAllProducts({
   rating?: string
   sort?: string
 }) {
+  await limitCatalogReadsByIP()
+
   const {
     common: { pageSize },
   } = await getSetting()

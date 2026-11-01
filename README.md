@@ -1509,8 +1509,14 @@ Possible future hardening: enforce the 200-character maximum server-side for can
 ### 76. Email templates concatenate an unstripped siteUrl (fixed)
 - Email sending already normalizes via `getSiteUrl()` (trailing slash stripped); templates build links from the normalized value to avoid `//` paths.
 
-### 77. Currency flash for non-SAR visitors (residual)
-- Known residual: the store still initializes from seed SAR defaults and swaps currency in `useEffect`. A full fix requires server-injected initial currency; left as a documented residual.
+### 77. Currency flash for non-SAR visitors (fixed)
+- `SettingsInitializer` now applies the server-selected currency in `useLayoutEffect` on the client (isomorphic `useEffect` fallback on the server), so the swap happens before the first paint instead of after it. The layout also resolves the cookie through `resolveCurrency()`.
+
+### 78. Cart leakage after session expiry (fixed)
+- A site-wide `CartOwnerSync` claims/clears the persisted cart from the server-resolved session on every page; `resolveCartOwnerAction()` clears when the owner disappears or changes, while keeping a guest cart across sign-in.
+
+### 82. Public catalogue read rate limiting (fixed)
+- `getAllProducts` now uses `limitCatalogReadsByIP()` (120/min); `calcDeliveryDateAndPrice` and `setCurrencyOnServer` were already limited.
 
 ### 56. Missing og-preview.jpg (fixed)
 - `resolveOgImage` falls back to `/opengraph-image.png`; legacy `/og-preview.jpg` 308-redirects to the generated image.

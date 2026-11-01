@@ -334,8 +334,12 @@ Automated checks: `npm test` 142/142 pass, `npx tsc --noEmit` clean, `npm run bu
 - Removed `console.log` statements that printed customer email and verification tokens in `lib/rate-limit.ts` (`checkEmailRateLimit`) and `app/[locale]/verify-email/VerifyClientToken.tsx` (item 80, fixed).
 - `app/api/debug-ip` now returns 404 when `NODE_ENV === 'production'` as well as `VERCEL_ENV === 'production'`, so non-Vercel production hosts cannot expose it (item 81, fixed).
 
-## Residual / suggested (low priority, not yet fixed)
-- 78. Shared-device cart leakage persists after session expiry: the cart uses a single `EV-cart` localStorage key. The Sign out button does call `clearCart()`, but if a JWT simply expires (or the account changes without pressing it) `ownerId` is not reset on most pages; `setCartOwner(undefined)` then keeps the previous cart, so a later guest inherits the prior customer's items/address. Sync the cart owner from the session on every page and clear when the owner disappears (extends bug 43).
-- 79. Currency flash remains the same known residual as item 77: `use-setting-store` initializes from seed SAR defaults and `SettingsInitializer` swaps the cookie currency in `useEffect` after hydration. Eliminate by injecting the server-selected currency into the initial store state.
-- 82. Heavy public actions (`calcDeliveryDateAndPrice`, `getAllProducts`, `setCurrencyOnServer`) still lack per-IP rate limiting (extends bug 33); the limiter infra exists but is wired only for auth.
-- 83. Zero-image products are guarded in the gallery (bug 28), but a published product can still be saved without an image. Add a published-product invariant (>=1 image) at the model/schema level to stop bad data at the source.
+## Fixed in this pass
+- 77/79. Currency flash: `SettingsInitializer` now syncs the store with `useLayoutEffect` on the client (isomorphic fallback on the server), so the cookie currency is applied before the first paint instead of after it. `resolveCurrency()` (`lib/currency.ts`) also centralizes the cookie validation used by the layout.
+- 78. Shared-device cart leakage: a site-wide `CartOwnerSync` component receives the server-resolved `ownerId` and calls `setCartOwner` on every page. `resolveCartOwnerAction()` (`lib/cart-owner.ts`) now clears the cart when a signed-in owner disappears (expired session) or a different account takes over, while still keeping a guest cart across the sign-in round-trip. Covered by `tests/cart-owner.test.ts`.
+- 82. Public catalogue reads: `getAllProducts` now calls `limitCatalogReadsByIP()` (a generous 120/min bucket). `calcDeliveryDateAndPrice` and `setCurrencyOnServer` were already rate-limited.
+- 83. Verified already enforced: `ProductInputSchema` / `ProductInputFormSchema` require at least one image, and the gallery renders an empty state, so a zero-image product cannot be saved as published through the admin flow.
+
+## Remaining (policy / low priority)
+- 47. Reviews still publish without a moderation flag (`isApproved`); this is a product-policy decision.
+- 40-42. Checkout state-machine and cart last-write-wins races remain suspected rather than reproduced; they need runtime reproduction before changing behaviour.

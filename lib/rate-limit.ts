@@ -45,6 +45,23 @@ export async function limitCartPricingByIP() {
     throw new Error('Too many cart updates. Please wait a moment.')
 }
 
+// Public catalogue reads (search and filters). Generous enough for normal
+// browsing and pagination, strict enough to stop scripted scraping.
+const catalogReadIpLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(120, '1 m'),
+  prefix: 'v1:ratelimit:catalog-read',
+})
+
+/** Limit unauthenticated catalogue/search reads. */
+export async function limitCatalogReadsByIP() {
+  const ip = await getIP()
+  const { success } = await catalogReadIpLimit.limit(ip)
+
+  if (!success)
+    throw new Error('Too many requests. Please wait a moment.')
+}
+
 const currencyIpLimit = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(10, '1 m'),
