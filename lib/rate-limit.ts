@@ -291,12 +291,9 @@ const IP_LOCKOUT_PERIOD_SECONDS = 0.5 * 60; // 10 minutes, locked out for invali
  * @ throws An error if the email is on cooldown.
 
 export async function checkEmailRateLimit(email: string) {
-  console.log('in checkEmailRateLimit with email:', email)
   const key = `Email-resend-limit:${email}`;
-  console.log('@@@@@@@@@@@@@@@@@@@@ after key was made')
-  
+
   const inCooldown = await redis.get(key);
-  console.log('after await redis.get key')
     // Time to live
   if (inCooldown) {
     const ttl = await redis.ttl(key);

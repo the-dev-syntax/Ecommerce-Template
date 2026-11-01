@@ -329,6 +329,38 @@ interface ProductFormUIProps {
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField
             control={form.control}
+            name='tags'
+            render={() => (
+              <FormItem className='w-full'>
+                <FormLabel>{t('Tags')}</FormLabel>
+                <div className='flex flex-wrap gap-4'>
+                  {['new-arrival', 'best-seller', 'featured', 'todays-deal'].map((tag) => {
+                    const current = form.watch('tags') ?? []
+                    const checked = current.includes(tag)
+                    return (
+                      <label key={tag} className='flex items-center gap-2'>
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(val) => {
+                            const next = val
+                              ? [...current, tag]
+                              : current.filter((t: string) => t !== tag)
+                            form.setValue('tags', next, { shouldValidate: true })
+                          }}
+                        />
+                        <span>{tag}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
             name='images'
             render={() => (
               <FormItem className='w-full'>

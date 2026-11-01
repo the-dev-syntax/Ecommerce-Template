@@ -7,7 +7,10 @@ import { pickClientIp } from '@/lib/client-ip'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  if (process.env.VERCEL_ENV === 'production') {
+  if (
+    process.env.NODE_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'production'
+  ) {
     return new NextResponse('Not found', { status: 404 })
   }
 

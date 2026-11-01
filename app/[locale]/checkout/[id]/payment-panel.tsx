@@ -58,6 +58,7 @@ function StripePanel({ order }: PaymentPanelProps) {
         <StripeForm
           priceInCents={Math.round(order.totalPrice * 100)}
           orderId={order._id}
+          currency={order.currency}
         />
       </Elements>
     )

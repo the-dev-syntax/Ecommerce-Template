@@ -96,17 +96,16 @@ const WebPageForm = ({
     }
   }
 
-  //Auto-generate slug from title
+  //Auto-generate slug from title (only on create; never rewrite an existing slug on edit)
   const watchedTitle = form.watch('title')
   useEffect(() => {
-    // Only update the slug if the user hasn't typed in it manually
-    // We check this by comparing the current slug with a slugified version of itself.
-    // If they match, it means it's either empty or was auto-generated.
+    if (type !== 'Create') return
     const currentSlug = form.getValues('slug')
-    if (currentSlug === slugify(currentSlug)) {
-      form.setValue('slug', slugify(watchedTitle), { shouldValidate: true })
-    }
-  }, [watchedTitle, form])
+    // Only auto-generate when the slug is empty or still matches its slugified
+    // form (i.e. was auto-generated), so a manually chosen slug survives.
+    if (currentSlug && currentSlug !== slugify(currentSlug)) return
+    form.setValue('slug', slugify(watchedTitle), { shouldValidate: true })
+  }, [watchedTitle, form, type])
 
   return (
     <Form {...form}>

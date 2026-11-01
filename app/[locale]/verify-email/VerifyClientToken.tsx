@@ -142,7 +142,7 @@ export default function VerifyClientToken() {
 
    const handleVerifyToken = async () => { 
      const token = searchParams.get('token');
-    console.log('VerifyClientToken token =========================', token)
+    // token received
       if (!token) {
       setMessage('No verification token found - Please, check your email for the verification link');
       return;
@@ -152,11 +152,8 @@ export default function VerifyClientToken() {
 
     processedTokenRef.current = token;
 
-    console.log('VerifyClientToken processedTokenRef.current ========================= Passed')
     startTransition(async () => {
-      console.log('VerifyClientToken processedTokenRef.current ========================= START TRANSITION')
       const result = await verifyEmailToken(token);
-      console.log('VerifyClientToken processedTokenRef.current ========================= START TRANSITION result', result )
       if (result.success) {
         setMessage('Email verified successfully. You can now log in.');
         setIsSuccess(true);

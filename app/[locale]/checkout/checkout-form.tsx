@@ -250,8 +250,22 @@ const CheckoutForm = ({
   }
   // for it to render all inside, isMounted and shippingAddress has to be true.
   // items and router is unnecessary. 
+  // Tracks whether the form currently mirrors a cart shipping address. Only
+  // that state can become stale; a fresh form may legitimately be seeded from
+  // a saved address.
+  const hasSyncedShippingAddress = useRef(false)
   useEffect(() => {
-    if (!isMounted || !shippingAddress) return
+    if (!isMounted) return
+    if (!shippingAddress) {
+      if (hasSyncedShippingAddress.current) {
+        // The cart was cleared for a different owner: drop the previous
+        // owner's name/street/phone instead of leaving them in the form.
+        shippingAddressForm.reset(shippingAddressDefaultValues)
+        hasSyncedShippingAddress.current = false
+      }
+      return
+    }
+    hasSyncedShippingAddress.current = true
     shippingAddressForm.setValue('fullName', shippingAddress.fullName)
     shippingAddressForm.setValue('street', shippingAddress.street)
     shippingAddressForm.setValue('city', shippingAddress.city)

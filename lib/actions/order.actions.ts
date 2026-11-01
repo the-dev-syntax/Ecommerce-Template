@@ -34,7 +34,7 @@ import User from '../db/models/user.model'
 import { normalizeSaudiPhone } from '../phone'
 import { getSetting } from './setting.actions'
 import { revalidateAllLocales } from '../utils-serverOnly'
-import { isAdminOrOwner, requireAdmin } from '../access'
+import { isAdminOrOwner, requireAdmin, requireVerifiedUser } from '../access'
 import { isFullyRefunded } from '../orders/status'
 import { OrderWithUser } from '../db/models/order.model'
 import { fulfillOrder } from '../orders/fulfill-order'
@@ -326,6 +326,7 @@ export const createOrderFromCart = async (
   const session = await auth()
   if (!session?.user?.id) throw new Error('User not authenticated')
   if (session.user.id !== userId) throw new Error('User mismatch')
+  requireVerifiedUser(session)
 
   await connectToDatabase()
 
@@ -512,6 +513,10 @@ export const createOrderFromCart = async (
         paymentMethod: order.paymentMethod,
         shippingPrice: order.shippingPrice,
         totalPrice: order.totalPrice,
+        shippingRateId: order.shippingRateId ?? null,
+        isPickup: order.isPickup ?? false,
+        shippingEtaMin: order.shippingEtaMin ?? null,
+        shippingEtaMax: order.shippingEtaMax ?? null,
       })
     )
     .digest('hex')
@@ -1265,9 +1270,10 @@ export async function getMyOrders({
   if (!session) {
     throw new Error('User is not authenticated')
   }
-  
+  requireVerifiedUser(session)
+
   await connectToDatabase()
-  
+
   const orders = await Order.find({
     user: session?.user?.id,
   })
@@ -1320,12 +1326,18 @@ export async function getOrderSummary(date: DateRange) {
           $gte: date.from,
           $lte: date.to,
         },
+        isPaid: true,
+        isCancelled: { $ne: true },
       },
     },
     {
       $group: {
         _id: null,
-        sales: { $sum: '$totalPrice' },
+        sales: {
+          $sum: {
+            $subtract: ['$totalPrice', { $ifNull: ['$refundedAmount', 0] }],
+          },
+        },
       },
     },
     { $project: { totalSales: { $ifNull: ['$sales', 0] } } },
@@ -1342,6 +1354,8 @@ export async function getOrderSummary(date: DateRange) {
         createdAt: {
           $gte: sixMonthEarlierDate,
         },
+        isPaid: true,
+        isCancelled: { $ne: true },
       },
     },
     {
@@ -1353,7 +1367,11 @@ export async function getOrderSummary(date: DateRange) {
             timezone: 'UTC',
           },
         },
-        totalSales: { $sum: '$totalPrice' },
+        totalSales: {
+          $sum: {
+            $subtract: ['$totalPrice', { $ifNull: ['$refundedAmount', 0] }],
+          },
+        },
       },
     },
     {
@@ -1402,6 +1420,8 @@ async function getSalesChartData(date: DateRange) {
           $gte: date.from,
           $lte: date.to,
         },
+        isPaid: true,
+        isCancelled: { $ne: true },
       },
     },
     {
@@ -1411,7 +1431,11 @@ async function getSalesChartData(date: DateRange) {
           month: { $month: '$createdAt' },
           day: { $dayOfMonth: '$createdAt' },
         },
-        totalSales: { $sum: '$totalPrice' },
+        totalSales: {
+          $sum: {
+            $subtract: ['$totalPrice', { $ifNull: ['$refundedAmount', 0] }],
+          },
+        },
       },
     },
     {
@@ -1447,6 +1471,8 @@ async function getTopSalesProducts(date: DateRange) {
           $gte: date.from,
           $lte: date.to,
         },
+        isPaid: true,
+        isCancelled: { $ne: true },
       },
     },
     // Step 1: Unwind orderItems array
@@ -1503,6 +1529,8 @@ async function getTopSalesCategories(date: DateRange, limit = 5) {
           $gte: date.from,
           $lte: date.to,
         },
+        isPaid: true,
+        isCancelled: { $ne: true },
       },
     },
     // Step 1: Unwind orderItems array

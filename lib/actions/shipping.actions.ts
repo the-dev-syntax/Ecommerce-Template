@@ -78,6 +78,7 @@ export async function toggleShippingRate(id: string, isActive: boolean) {
     requireAdmin(await auth())
     await connectToDatabase()
     await ShippingRate.findByIdAndUpdate(id, { isActive })
+    clearShippingRatesCache()
     await revalidateAllLocales('/admin/shipping')
     await revalidateAllLocales('/checkout')
     return { success: true, message: 'Shipping rate updated' }

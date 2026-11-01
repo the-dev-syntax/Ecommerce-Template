@@ -317,3 +317,25 @@ Legend: **[live]** reproduced on production; **[code]** proven by reading the cu
 3. SEO and navigation: 55, 57, 58, 59, 60; then 61, 62, 66-74.
 4. ZATCA (54) before production onboarding; hygiene items 75-77 in one pass.
 
+-----------------------------------------------------------
+-----------------------------------------------------------
+-----------------------------------------------------------
+-----------------------------------------------------------
+-----------------------------------------------------------
+
+
+---
+
+# THIRD AUDIT (automated + targeted review) - 2026-11-01
+
+Automated checks: `npm test` 142/142 pass, `npx tsc --noEmit` clean, `npm run build` success, `npm run i18n:check` 805 identical keys, `npm run lint` no warnings.
+
+## Cleanup applied in this pass
+- Removed `console.log` statements that printed customer email and verification tokens in `lib/rate-limit.ts` (`checkEmailRateLimit`) and `app/[locale]/verify-email/VerifyClientToken.tsx` (item 80, fixed).
+- `app/api/debug-ip` now returns 404 when `NODE_ENV === 'production'` as well as `VERCEL_ENV === 'production'`, so non-Vercel production hosts cannot expose it (item 81, fixed).
+
+## Residual / suggested (low priority, not yet fixed)
+- 78. Shared-device cart leakage persists after session expiry: the cart uses a single `EV-cart` localStorage key. The Sign out button does call `clearCart()`, but if a JWT simply expires (or the account changes without pressing it) `ownerId` is not reset on most pages; `setCartOwner(undefined)` then keeps the previous cart, so a later guest inherits the prior customer's items/address. Sync the cart owner from the session on every page and clear when the owner disappears (extends bug 43).
+- 79. Currency flash remains the same known residual as item 77: `use-setting-store` initializes from seed SAR defaults and `SettingsInitializer` swaps the cookie currency in `useEffect` after hydration. Eliminate by injecting the server-selected currency into the initial store state.
+- 82. Heavy public actions (`calcDeliveryDateAndPrice`, `getAllProducts`, `setCurrencyOnServer`) still lack per-IP rate limiting (extends bug 33); the limiter infra exists but is wired only for auth.
+- 83. Zero-image products are guarded in the gallery (bug 28), but a published product can still be saved without an image. Add a published-product invariant (>=1 image) at the model/schema level to stop bad data at the source.

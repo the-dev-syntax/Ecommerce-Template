@@ -98,7 +98,7 @@ export function getEnabledPaymentMethods<T extends { name: string }>(
 ): T[] {
   return methods.filter((method) => {
     const provider = getPaymentProviderByName(method.name)
-    if (!provider) return true
+    if (!provider) return false
     if (provider.id === 'cod' && options.cashOnDelivery === false) {
       return false
     }

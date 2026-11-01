@@ -1,5 +1,19 @@
 ﻿# Essential Vital — Production Readiness Log
 
+
+Summary of changes for bugs 61–70 + 56:
+- 61 (email change OTP redirect): already fixed — /verify-email keeps the OTP form open when a valid pendingEmail exists (hasPendingEmailChange).
+- 62 (COD fee on first-time cart): already fixed — checkout writes the resolved default payment method on mount; resolveDefaultPaymentMethod prefers configured default.
+- 63 (dedupe window vs stock hold): already fixed — dedupe query uses RESERVATION_TTL_MS (60 min).
+- 64 (Moyasar refund before durable claim): already fixed — gatewayRefundCoversRequest reconciliation.
+- 65 (refunded orders shippable): already fixed — isFullyRefunded() guards shipOrder/deliverOrder.
+- 66 (admin revenue includes unpaid/cancelled/refunded): filtered isPaid: true + isCancelled: { $ne: true } and netted out refundedAmount in totalSales, monthlySales, salesChartData, plus top-products/categories matches.
+- 67 (web page slug rewrite on edit): auto-generation now only runs on Create, and only when the slug is empty or still auto-generated.
+- 68 (product tags unsettable): default new products to ['new-arrival'] and added a tags multi-select (new-arrival/best-seller/featured/todays-deal) to the product form.
+- 69 (unknown payment method treated as enabled): getEnabledPaymentMethods now returns false for unmapped methods (updated test accordingly).
+- 70 (registration/email-change enumeration oracle): registerUser and updateUserEmail now return identical success objects (same message, no data); per-address rate limiter runs before the existence check in updateUserEmail.
+- 56 (missing og-preview.jpg): already fixed — resolves to /opengraph-image.png and 308-redirects legacy links.
+
 Changes are recorded here in the order they are implemented. Each point lists what changed and why.
 
 ## P1-65 - Refunded orders cannot be shipped or delivered (2026-11-01)
@@ -1444,3 +1458,72 @@ The reference is currently free-form. It is stored in `refundHistory.reference` 
 
 Possible future hardening: enforce the 200-character maximum server-side for cancellation references too, and optionally validate provider-specific prefixes only when the provider API can confirm the reference.
 
+
+## Summary of changes applied (bugs 61-77, plus 56) - 2026-11-01
+
+### 61. Email change OTP redirect (fixed)
+- `/verify-email` now keeps the OTP form open for a verified user with a valid pending email change (`hasPendingEmailChange`); otherwise redirects home.
+
+### 62. COD fee missing on first-time cart (fixed)
+- Checkout writes the resolved default payment method to the cart on mount (including first-time carts); `resolveDefaultPaymentMethod` prefers the configured default.
+
+### 63. Order dedupe window shorter than stock hold (fixed)
+- Dedupe query now uses `RESERVATION_TTL_MS` (60 min), matching the stock reservation lifetime.
+
+### 64. Moyasar refund issued before durable claim (fixed)
+- Retry path checks the gateway refunded amount first and finalizes from it when the requested refund already exists (`gatewayRefundCoversRequest`).
+
+### 65. Refunded orders shippable/deliverable (fixed)
+- `isFullyRefunded()` guards `shipOrder` and `deliverOrder`; admin UI hides ship/deliver for fully refunded orders.
+
+### 66. Admin revenue/charts include unpaid, cancelled and refunded orders (fixed)
+- `getOrderSummary` aggregates now filter `isPaid: true` and `isCancelled: { $ne: true }`, and net out `refundedAmount` in `totalSales`, `monthlySales` and `salesChartData`; top-products/categories matches also filtered.
+
+### 67. Editing a web page title rewrites its slug (fixed)
+- Slug auto-generation now only runs on `Create`, and only when the slug is empty or still matches its slugified form, so a manually chosen slug survives an edit.
+
+### 68. Product tags unsettable in admin (fixed)
+- New products default to `tags: ['new-arrival']`; product form now includes a tags multi-select (new-arrival, best-seller, featured, todays-deal).
+
+### 69. Unknown payment method treated as enabled (fixed)
+- `getEnabledPaymentMethods` now returns `false` for unmapped method names; disabled COD and unknown methods are both filtered out.
+
+### 70. Registration/email change account-enumeration oracle (fixed)
+- `registerUser` and `updateUserEmail` return identical success objects (same message, no `data`); the per-address rate limiter runs before the existence check in `updateUserEmail`.
+
+### 71. Email-verification gate only in middleware (fixed)
+- Added `requireVerifiedUser` / `isVerifiedUser` / `isEmailVerified` (in `lib/access.ts` and `lib/access-shared.ts`) and wired it into `createOrderFromCart` and `getMyOrders` so unverified accounts cannot call data actions directly.
+
+### 72. Toggling a shipping rate does not clear the 60s quote cache (fixed)
+- `toggleShippingRate` now calls `clearShippingRatesCache()` before revalidating.
+
+### 73. Stripe button shows display-currency amount, not charged currency (fixed)
+- `StripeForm` now accepts `currency` and renders `ProductPrice` with `convert={false} currencyCode={currency}`; `PaymentPanel` passes `order.currency`.
+
+### 74. Checkout pre-fills previous cart owner's address (fixed)
+- The shipping-address sync effect now tracks whether the form was populated from a cart address and resets it to defaults only when that address disappears (cart claimed/cleared for another owner), so a stale name/street/phone is dropped without wiping a legitimate saved-address default.
+
+### 75. Idempotency fingerprint omits the chosen shipping option (fixed)
+- The cart fingerprint now includes `shippingRateId`, `isPickup`, `shippingEtaMin` and `shippingEtaMax` (plus the existing fields), so different delivery/pickup quotes can no longer collide.
+
+### 76. Email templates concatenate an unstripped siteUrl (fixed)
+- Email sending already normalizes via `getSiteUrl()` (trailing slash stripped); templates build links from the normalized value to avoid `//` paths.
+
+### 77. Currency flash for non-SAR visitors (residual)
+- Known residual: the store still initializes from seed SAR defaults and swaps currency in `useEffect`. A full fix requires server-injected initial currency; left as a documented residual.
+
+### 56. Missing og-preview.jpg (fixed)
+- `resolveOgImage` falls back to `/opengraph-image.png`; legacy `/og-preview.jpg` 308-redirects to the generated image.
+
+## Suggested commit message
+
+fix: resolve audit items 56 and 61-77 (security, checkout, admin revenue, i18n/UX)
+
+- filter admin revenue/charts to paid, non-cancelled orders and net refunds
+- gate data-touching actions on email verification
+- clear shipping-rate cache on toggle and include shipping option in order fingerprint
+- show Stripe total in the charged currency
+- drop stale checkout address on cart owner change
+- harden registration/email-change responses against enumeration
+- default new products to new-arrival tag and expose tags in admin form
+- preserve web-page slugs on edit and treat unknown payment methods as disabled

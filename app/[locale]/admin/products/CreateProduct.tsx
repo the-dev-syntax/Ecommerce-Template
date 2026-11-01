@@ -29,7 +29,7 @@ const defaultValues: IProductInputForm = {
         taxCategory: 'S',
         exemptionReasonCode: '',
         returnPolicy: 'return_and_refund',
-        tags: [],
+        tags: ['new-arrival'],
         sizes: [],
         colors: [],
         variants: [],

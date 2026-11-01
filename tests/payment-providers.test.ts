@@ -24,14 +24,14 @@ describe('payment provider registry', () => {
     )
   })
 
-  it('filters disabled COD and keeps unknown manual methods', () => {
+  it('filters disabled COD and unknown methods', () => {
     const methods = [
       { name: 'Cash On Delivery' },
       { name: 'Custom Manual' },
     ]
     assert.deepEqual(
       getEnabledPaymentMethods(methods, { cashOnDelivery: false }),
-      [{ name: 'Custom Manual' }]
+      []
     )
   })
 

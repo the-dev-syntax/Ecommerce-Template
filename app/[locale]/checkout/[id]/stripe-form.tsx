@@ -14,9 +14,11 @@ import { useTranslations } from 'next-intl'
 export default function StripeForm({
     priceInCents,
     orderId,
+    currency,
   }: {
     priceInCents: number
     orderId: string
+    currency?: string
   }) {
     const stripe = useStripe()
     const elements = useElements()
@@ -71,7 +73,7 @@ export default function StripeForm({
             'Purchasing...'
           ) : (
             <div>
-              {t('Purchase')} - <ProductPrice price={priceInCents / 100} plain />
+              {t('Purchase')} - <ProductPrice price={priceInCents / 100} plain convert={false} currencyCode={currency} />
             </div>
           )}
         </Button>

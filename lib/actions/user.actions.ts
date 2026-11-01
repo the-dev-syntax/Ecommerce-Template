@@ -126,7 +126,10 @@ export async function registerUser(userSignUp: IUserSignUp) {
     }
     await sendVerificationEmail(verificationProps)
 
-    return { success: true, message: 'User created successfully' }
+    return {
+      success: true,
+      message: 'If this email can be used, a verification code has been sent.',
+    }
   } catch (error) {
     return { success: false, error: formatError(error) }
   }
@@ -584,6 +587,10 @@ export async function updateUserEmail(values: IUserEmail) {
       return { success: false, message: 'Current password is incorrect' }
     }
 
+    // Run the per-address limiter before any existence check so the taken and
+    // free paths cannot be told apart by timing or by an early return.
+    await checkAndSetEmailRateLimit(normalizedEmail)
+
     // Do not reveal whether the address is taken, and never email an address
     // controlled by someone else.
     const existingUser = await User.findOne({ email: normalizedEmail })
@@ -594,8 +601,6 @@ export async function updateUserEmail(values: IUserEmail) {
         message: 'If this email can be used, a verification code has been sent.',
       };
     }
-
-    await checkAndSetEmailRateLimit(normalizedEmail)
 
     const { token, hashedToken } = generateVerificationToken()
 
@@ -624,9 +629,7 @@ export async function updateUserEmail(values: IUserEmail) {
 
     return {
       success: true,
-      message:
-        'Check your new inbox to verify the address before it becomes active',
-      data: { email: normalizedEmail },
+      message: 'If this email can be used, a verification code has been sent.',
     }
 
   } catch (error) {
