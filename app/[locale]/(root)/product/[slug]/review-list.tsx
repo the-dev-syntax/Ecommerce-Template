@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Calendar, Check, StarIcon, User } from 'lucide-react'
 import { Link } from '@/i18n/routing'
 import { useEffect, useState } from 'react'
-import { SubmitHandler, useForm } from 'react-hook-form'
+import { Resolver, SubmitHandler, useForm } from 'react-hook-form'
 import { useInView } from 'react-intersection-observer'
 
 import Rating from '@/components/shared/product/rating'
@@ -120,7 +120,8 @@ export default function ReviewList({
   // type CustomerReview = z.infer<typeof ReviewInputSchema>
 
   const form = useForm<IReviewInput>({
-    resolver: zodResolver(ReviewInputSchema),
+    // Zod 4 types coerced inputs as `unknown`; the runtime output matches the form.
+    resolver: zodResolver(ReviewInputSchema) as unknown as Resolver<IReviewInput>,
     defaultValues: reviewFormDefaultValues,
   })
 

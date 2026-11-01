@@ -1,6 +1,6 @@
  'use client';
 
-import { useForm } from 'react-hook-form';
+import { Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProduct } from '@/lib/actions/product.actions';
 import { useRouter } from 'next/navigation';
@@ -50,7 +50,8 @@ export const UpdateProductForm = ({
     const { toast } = useToast()
 
     const form = useForm<IProductInputForm>({
-      resolver: zodResolver(ProductInputFormSchema),
+      // Zod 4 types coerced inputs as `unknown`; the runtime output matches the form.
+      resolver: zodResolver(ProductInputFormSchema) as unknown as Resolver<IProductInputForm>,
       defaultValues: product || defaultValues,
   })
 

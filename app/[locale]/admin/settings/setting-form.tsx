@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { Resolver, useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
@@ -32,7 +32,8 @@ export default function SettingForm({ setting }: { setting: ISettingInput }) {
   const t = useTranslations()
 
   const form = useForm<ISettingInput>({
-    resolver: zodResolver(SettingInputSchemaNoDefaults),
+    // Zod 4 types coerced inputs as `unknown`; the runtime output matches the form.
+    resolver: zodResolver(SettingInputSchemaNoDefaults) as unknown as Resolver<ISettingInput>,
     defaultValues: setting,
   })
   const {

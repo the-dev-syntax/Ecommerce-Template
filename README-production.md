@@ -22,11 +22,17 @@
 
 These are present and covered by automated tests or code review. They still need the live tests listed later.
 
+
 - Security: safe callback URLs, OTP via `crypto.randomInt`, per-account OTP lockout, hashed single-use reset tokens, password policy, verified-email gate inside data actions, trusted client IP handling, rate limits, session revocation, admin guards, last-admin guard, upload restricted to admins.
+
 - Payments: Stripe webhook signature + idempotency, Moyasar token + amount/currency checks, capture recovery, PayPal capture persistence, refund/credit-note flows, restock idempotency, terminal refund status, order dedupe longer than the stock hold, shipping price/COD validation.
+
 - Data: production seed guard, production-data readiness guard, client-bundle seed scan, indexes on orders/reviews/shipping rates, email uniqueness migration.
+
 - Storefront: locale-aware links and pagination, real 404s for missing slugs, canonical/OG metadata per route, sitemap without double slashes, working filters/pagination, currency resolved before first paint, cart owner sync, catalogue read limiting.
+
 - Admin: order lifecycle, inventory audit, reviews moderation, settings validation, VAT report, ZATCA queue + retry cron, setup checklist.
+
 - Quality gates: `npm test` (148 passing), `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run i18n:check` (805 keys), `npm run check:client-bundle`.
 
 ---
@@ -35,18 +41,20 @@ These are present and covered by automated tests or code review. They still need
 
 ### 1.1 Dependency security (critical advisory)
 
-- [ ] **PR-01 — Upgrade Next.js.** `npm audit` reports a **critical** advisory affecting `next` `10.0.0 – 15.5.27` (current `15.5.24`).
-  - Action: upgrade Next.js to a patched release, re-run `npm ci`, `npm test`, `npx tsc --noEmit`, `npm run build`.
-  - Test: `npm audit --omit=dev` has **zero critical** findings; the app still builds and all automated tests pass.
-- [ ] **PR-02 — Upgrade the remaining vulnerable packages.**
-  - `zod` `< 4.6.6` (high; memory exhaustion on oversized constrained collections).
-  - `sharp` `< 0.35.5` (high).
-  - `qs` `2.2.5 – 6.16.0` (moderate).
-  - `postcss-selector-parser` `< 6.1.5` (moderate), `decode-uri-component` `<= 0.5.0` (high), `source-map-js` `1.0.0 – 1.2.1` (high), `deepmerge` `>= 4.2.0`.
-  - Note: `zod@4` is a breaking major — plan and test the migration, do not blind-force it.
-  - Test: `npm audit --omit=dev`; document any accepted residual risk with owner and expiry date.
-- [ ] **PR-03 — Pin the Node runtime.** Add `engines.node` (and optionally `.nvmrc`) matching Vercel (Node 22 LTS recommended) and confirm the build runs on that exact version.
-  - Test: clean `npm ci` + `npm run build` on the pinned version.
+- [x] **PR-01 — Upgrade Next.js.** `npm audit` reported a **critical** advisory affecting `next` `10.0.0 – 15.5.27` (was `15.5.24`).
+  - Done: upgraded to **`next@15.5.28`** (patched 15.x backport; `eslint-config-next` matched).
+  - Test: `npm audit --omit=dev` has **zero critical/high** findings; `npx tsc --noEmit`, `npm test` (148 passing), `npm run lint`, `npm run build` and `npm run check:client-bundle` all pass.
+
+- [x] **PR-02 — Upgrade the remaining vulnerable packages.**
+  - Done: `zod@4.6.7` (migrated from zod 3; form resolvers are explicitly typed because zod 4 treats coerced inputs as `unknown`).
+  - Done: `sharp@0.35.5`, `qs@6.17.1`, `postcss-selector-parser@6.1.5`, `source-map-js@1.2.2`, `decode-uri-component@0.5.1`, `brace-expansion@1.1.21` (via the `minimatch@^3` override).
+  - Added npm `overrides` so transitive packages cannot regress to the vulnerable ranges.
+  - Test result: `npm audit --omit=dev` -> **5 low, 0 moderate, 0 high, 0 critical**. Full audit -> **5 low, 16 moderate, 0 high, 0 critical**.
+  - Accepted residual: the 5 low findings are the `resend` -> `@react-email/*` -> `html-to-text`/`deepmerge` chain (no non-breaking fix; a resend major upgrade is a separate change) and `@react-email/components` (no fix published). The 16 moderate findings are **dev-only** (`eslint`, `eslint-config-next`/`@typescript-eslint`, `react-email`/`glob`/`minimatch`). Owner: technical owner. Review again at the next dependency refresh; do not ship a dev-only package in the production bundle.
+
+- [x] **PR-03 — Pin the Node runtime.**
+  - Done: added `"engines": { "node": ">=22.0.0" }`, `.nvmrc` (`22`) and `@types/node@^22` to match the Vercel Node 22 LTS runtime.
+  - Test: `npm ci` + `npx tsc --noEmit` + `npm test` + `npm run build` pass on Node `v22.13.1`.
 
 ### 1.2 Production data and settings
 
@@ -60,9 +68,11 @@ These are present and covered by automated tests or code review. They still need
   - Admin user (bcrypt hash only — never plaintext) and real catalogue products.
   - Legal/CMS pages: about, contact, privacy, conditions/terms, shipping, returns.
   - Test: `npm run check:production-data` must pass with no placeholder or duplicate-slug errors.
+
 - [ ] **PR-05 — Seed a fresh production database correctly.**
   - Action: run `npm run seed:production` only against an **empty** production database after PR-04 passes.
   - Test: admin can sign in; no demo users/orders/reviews; published catalogue and settings match the business data.
+
 - [ ] **PR-06 — Verify all legal content exists and is linked.** Footer/header links must resolve: `/page/privacy-policy`, `/page/conditions-of-use`, `/page/returns-policy`, `/page/shipping`, `/page/about-us`, `/page/contact-us`.
   - Test: every footer/header link returns 200 in all three locales.
 
